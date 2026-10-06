@@ -5,10 +5,15 @@ import { formatDate } from '@/lib/utils/formatters';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminAuditPage() {
-  const logs = await prisma.auditLog.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-  });
+  let logs: any[] = [];
+  try {
+    logs = await prisma.auditLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  } catch (err) {
+    console.error('Error fetching audit logs:', err);
+  }
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-7xl mx-auto">

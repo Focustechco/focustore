@@ -2,83 +2,108 @@ import { prisma } from '@/lib/db/prisma';
 
 export class CatalogService {
   static async getCollections() {
-    return prisma.collection.findMany({
-      include: {
-        products: {
-          include: {
-            product: {
-              include: {
-                images: { orderBy: { position: 'asc' } },
-                variants: { include: { inventory: true } },
-                categories: { include: { category: true } },
-                collections: { include: { collection: true } },
+    try {
+      return await prisma.collection.findMany({
+        include: {
+          products: {
+            include: {
+              product: {
+                include: {
+                  images: { orderBy: { position: 'asc' } },
+                  variants: { include: { inventory: true } },
+                  categories: { include: { category: true } },
+                  collections: { include: { collection: true } },
+                },
               },
             },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      console.error('Error fetching collections:', error);
+      return [];
+    }
   }
 
   static async getCollectionBySlug(slug: string) {
-    return prisma.collection.findUnique({
-      where: { slug },
-      include: {
-        products: {
-          include: {
-            product: {
-              include: {
-                images: { orderBy: { position: 'asc' } },
-                variants: { include: { inventory: true } },
-                categories: { include: { category: true } },
-                collections: { include: { collection: true } },
+    try {
+      return await prisma.collection.findUnique({
+        where: { slug },
+        include: {
+          products: {
+            include: {
+              product: {
+                include: {
+                  images: { orderBy: { position: 'asc' } },
+                  variants: { include: { inventory: true } },
+                  categories: { include: { category: true } },
+                  collections: { include: { collection: true } },
+                },
               },
             },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      console.error(`Error fetching collection ${slug}:`, error);
+      return null;
+    }
   }
 
   static async getCategories() {
-    return prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: { position: 'asc' },
-      include: {
-        _count: { select: { products: true } },
-      },
-    });
+    try {
+      return await prisma.category.findMany({
+        where: { isActive: true },
+        orderBy: { position: 'asc' },
+        include: {
+          _count: { select: { products: true } },
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      return [];
+    }
   }
 
   static async getCategoryBySlug(slug: string) {
-    return prisma.category.findUnique({
-      where: { slug },
-      include: {
-        products: {
-          include: {
-            product: {
-              include: {
-                images: { orderBy: { position: 'asc' } },
-                variants: { include: { inventory: true } },
+    try {
+      return await prisma.category.findUnique({
+        where: { slug },
+        include: {
+          products: {
+            include: {
+              product: {
+                include: {
+                  images: { orderBy: { position: 'asc' } },
+                  variants: { include: { inventory: true } },
+                },
               },
             },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      console.error(`Error fetching category ${slug}:`, error);
+      return null;
+    }
   }
 
   static async getFeaturedProducts() {
-    return prisma.product.findMany({
-      where: { status: 'ACTIVE', isFeatured: true },
-      include: {
-        images: { orderBy: { position: 'asc' } },
-        variants: { include: { inventory: true } },
-        categories: { include: { category: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 8,
-    });
+    try {
+      return await prisma.product.findMany({
+        where: { status: 'ACTIVE', isFeatured: true },
+        include: {
+          images: { orderBy: { position: 'asc' } },
+          variants: { include: { inventory: true } },
+          categories: { include: { category: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 8,
+      });
+    } catch (error) {
+      console.error('Error fetching featured products:', error);
+      return [];
+    }
   }
 
   static async getAllProducts(params?: {
@@ -88,92 +113,112 @@ export class CatalogService {
     minPrice?: number;
     maxPrice?: number;
   }) {
-    const { categorySlug, search, sortBy, minPrice, maxPrice } = params || {};
+    try {
+      const { categorySlug, search, sortBy, minPrice, maxPrice } = params || {};
 
-    const where: any = { status: 'ACTIVE' };
+      const where: any = { status: 'ACTIVE' };
 
-    if (categorySlug && categorySlug !== 'todos') {
-      where.categories = {
-        some: {
-          category: { slug: categorySlug },
+      if (categorySlug && categorySlug !== 'todos') {
+        where.categories = {
+          some: {
+            category: { slug: categorySlug },
+          },
+        };
+      }
+
+      if (search) {
+        where.OR = [
+          { name: { contains: search } },
+          { description: { contains: search } },
+          { brand: { contains: search } },
+        ];
+      }
+
+      if (minPrice !== undefined || maxPrice !== undefined) {
+        where.basePrice = {};
+        if (minPrice !== undefined) where.basePrice.gte = minPrice;
+        if (maxPrice !== undefined) where.basePrice.lte = maxPrice;
+      }
+
+      let orderBy: any = { createdAt: 'desc' };
+      if (sortBy === 'price_asc') orderBy = { basePrice: 'asc' };
+      if (sortBy === 'price_desc') orderBy = { basePrice: 'desc' };
+      if (sortBy === 'newest') orderBy = { createdAt: 'desc' };
+
+      return await prisma.product.findMany({
+        where,
+        orderBy,
+        include: {
+          images: { orderBy: { position: 'asc' } },
+          variants: { include: { inventory: true } },
+          categories: { include: { category: true } },
+          collections: { include: { collection: true } },
         },
-      };
+      });
+    } catch (error) {
+      console.error('Error fetching all products:', error);
+      return [];
     }
-
-    if (search) {
-      where.OR = [
-        { name: { contains: search } },
-        { description: { contains: search } },
-        { brand: { contains: search } },
-      ];
-    }
-
-    if (minPrice !== undefined || maxPrice !== undefined) {
-      where.basePrice = {};
-      if (minPrice !== undefined) where.basePrice.gte = minPrice;
-      if (maxPrice !== undefined) where.basePrice.lte = maxPrice;
-    }
-
-    let orderBy: any = { createdAt: 'desc' };
-    if (sortBy === 'price_asc') orderBy = { basePrice: 'asc' };
-    if (sortBy === 'price_desc') orderBy = { basePrice: 'desc' };
-    if (sortBy === 'newest') orderBy = { createdAt: 'desc' };
-
-    return prisma.product.findMany({
-      where,
-      orderBy,
-      include: {
-        images: { orderBy: { position: 'asc' } },
-        variants: { include: { inventory: true } },
-        categories: { include: { category: true } },
-        collections: { include: { collection: true } },
-      },
-    });
   }
 
   static async getProductBySlug(slug: string) {
-    return prisma.product.findUnique({
-      where: { slug },
-      include: {
-        images: { orderBy: { position: 'asc' } },
-        variants: {
-          include: { inventory: true },
-          orderBy: { position: 'asc' },
+    try {
+      return await prisma.product.findUnique({
+        where: { slug },
+        include: {
+          images: { orderBy: { position: 'asc' } },
+          variants: {
+            include: { inventory: true },
+            orderBy: { position: 'asc' },
+          },
+          categories: { include: { category: true } },
+          reviews: {
+            where: { isApproved: true },
+            include: { user: { select: { name: true, image: true } } },
+            orderBy: { createdAt: 'desc' },
+          },
         },
-        categories: { include: { category: true } },
-        reviews: {
-          where: { isApproved: true },
-          include: { user: { select: { name: true, image: true } } },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
+      });
+    } catch (error) {
+      console.error(`Error fetching product ${slug}:`, error);
+      return null;
+    }
   }
 
   static async getRelatedProducts(productId: string, categoryId?: string) {
-    return prisma.product.findMany({
-      where: {
-        id: { not: productId },
-        status: 'ACTIVE',
-        ...(categoryId
-          ? { categories: { some: { categoryId } } }
-          : {}),
-      },
-      include: {
-        images: { orderBy: { position: 'asc' } },
-        variants: { include: { inventory: true } },
-      },
-      take: 4,
-    });
+    try {
+      return await prisma.product.findMany({
+        where: {
+          id: { not: productId },
+          status: 'ACTIVE',
+          ...(categoryId
+            ? { categories: { some: { categoryId } } }
+            : {}),
+        },
+        include: {
+          images: { orderBy: { position: 'asc' } },
+          variants: { include: { inventory: true } },
+        },
+        take: 4,
+      });
+    } catch (error) {
+      console.error(`Error fetching related products for ${productId}:`, error);
+      return [];
+    }
   }
 
   static async getBanners(placement?: string) {
-    return prisma.banner.findMany({
-      where: {
-        isActive: true,
-        ...(placement ? { placement } : {}),
-      },
-      orderBy: { position: 'asc' },
-    });
+    try {
+      return await prisma.banner.findMany({
+        where: {
+          isActive: true,
+          ...(placement ? { placement } : {}),
+        },
+        orderBy: { position: 'asc' },
+      });
+    } catch (error) {
+      console.error(`Error fetching banners for placement ${placement}:`, error);
+      return [];
+    }
   }
 }

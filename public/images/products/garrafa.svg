@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#242424" />
+      <stop offset="100%" stop-color="#121212" />
+    </radialGradient>
+    <linearGradient id="metalGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#181818"/>
+      <stop offset="30%" stop-color="#2a2a2a"/>
+      <stop offset="70%" stop-color="#151515"/>
+      <stop offset="100%" stop-color="#0e0e0e"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" fill="url(#bgGrad)" />
+  <g filter="url(#shadow)" transform="translate(145, 45)">
+    <rect x="35" y="0" width="40" height="30" rx="6" fill="#111" stroke="#333" stroke-width="1.5"/>
+    <rect x="42" y="30" width="26" height="15" fill="#222" />
+    <path d="M25 45 C25 45 85 45 85 45 C95 45 95 65 95 75 L95 285 C95 295 85 300 55 300 C25 300 15 295 15 285 L15 75 C15 65 15 45 25 45 Z" fill="url(#metalGrad)" stroke="#333" stroke-width="1.5"/>
+    <g transform="translate(35, 145) scale(0.4)">
+      <g fill="#FF6500">
+  <path d="M 50 8 C 68 8, 84 20, 88 38 C 76 34, 62 38, 54 48 C 50 42, 44 32, 50 8 Z" />
+  <path d="M 92 50 C 92 68, 80 84, 62 88 C 66 76, 62 62, 52 54 C 58 50, 68 44, 92 50 Z" />
+  <path d="M 50 92 C 32 92, 16 80, 12 62 C 24 66, 38 62, 46 52 C 50 58, 56 68, 50 92 Z" />
+  <path d="M 8 50 C 8 32, 20 16, 38 12 C 34 24, 38 38, 48 46 C 42 50, 32 56, 8 50 Z" />
+</g>
+    </g>
+  </g>
+</svg>

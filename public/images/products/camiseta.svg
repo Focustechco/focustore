@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#242424" />
+      <stop offset="100%" stop-color="#111111" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" fill="url(#bgGrad)" />
+  <g filter="url(#shadow)">
+    <path d="M140 70 Q170 95 200 95 Q230 95 260 70 L330 110 L295 165 L260 145 L260 340 L140 340 L140 145 L105 165 L70 110 Z" fill="#141414" stroke="#282828" stroke-width="2" />
+    <path d="M165 70 Q200 90 235 70" fill="none" stroke="#2e2e2e" stroke-width="4" />
+    <g transform="translate(205, 135) scale(0.35)">
+      <g fill="#FF6500">
+  <path d="M 50 8 C 68 8, 84 20, 88 38 C 76 34, 62 38, 54 48 C 50 42, 44 32, 50 8 Z" />
+  <path d="M 92 50 C 92 68, 80 84, 62 88 C 66 76, 62 62, 52 54 C 58 50, 68 44, 92 50 Z" />
+  <path d="M 50 92 C 32 92, 16 80, 12 62 C 24 66, 38 62, 46 52 C 50 58, 56 68, 50 92 Z" />
+  <path d="M 8 50 C 8 32, 20 16, 38 12 C 34 24, 38 38, 48 46 C 42 50, 32 56, 8 50 Z" />
+</g>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#242424" />
+      <stop offset="100%" stop-color="#121212" />
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+  <rect width="400" height="400" fill="url(#bgGrad)" />
+  <g filter="url(#shadow)" transform="translate(125, 40)">
+    <circle cx="75" cy="40" r="30" fill="none" stroke="#666" stroke-width="6" />
+    <circle cx="75" cy="40" r="24" fill="none" stroke="#222" stroke-width="2" />
+    <rect x="71" y="70" width="8" height="25" rx="3" fill="#555" />
+    <polygon points="75,100 140,135 140,210 75,245 10,210 10,135" fill="#121212" stroke="#2a2a2a" stroke-width="3"/>
+    <g transform="translate(32, 130) scale(0.85)">
+      <g fill="#FF6500">
+  <path d="M 50 8 C 68 8, 84 20, 88 38 C 76 34, 62 38, 54 48 C 50 42, 44 32, 50 8 Z" />
+  <path d="M 92 50 C 92 68, 80 84, 62 88 C 66 76, 62 62, 52 54 C 58 50, 68 44, 92 50 Z" />
+  <path d="M 50 92 C 32 92, 16 80, 12 62 C 24 66, 38 62, 46 52 C 50 58, 56 68, 50 92 Z" />
+  <path d="M 8 50 C 8 32, 20 16, 38 12 C 34 24, 38 38, 48 46 C 42 50, 32 56, 8 50 Z" />
+</g>
+    </g>
+  </g>
+</svg>

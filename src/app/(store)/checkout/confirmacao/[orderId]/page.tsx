@@ -7,11 +7,6 @@ import { formatPrice, formatDate } from '@/lib/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { OrderConfirmationClient } from './order-confirmation-client';
 
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 interface Props {
   params: Promise<{ orderId: string }>;
 }

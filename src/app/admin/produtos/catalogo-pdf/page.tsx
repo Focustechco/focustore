@@ -2,11 +2,6 @@ import React from 'react';
 import { prisma } from '@/lib/db/prisma';
 import { CatalogPdfView } from '@/components/admin/catalog-pdf-view';
 
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 export const dynamic = 'force-dynamic';
 
 export default async function CatalogPdfPage() {

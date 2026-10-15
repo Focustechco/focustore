@@ -1,5 +1,10 @@
 import React from 'react';
 
+// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
+// Remove this opt-out after verifying the segment passes validation without it.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 export default function TermsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 space-y-6 text-sm text-muted">

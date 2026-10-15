@@ -4,6 +4,11 @@ import { CartProvider } from '@/modules/cart/cart-context';
 import { FavoritesProvider } from '@/modules/favorites/favorites-context';
 import { CartDrawer } from '@/components/commerce/cart-drawer';
 
+// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
+// Remove this opt-out after verifying the segment passes validation without it.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 export const metadata: Metadata = {
   title: 'Focus Store — Loja Oficial | Tecnologia, Design & Streetwear',
   description: 'Produtos exclusivos para quem vive tecnologia, criatividade e inovação. Streetwear, vestuário premium, garrafas térmicas e acessórios.',

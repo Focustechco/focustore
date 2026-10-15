@@ -4,11 +4,6 @@ import { ChevronRight, Package } from 'lucide-react';
 import { prisma } from '@/lib/db/prisma';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
 
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 export const dynamic = 'force-dynamic';
 
 export default async function CustomerOrdersPage() {

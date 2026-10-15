@@ -4,11 +4,6 @@ import { Package, Heart, MapPin, User, ChevronRight } from 'lucide-react';
 import { OrderService } from '@/modules/orders/order.service';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
 
-// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
-// Remove this opt-out after verifying the segment passes validation without it.
-// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
-export const instant = false;
-
 export default async function CustomerAccountPage() {
   // Usuário padrão de demonstração cliente@focusstore.com
   const userOrders = await OrderService.getOrdersByUserId('mock-customer-id');

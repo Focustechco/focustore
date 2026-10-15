@@ -1,4 +1,4 @@
----
+nao---
 name: Seguranca e Qualidade
 description: "Use when reviewing or changing code for security, backend failures, correctness, reliability, or maintainability, especially in this Next.js, TypeScript, Prisma e-commerce project. Finds root causes, reports prioritized improvements, and asks the user to approve changes before editing code."
 tools: [read, search, execute, edit]

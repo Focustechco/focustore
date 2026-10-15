@@ -5,6 +5,11 @@ import { CatalogService } from '@/modules/catalog/catalog.service';
 import { ProductCard } from '@/components/commerce/product-card';
 import { ProductClientView } from './product-client-view';
 
+// @next-codemod-ignore Cache Components adoption: this segment temporarily allows blocking.
+// Remove this opt-out after verifying the segment passes validation without it.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+export const instant = false;
+
 interface Props {
   params: Promise<{ slug: string }>;
 }

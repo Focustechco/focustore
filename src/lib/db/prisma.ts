@@ -1,24 +1,31 @@
-import { PrismaClient } from '@prisma/client';
-import path from 'path';
-import fs from 'fs';
+import { PrismaClient } from "@prisma/client";
+import path from "path";
+import fs from "fs";
 
 function getDatabaseUrl(): string {
   // If remote database URL is explicitly defined
-  if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith('file:')) {
+  if (
+    process.env.DATABASE_URL &&
+    !process.env.DATABASE_URL.startsWith("file:")
+  ) {
     return process.env.DATABASE_URL;
   }
 
   // On Serverless / Vercel (Linux environments)
-  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NODE_ENV === 'production') {
+  if (
+    process.env.VERCEL ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.NODE_ENV === "production"
+  ) {
     try {
-      const tmpDbPath = path.join('/tmp', 'dev.db');
-      
+      const tmpDbPath = path.join("/tmp", "dev.db");
+
       // Possible locations of the bundled dev.db
       const possibleSources = [
-        path.join(process.cwd(), 'prisma', 'dev.db'),
-        path.join(process.cwd(), 'dev.db'),
-        path.join(__dirname, '..', '..', '..', 'prisma', 'dev.db'),
-        path.join(__dirname, 'prisma', 'dev.db'),
+        path.join(process.cwd(), "prisma", "dev.db"),
+        path.join(process.cwd(), "dev.db"),
+        path.join(__dirname, "..", "..", "..", "prisma", "dev.db"),
+        path.join(__dirname, "prisma", "dev.db"),
       ];
 
       if (!fs.existsSync(tmpDbPath)) {
@@ -38,13 +45,13 @@ function getDatabaseUrl(): string {
         return `file:${tmpDbPath}`;
       }
     } catch (e) {
-      console.warn('Vercel serverless /tmp db setup notice:', e);
+      console.warn("Vercel serverless /tmp db setup notice:", e);
     }
   }
 
   // Standard local SQLite path
-  const localDb = path.join(process.cwd(), 'prisma', 'dev.db');
-  return `file:${localDb.replace(/\\/g, '/')}`;
+  const localDb = path.join(process.cwd(), "prisma", "dev.db");
+  return `file:${localDb.replace(/\\/g, "/")}`;
 }
 
 const dbUrl = getDatabaseUrl();
@@ -62,7 +69,7 @@ export const prisma =
         url: dbUrl,
       },
     },
-    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

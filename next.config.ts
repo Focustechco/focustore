@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  cacheComponents: true,
+  cacheComponents: false,
   serverExternalPackages: ['@prisma/client', 'prisma'],
   outputFileTracingIncludes: {
     '/**': ['./prisma/**'],

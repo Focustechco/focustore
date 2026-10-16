@@ -11,7 +11,6 @@ import { FAQAccordion } from '@/components/commerce/faq-accordion';
 import { BenefitsBar } from '@/components/commerce/benefits-bar';
 import { Button } from '@/components/ui/button';
 
-export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const [products, heroBanners, featuredBanners, realLifeBanners] = await Promise.all([

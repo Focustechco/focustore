@@ -1,23 +1,22 @@
+
 @import url('https://fonts.cdnfonts.com/css/sf-pro-display');
 @import "tailwindcss";
-<<<<<<< HEAD
 @config "../../tailwind.config.ts";
-=======
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
->>>>>>> ba138c8a45c420c7700cefbd1ba36264136a8b96
 
 :root {
   --background: #080808;
   --foreground: #FFFFFF;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   background-color: #080808;
   color: #FFFFFF;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+    'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -25,32 +24,34 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading, nav, button {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+    'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   letter-spacing: -0.022em;
 }
 
 /* Custom subtle scrollbar */
-::-webkit-scrollbar {
+*::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
+*::-webkit-scrollbar-track {
   background: #080808;
 }
 
-::-webkit-scrollbar-thumb {
+*::-webkit-scrollbar-thumb {
   background: #1C1C1C;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
+*::-webkit-scrollbar-thumb:hover {
   background: #FF6500;
 }
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -60,6 +61,7 @@ h1, h2, h3, h4, h5, h6, .font-heading, nav, button {
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -94,7 +96,7 @@ h1, h2, h3, h4, h5, h6, .font-heading, nav, button {
 
   aside,
   nav,
-  header.no-print,
+  header,
   .no-print,
   .print\:hidden,
   [data-no-print="true"] {

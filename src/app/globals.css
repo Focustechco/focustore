@@ -1,6 +1,13 @@
 @import url('https://fonts.cdnfonts.com/css/sf-pro-display');
 @import "tailwindcss";
+<<<<<<< HEAD
 @config "../../tailwind.config.ts";
+=======
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+>>>>>>> ba138c8a45c420c7700cefbd1ba36264136a8b96
 
 :root {
   --background: #080808;

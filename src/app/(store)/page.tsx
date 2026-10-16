@@ -10,9 +10,25 @@ import { CommunityInstagramGallery } from '@/components/commerce/community-insta
 import { FAQAccordion } from '@/components/commerce/faq-accordion';
 import { BenefitsBar } from '@/components/commerce/benefits-bar';
 import { Button } from '@/components/ui/button';
+import { Suspense } from "react";
 
+// Mantenha os imports que já existem no arquivo.
 
-export default async function HomePage() {
+export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen p-8">
+          Carregando produtos...
+        </div>
+      }
+    >
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+async function HomePageContent() {
   const [products, heroBanners, featuredBanners, realLifeBanners] = await Promise.all([
     CatalogService.getAllProducts(),
     CatalogService.getBanners('home_hero'),

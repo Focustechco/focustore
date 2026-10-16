@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ShieldCheck, Truck } from 'lucide-react';
 import { FocusLogo } from '@/components/ui/focus-logo';
+import { CurrentYear } from "./current-year";
 
 export function Footer() {
   return (
@@ -71,7 +72,7 @@ export function Footer() {
 
         {/* Rodapé Bottom */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-zinc-500">
-          <p>© {new Date().getFullYear()} Focus Store Oficial®. Todos os direitos reservados.</p>
+          <p>© <CurrentYear /> Focus Store Oficial®. Todos os direitos reservados.</p>
           <div className="flex items-center gap-6">
             <span className="flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-400" /> Compra 100% Segura</span>
             <span className="flex items-center gap-1.5"><Truck size={14} className="text-[#FF6500]" /> Entrega em todo o Brasil</span>

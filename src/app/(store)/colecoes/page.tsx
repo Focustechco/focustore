@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ChevronRight, Sparkles, ArrowRight, Layers, Flame } from 'lucide-react';
+import { ChevronRight, Sparkles, ArrowRight, Layers } from 'lucide-react';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { ProductCard } from '@/components/commerce/product-card';
 
@@ -52,11 +52,6 @@ export default async function CollectionsPage() {
 
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           <div className="lg:col-span-7 space-y-5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6500] text-white text-xs font-black uppercase tracking-widest shadow-md shadow-[#FF6500]/40">
-              <Flame size={14} className="fill-white" />
-              <span>Nova Coleção • Edição Especial</span>
-            </div>
-
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight uppercase">
               Coleção Focus <span className="text-[#FF6500]">Linguagens de Programação</span>
             </h2>

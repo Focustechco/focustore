@@ -29,6 +29,46 @@ export function Header() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [customer, setCustomer] = useState<CustomerSession | null>(null);
+  const navRef = React.useRef<HTMLElement>(null);
+  const navItemRefs = React.useRef<(HTMLAnchorElement | null)[]>([]);
+  const searchFormRef = React.useRef<HTMLFormElement>(null);
+  const [coveredNavItems, setCoveredNavItems] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (!isSearchOpen) {
+      setCoveredNavItems([]);
+      return;
+    }
+
+    const updateCoveredNavItems = () => {
+      const searchBounds = searchFormRef.current?.getBoundingClientRect();
+      if (!searchBounds) return;
+
+      setCoveredNavItems(
+        navItemRefs.current.flatMap((item, index) => {
+          if (!item) return [];
+          const itemBounds = item.getBoundingClientRect();
+          const overlaps =
+            itemBounds.left < searchBounds.right &&
+            itemBounds.right > searchBounds.left &&
+            itemBounds.top < searchBounds.bottom &&
+            itemBounds.bottom > searchBounds.top;
+          return overlaps ? [index] : [];
+        }),
+      );
+    };
+
+    updateCoveredNavItems();
+    window.addEventListener('resize', updateCoveredNavItems);
+    const resizeObserver = new ResizeObserver(updateCoveredNavItems);
+    if (navRef.current) resizeObserver.observe(navRef.current);
+    if (searchFormRef.current) resizeObserver.observe(searchFormRef.current);
+
+    return () => {
+      window.removeEventListener('resize', updateCoveredNavItems);
+      resizeObserver.disconnect();
+    };
+  }, [isSearchOpen]);
 
   useEffect(() => {
     let active = true;
@@ -88,16 +128,21 @@ export function Header() {
           <FocusLogo size="xl" />
         </Link>
 
-        <nav aria-label="Categorias" className="hidden flex-1 items-center justify-center gap-5 xl:flex xl:-translate-x-3 2xl:gap-8">
-          {NAV_ITEMS.map((item) => {
+        <nav ref={navRef} aria-label="Categorias" className="hidden flex-1 items-center justify-center gap-5 xl:flex xl:-translate-x-3 2xl:gap-8">
+          {NAV_ITEMS.map((item, index) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.href}
+                ref={(element) => {
+                  navItemRefs.current[index] = element;
+                }}
                 href={item.href}
-                className={`whitespace-nowrap text-[11px] font-semibold uppercase transition-colors 2xl:text-xs ${
+                aria-hidden={coveredNavItems.includes(index)}
+                tabIndex={coveredNavItems.includes(index) ? -1 : undefined}
+                className={`${coveredNavItems.includes(index) ? 'invisible pointer-events-none' : ''} whitespace-nowrap text-[11px] font-semibold uppercase transition-colors 2xl:text-xs ${
                   item.label === 'Ofertas'
-                    ? 'text-[#FF5500] hover:text-[#df4700]'
+                    ? 'text-white hover:text-[#FF5500]'
                     : isActive
                       ? 'text-[#FF5500]'
                         : 'text-white hover:text-[#FF5500]'
@@ -111,20 +156,22 @@ export function Header() {
 
         {/* AÇÕES À DIREITA */}
         <div className="flex flex-shrink-0 items-center gap-3 text-white sm:gap-5">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen((open) => !open)}
-              aria-label="Buscar produtos"
-              aria-expanded={isSearchOpen}
-              className="flex items-center justify-center p-1 transition-colors hover:text-[#FF5500]"
-            >
-              <Search size={22} strokeWidth={2.2} />
-            </button>
-            {isSearchOpen && (
+          <div className="relative h-8 w-8 flex-shrink-0">
+            {!isSearchOpen ? (
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen(true)}
+                aria-label="Buscar produtos"
+                aria-expanded={false}
+                className="flex h-full w-full items-center justify-center transition-colors hover:text-[#FF5500]"
+              >
+                <Search size={22} strokeWidth={2.2} />
+              </button>
+            ) : (
               <form
+                ref={searchFormRef}
                 onSubmit={handleSearch}
-                className="absolute right-0 top-full z-50 mt-4 flex w-[min(85vw,320px)] items-center rounded-lg border border-white/10 bg-[#121212] p-2 shadow-xl"
+                className="animate-search-appear absolute right-0 top-1/2 z-50 flex w-[min(40vw,280px)] -translate-y-1/2 items-center rounded-full border border-white/15 bg-[#121212] px-4 py-1 shadow-xl transition-colors focus-within:border-[#FF5500]"
               >
                 <input
                   autoFocus
@@ -132,14 +179,16 @@ export function Header() {
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Buscar produtos..."
-                  className="w-full bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-zinc-500"
+                  aria-label="Buscar produtos"
+                  className="w-full min-w-0 bg-transparent py-1 text-sm text-white outline-none placeholder:text-zinc-500"
                 />
                 <button
-                  type="submit"
-                  aria-label="Enviar busca"
-                  className="p-2 text-white transition-colors hover:text-[#FF5500]"
+                  type="button"
+                  onClick={() => setIsSearchOpen(false)}
+                  aria-label="Fechar busca"
+                  className="ml-2 flex-shrink-0 text-zinc-400 transition-colors hover:text-[#FF5500]"
                 >
-                  <Search size={18} />
+                  <X size={18} />
                 </button>
               </form>
             )}
@@ -239,7 +288,9 @@ export function Header() {
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
                 className={`rounded-md px-2.5 py-2.5 transition-colors ${
-                  pathname === item.href || item.label === 'Ofertas'
+                  item.label === 'Ofertas'
+                    ? 'text-white hover:text-[#FF5500]'
+                    : pathname === item.href
                     ? 'text-[#FF5500]'
                     : 'text-white hover:text-[#FF5500]'
                 }`}

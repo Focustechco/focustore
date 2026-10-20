@@ -261,6 +261,27 @@ export function CommunityInstagramGallery({ banners }: { banners?: any[] }) {
                 priority
                 draggable={false}
               />
+              {posts.length > 1 && (
+                <div
+                  aria-label="Selecionar foto"
+                  className="absolute inset-x-0 bottom-3 z-10 flex items-center justify-center gap-2"
+                >
+                  {posts.map((post, index) => (
+                    <button
+                      key={post.id}
+                      type="button"
+                      onClick={() => setSelectedPostIndex(index)}
+                      aria-label={`Ver foto ${index + 1} de ${posts.length}`}
+                      aria-current={index === selectedPostIndex ? 'true' : undefined}
+                      className={`h-1.5 cursor-pointer rounded-full transition-all duration-300 ${
+                        index === selectedPostIndex
+                          ? 'w-8 bg-[#FF6500]'
+                          : 'w-2 bg-white/50 hover:bg-white/80'
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
             <p className="text-center text-sm font-semibold text-white">
               {posts[selectedPostIndex].productName}

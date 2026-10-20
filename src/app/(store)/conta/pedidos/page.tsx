@@ -3,19 +3,19 @@ import Link from 'next/link';
 import { ChevronRight, Package } from 'lucide-react';
 import { prisma } from '@/lib/db/prisma';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
+import { getAuthenticatedUser } from '@/lib/auth/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CustomerOrdersPage() {
-  let orders: any[] = [];
-  try {
-    orders = await prisma.order.findMany({
-      include: { items: true, payments: true, shipments: true },
-      orderBy: { createdAt: 'desc' },
-    });
-  } catch (err) {
-    console.error('Error fetching customer orders:', err);
-  }
+  const customer = await getAuthenticatedUser();
+  const orders = customer
+    ? await prisma.order.findMany({
+        where: { userId: customer.id },
+        include: { items: true, payments: true, shipments: true },
+        orderBy: { createdAt: 'desc' },
+      })
+    : [];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -31,12 +31,19 @@ export default async function CustomerOrdersPage() {
         <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
           Histórico de Pedidos
         </h1>
+        {!customer && (
+          <p className="mt-2 text-sm text-muted">
+            Entre na sua conta para consultar seu histórico de pedidos.
+          </p>
+        )}
       </div>
 
       <div className="space-y-4">
         {orders.length === 0 ? (
           <div className="p-8 text-center rounded-2xl bg-surface border border-white/10 text-muted text-sm">
-            Nenhum pedido encontrado no momento.
+            {customer
+              ? 'Nenhum pedido encontrado no momento.'
+              : 'Faça login para ver seus pedidos.'}
           </div>
         ) : (
           orders.map((ord) => (

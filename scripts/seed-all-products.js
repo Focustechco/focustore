@@ -86,19 +86,19 @@ async function seedAllProducts() {
   if (!colFocusAmsterda) {
     colFocusAmsterda = await prisma.collection.create({
       data: {
-        name: 'Focus Amsterdã',
+        name: 'Focus Linguagens de Programação',
         slug: 'focus-amsterda',
-        headline: 'Edição Especial Laranja Focus',
-        description: 'Linha exclusiva em Laranja Focus inspirada na cultura urbana com logotipo oficial em branco puro.',
+        headline: 'Uma coleção para quem transforma ideias em código',
+        description: 'Linha exclusiva inspirada no universo da programação, com Laranja Focus e logotipo oficial em branco puro.',
       },
     });
   } else {
     colFocusAmsterda = await prisma.collection.update({
       where: { id: colFocusAmsterda.id },
       data: {
-        name: 'Focus Amsterdã',
-        headline: 'Edição Especial Laranja Focus',
-        description: 'Linha exclusiva em Laranja Focus inspirada na cultura urbana com logotipo oficial em branco puro.',
+        name: 'Focus Linguagens de Programação',
+        headline: 'Uma coleção para quem transforma ideias em código',
+        description: 'Linha exclusiva inspirada no universo da programação, com Laranja Focus e logotipo oficial em branco puro.',
       },
     });
   }

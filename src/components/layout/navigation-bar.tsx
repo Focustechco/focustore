@@ -9,8 +9,6 @@ const NAV_ITEMS = [
   { label: 'Todos', href: '/categoria/todos' },
   { label: 'Vestuário', href: '/categoria/vestuario' },
   { label: 'Acessórios', href: '/categoria/acessorios' },
-  { label: 'Tecnologia', href: '/categoria/tecnologia' },
-  { label: 'Lifestyle', href: '/categoria/lifestyle' },
   { label: 'Coleções', href: '/colecoes' },
   { label: 'Ofertas', href: '/categoria/ofertas' },
 ];

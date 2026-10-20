@@ -1,19 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Search, Heart, ShoppingBag, User, Menu, X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Search, Heart, User, Menu, X, LogOut, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/modules/cart/cart-context';
 import { useFavorites } from '@/modules/favorites/favorites-context';
 import { FocusLogo } from '@/components/ui/focus-logo';
+import { LoginModal, type CustomerSession } from '@/components/layout/login-modal';
+
+const NAV_ITEMS = [
+  { label: 'Todos', href: '/categoria/todos' },
+  { label: 'Vestuário', href: '/categoria/vestuario' },
+  { label: 'Acessórios', href: '/categoria/acessorios' },
+  { label: 'Tecnologia', href: '/categoria/tecnologia' },
+  { label: 'Lifestyle', href: '/categoria/lifestyle' },
+  { label: 'Coleções', href: '/colecoes' },
+  { label: 'Ofertas', href: '/categoria/ofertas' },
+];
 
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const { totalItems, setIsCartOpen } = useCart();
   const { totalFavorites } = useFavorites();
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [customer, setCustomer] = useState<CustomerSession | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadSession() {
+      try {
+        const response = await fetch('/api/auth/session', { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`Sessão do cliente retornou HTTP ${response.status}`);
+        }
+        const result = (await response.json()) as { user: CustomerSession | null };
+        if (active) setCustomer(result.user);
+      } catch (error) {
+        console.error('Não foi possível carregar a sessão do cliente:', error);
+      }
+    }
+
+    void loadSession();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,83 +59,151 @@ export function Header() {
     }
   };
 
+  function handleAuthenticated(user: CustomerSession) {
+    setCustomer(user);
+    setIsLoginOpen(false);
+    router.push('/conta');
+  }
+
+  async function handleLogout() {
+    try {
+      const response = await fetch('/api/auth/session', { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error(`Encerramento de sessão retornou HTTP ${response.status}`);
+      }
+      setCustomer(null);
+      router.push('/');
+    } catch (error) {
+      console.error('Não foi possível encerrar a sessão do cliente:', error);
+    }
+  }
+
+  const customerName = customer?.name?.trim() || customer?.email.split('@')[0];
+
   return (
-    <header className="sticky top-0 z-40 bg-[#080808]/95 backdrop-blur-md border-b border-white/10">
-      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-8">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#080808] text-white">
+      <div className="relative mx-auto flex h-[76px] max-w-[1800px] items-center justify-between gap-3 px-4 sm:px-6 lg:h-[88px] lg:px-10">
         {/* LOGO FOCUS STORE OFICIAL */}
         <Link href="/" className="flex items-center flex-shrink-0 relative overflow-visible -ml-1 sm:ml-0">
-          <FocusLogo size="lg" />
+          <FocusLogo size="xl" />
         </Link>
 
-        {/* BARRA DE PESQUISA CENTRALIZADA E MAIS COMPACTA */}
-        <div className="hidden md:flex flex-1 justify-center px-4">
-          <form
-            onSubmit={handleSearch}
-            className="w-full max-w-[360px] relative flex items-center"
-          >
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar produtos..."
-              className="w-full bg-[#141414] hover:bg-[#181818] border border-white/10 focus:border-[#FF6500] focus:ring-1 focus:ring-[#FF6500] rounded-full py-2 pl-10 pr-4 text-xs text-white placeholder-zinc-500 focus:outline-none transition-all"
-            />
-            <Search className="absolute left-3.5 text-zinc-500" size={15} />
-          </form>
-        </div>
+        <nav aria-label="Categorias" className="hidden flex-1 items-center justify-center gap-5 xl:flex xl:-translate-x-3 2xl:gap-8">
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`whitespace-nowrap text-[11px] font-semibold uppercase transition-colors 2xl:text-xs ${
+                  item.label === 'Ofertas'
+                    ? 'text-[#FF5500] hover:text-[#df4700]'
+                    : isActive
+                      ? 'text-[#FF5500]'
+                        : 'text-white hover:text-[#FF5500]'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
         {/* AÇÕES À DIREITA */}
-        <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
-          <Link
-            href="/conta"
-            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-white/90 hover:text-[#FF6500] transition-colors tracking-wide uppercase"
-          >
-            <User size={16} className="text-zinc-400" />
-            <span>Entrar</span>
-          </Link>
+        <div className="flex flex-shrink-0 items-center gap-3 text-white sm:gap-5">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen((open) => !open)}
+              aria-label="Buscar produtos"
+              aria-expanded={isSearchOpen}
+              className="flex items-center justify-center p-1 transition-colors hover:text-[#FF5500]"
+            >
+              <Search size={22} strokeWidth={2.2} />
+            </button>
+            {isSearchOpen && (
+              <form
+                onSubmit={handleSearch}
+                className="absolute right-0 top-full z-50 mt-4 flex w-[min(85vw,320px)] items-center rounded-lg border border-white/10 bg-[#121212] p-2 shadow-xl"
+              >
+                <input
+                  autoFocus
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Buscar produtos..."
+                  className="w-full bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-zinc-500"
+                />
+                <button
+                  type="submit"
+                  aria-label="Enviar busca"
+                  className="p-2 text-white transition-colors hover:text-[#FF5500]"
+                >
+                  <Search size={18} />
+                </button>
+              </form>
+            )}
+          </div>
+          {customer ? (
+            <Link
+              href="/conta"
+              aria-label={`Minha conta: ${customerName}`}
+              className="hidden items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors hover:text-[#FF5500] sm:flex"
+            >
+              <User size={22} strokeWidth={1.8} />
+              <span className="max-w-24 truncate 2xl:max-w-32">Olá, {customerName}</span>
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsLoginOpen(true)}
+              aria-label="Entrar na conta"
+              className="hidden items-center justify-center p-1 transition-colors hover:text-[#FF5500] sm:flex"
+            >
+              <User size={22} strokeWidth={1.8} />
+            </button>
+          )}
+
+          {customer && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              aria-label="Sair da conta"
+              className="hidden items-center p-1 text-zinc-400 transition-colors hover:text-[#FF5500] sm:flex"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
 
           <Link
             href="/conta/favoritos"
-            className="relative p-1 text-white/90 hover:text-[#FF6500] transition-colors flex items-center justify-center group focus:outline-none"
+            className="group relative flex items-center justify-center p-1 text-white transition-colors hover:text-[#FF5500] focus:outline-none"
             aria-label="Ver favoritos"
           >
             <Heart
               size={22}
               className={`transition-colors ${
                 totalFavorites > 0
-                  ? 'text-[#FF6500] fill-[#FF6500]'
-                  : 'text-white group-hover:text-[#FF6500]'
+                  ? 'fill-[#FF5500] text-[#FF5500]'
+                  : 'text-white group-hover:text-[#FF5500]'
               }`}
             />
             {totalFavorites > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-[#FF6500] text-white text-[10px] font-black w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full flex items-center justify-center shadow-[#FF6500]/60 shadow-sm px-1">
+              <span className="absolute -right-2 -top-1.5 flex h-[18px] min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF5500] px-1 text-[10px] font-black text-white shadow-sm shadow-[#FF5500]/60">
                 {totalFavorites}
               </span>
             )}
           </Link>
 
-          {/* ÍCONE CLEAN DE CARRINHO (SEM MOLDURA E SEM NOME) */}
           <button
             onClick={() => setIsCartOpen(true)}
-            className="relative p-1 text-white/90 hover:text-[#FF6500] transition-colors flex items-center justify-center group focus:outline-none"
+            className="group relative flex items-center justify-center p-1 text-white transition-colors hover:text-[#FF5500] focus:outline-none"
             aria-label="Abrir carrinho"
           >
-            {/* Ícone de Sacola / Carrinho Clean Fiel à Referência */}
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-6 h-6 text-white group-hover:text-[#FF6500] transition-colors"
-            >
-              <path d="M7 4 H17 L20 8 V18 C20 19.5 18.5 21 17 21 H7 C5.5 21 4 19.5 4 18 V8 L7 4 Z" />
-              <path d="M10 8.5 C10 9.8 10.9 10.8 12 10.8 C13.1 10.8 14 9.8 14 8.5" />
-            </svg>
+            <ShoppingBag size={22} strokeWidth={1.9} />
 
             {totalItems > 0 && (
-              <span className="absolute -top-1.5 -right-2 bg-[#FF6500] text-white text-[10px] font-black w-4.5 h-4.5 min-w-[18px] min-h-[18px] rounded-full flex items-center justify-center shadow-[#FF6500]/60 shadow-sm px-1">
+              <span className="absolute -right-2 -top-1.5 flex h-[18px] min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#FF5500] px-1 text-[10px] font-black text-white shadow-sm shadow-[#FF5500]/60">
                 {totalItems}
               </span>
             )}
@@ -106,7 +211,8 @@ export function Header() {
 
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-white hover:text-[#FF6500]"
+            aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+            className="p-2 text-white transition-colors hover:text-[#FF5500] xl:hidden"
           >
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
@@ -114,43 +220,90 @@ export function Header() {
       </div>
 
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#121212] px-4 py-4 border-b border-white/10 space-y-3">
+        <div className="absolute left-0 right-0 top-full z-40 space-y-3 border-b border-white/10 bg-[#121212] px-4 py-4 shadow-lg xl:hidden">
           <form onSubmit={handleSearch} className="relative flex items-center">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar produtos..."
-              className="w-full bg-[#181818] border border-white/10 rounded-lg py-2 pl-10 pr-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF6500]"
+              className="w-full rounded-lg border border-white/10 bg-[#181818] py-2 pl-10 pr-3 text-sm text-white placeholder-zinc-500 focus:border-[#FF5500] focus:outline-none"
             />
             <Search className="absolute left-3 text-zinc-500" size={16} />
           </form>
 
-          <div className="grid grid-cols-2 gap-2 pt-2 text-xs font-medium">
-            <Link
-              href="/conta"
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2.5 bg-[#181818] rounded-md text-white flex items-center gap-2"
-            >
-              <User size={16} className="text-[#FF6500]" /> Entrar / Conta
-            </Link>
+          <nav aria-label="Categorias" className="grid grid-cols-2 gap-2 border-b border-white/10 pb-3 text-xs font-semibold uppercase">
+            {NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`rounded-md px-2.5 py-2.5 transition-colors ${
+                  pathname === item.href || item.label === 'Ofertas'
+                    ? 'text-[#FF5500]'
+                    : 'text-white hover:text-[#FF5500]'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="grid grid-cols-2 gap-2 pt-1 text-xs font-medium">
+            {customer ? (
+              <>
+                <Link
+                  href="/conta"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-md border border-white/10 bg-[#181818] p-2.5 text-white"
+                >
+                  <User size={16} className="text-[#FF6500]" /> Olá, {customerName}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    void handleLogout();
+                  }}
+                  className="flex items-center gap-2 rounded-md border border-white/10 bg-[#181818] p-2.5 text-white"
+                >
+                  <LogOut size={16} className="text-[#FF6500]" /> Sair
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setIsLoginOpen(true);
+                }}
+                className="flex items-center gap-2 rounded-md border border-white/10 bg-[#181818] p-2.5 text-white"
+              >
+                <User size={16} className="text-[#FF6500]" /> Entrar / Conta
+              </button>
+            )}
             <Link
               href="/conta/favoritos"
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2.5 bg-[#181818] rounded-md text-white flex items-center gap-2"
+              className="flex items-center gap-2 rounded-md border border-white/10 bg-[#181818] p-2.5 text-white"
             >
               <Heart size={16} className="text-[#FF6500]" /> Favoritos
             </Link>
             <Link
               href="/admin/dashboard"
               onClick={() => setMobileMenuOpen(false)}
-              className="col-span-2 p-2.5 bg-[#FF6500]/10 border border-[#FF6500]/30 text-[#FF6500] rounded-md flex items-center justify-center font-bold"
+              className="col-span-2 flex items-center justify-center rounded-md border border-[#FF5500]/30 bg-[#FF5500]/10 p-2.5 font-bold text-[#FF5500]"
             >
               Painel Administrativo
             </Link>
           </div>
         </div>
       )}
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
+        onAuthenticated={handleAuthenticated}
+      />
     </header>
   );
 }

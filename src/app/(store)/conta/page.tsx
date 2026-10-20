@@ -3,10 +3,13 @@ import Link from 'next/link';
 import { Package, Heart, MapPin, User, ChevronRight } from 'lucide-react';
 import { OrderService } from '@/modules/orders/order.service';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
+import { getAuthenticatedUser } from '@/lib/auth/session';
 
 export default async function CustomerAccountPage() {
-  // Usuário padrão de demonstração cliente@focusstore.com
-  const userOrders = await OrderService.getOrdersByUserId('mock-customer-id');
+  const customer = await getAuthenticatedUser();
+  const userOrders = customer
+    ? await OrderService.getOrdersByUserId(customer.id)
+    : [];
   const recentOrders = userOrders.slice(0, 3);
 
   return (
@@ -16,6 +19,15 @@ export default async function CustomerAccountPage() {
         <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
           Minha Conta
         </h1>
+        {customer ? (
+          <p className="mt-2 text-sm text-muted">
+            Olá, {customer.name || customer.email}
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            Entre na sua conta pelo botão “Entrar” para ver seus pedidos e dados.
+          </p>
+        )}
       </div>
 
       {/* Cards de Navegação da Conta */}

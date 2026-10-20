@@ -120,7 +120,7 @@ export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[]
   const slide = slides[currentSlide] || slides[0];
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 select-none">
+    <section className="max-w-[1440px] mx-auto mt-6 px-4 sm:px-6 lg:px-8 select-none sm:mt-8">
       <div
         className="relative min-h-[460px] sm:min-h-[420px] lg:min-h-[460px] rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0A0A0A] border border-white/10 hover:border-[#FF6500]/30 transition-all duration-500 shadow-2xl flex flex-col justify-between p-5 sm:p-10 lg:p-12 group"
         onMouseEnter={() => setIsPaused(true)}

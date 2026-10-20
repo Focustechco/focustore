@@ -526,7 +526,7 @@ export default function AdminCategoriesPage() {
               {/* Descrição */}
               <div className="space-y-1.5">
                 <label className="text-zinc-300 font-bold uppercase tracking-wider block">
-                  Descrição Curta (Opcional)
+                  Descrição Curta
                 </label>
                 <textarea
                   rows={2}

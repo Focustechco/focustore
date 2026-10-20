@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'Coleções Exclusivas | FOCUS STORE®',
-  description: 'Descubra as coleções conceituais da FOCUS STORE®, incluindo a nova Coleção Focus Amsterdã e Focus Lab.',
+  description: 'Descubra as coleções conceituais da FOCUS STORE®, incluindo a coleção Focus Linguagens de Programação e Focus Lab.',
 };
 
 export default async function CollectionsPage() {
@@ -44,7 +44,7 @@ export default async function CollectionsPage() {
       </div>
 
       {/* =========================================================
-          DESTAQUE PRINCIPAL: COLEÇÃO FOCUS AMSTERDÃ (BANNER HERO)
+          DESTAQUE PRINCIPAL: COLEÇÃO FOCUS LINGUAGENS DE PROGRAMAÇÃO (BANNER HERO)
           ========================================================= */}
       <section className="relative rounded-3xl overflow-hidden border border-[#FF6500]/30 bg-gradient-to-br from-[#1A0C00] via-[#0E0E0E] to-[#080808] p-6 sm:p-10 lg:p-14 shadow-[0_20px_50px_rgba(255,101,0,0.15)]">
         {/* Glow de fundo */}
@@ -58,11 +58,11 @@ export default async function CollectionsPage() {
             </div>
 
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight uppercase">
-              Coleção Focus <span className="text-[#FF6500]">Amsterdã</span>
+              Coleção Focus <span className="text-[#FF6500]">Linguagens de Programação</span>
             </h2>
 
             <p className="text-sm sm:text-base text-zinc-300 leading-relaxed max-w-xl">
-              Inspirada na estética vibrante, urbana e cosmopolita da capital holandesa. Apresenta o icônico <strong className="text-white">Laranja Focus</strong> combinado com o logotipo oficial em <strong className="text-white">branco puro</strong> sobre algodão egípcio e piquet inteligente de alta performance.
+              Inspirada no universo da programação e na criatividade de quem transforma ideias em código. Apresenta o icônico <strong className="text-white">Laranja Focus</strong> combinado com o logotipo oficial em <strong className="text-white">branco puro</strong> sobre algodão egípcio e piquet inteligente de alta performance.
             </p>
 
             <div className="flex flex-wrap items-center gap-3 pt-2">
@@ -76,12 +76,12 @@ export default async function CollectionsPage() {
             </div>
           </div>
 
-          {/* Mini Vitrine da Coleção Amsterdã */}
+          {/* Mini Vitrine da Coleção Linguagens de Programação */}
           <div className="lg:col-span-5 grid grid-cols-3 gap-3 sm:gap-4">
             <div className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
                 src="/images/products/camiseta-focus-orange.jpg"
-                alt="T-Shirt Focus Amsterdã"
+                alt="T-Shirt Focus"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -94,7 +94,7 @@ export default async function CollectionsPage() {
             <div className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
                 src="/images/products/polo-focus-orange.jpg"
-                alt="Polo Focus Amsterdã"
+                alt="Polo Focus"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -107,7 +107,7 @@ export default async function CollectionsPage() {
             <div className="relative aspect-square rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
                 src="/images/products/bone-focus-orange.jpg"
-                alt="Boné Focus Amsterdã"
+                alt="Boné Focus"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
@@ -121,14 +121,14 @@ export default async function CollectionsPage() {
       </section>
 
       {/* =========================================================
-          PRODUTOS DA COLEÇÃO FOCUS AMSTERDÃ
+          PRODUTOS DA COLEÇÃO FOCUS LINGUAGENS DE PROGRAMAÇÃO
           ========================================================= */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase flex items-center gap-2.5">
               <span className="w-2 h-2 rounded-full bg-[#FF6500]" />
-              Itens Exclusivos • Focus Amsterdã
+              Itens Exclusivos • Focus Linguagens de Programação
             </h2>
             <p className="text-xs text-zinc-400 mt-1">Peças avulsas numeradas da coleção cápsula</p>
           </div>

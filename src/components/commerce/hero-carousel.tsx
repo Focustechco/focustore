@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 export interface HeroBanner {
   id: string;
@@ -120,7 +120,7 @@ export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[]
   const slide = slides[currentSlide] || slides[0];
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 select-none">
+    <section className="max-w-[1440px] mx-auto mt-6 px-4 sm:px-6 lg:px-8 select-none sm:mt-8">
       <div
         className="relative min-h-[460px] sm:min-h-[420px] lg:min-h-[460px] rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0A0A0A] border border-white/10 hover:border-[#FF6500]/30 transition-all duration-500 shadow-2xl flex flex-col justify-between p-5 sm:p-10 lg:p-12 group"
         onMouseEnter={() => setIsPaused(true)}
@@ -183,7 +183,7 @@ export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[]
               <button
                 key={s.id || idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`transition-all duration-300 rounded-full ${
+                className={`cursor-pointer transition-all duration-300 rounded-full ${
                   idx === currentSlide
                     ? 'w-6 sm:w-8 h-1 sm:h-1.5 bg-[#FF6500]'
                     : 'w-1.5 sm:w-2 h-1 sm:h-1.5 bg-white/30 hover:bg-white/60'
@@ -194,25 +194,6 @@ export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[]
           </div>
         )}
 
-        {/* 4. Setas Discretas de Navegação */}
-        {slides.length > 1 && (
-          <>
-            <button
-              onClick={prevSlide}
-              className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-[#FF6500] text-white border border-white/15 hover:border-transparent flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md shadow-xl"
-              aria-label="Slide anterior"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={nextSlide}
-              className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-30 w-10 h-10 rounded-full bg-black/60 hover:bg-[#FF6500] text-white border border-white/15 hover:border-transparent flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md shadow-xl"
-              aria-label="Próximo slide"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </>
-        )}
       </div>
     </section>
   );

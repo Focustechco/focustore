@@ -33,18 +33,25 @@ const BENEFITS = [
 
 export function BenefitsBar() {
   return (
-    <section className="border-b border-white/10 bg-[#0A0A0A] py-3 select-none overflow-hidden relative">
+    <section className="relative select-none overflow-hidden border-b border-white/10 bg-[#0A0A0A] py-2 text-white">
       {/* 1. VERSÃO DESKTOP (Grid estático elegante de 5 colunas) */}
-      <div className="hidden lg:block max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-5 gap-8 items-center justify-between text-xs">
+      <div className="mx-auto hidden max-w-[1800px] px-4 sm:px-6 xl:block xl:px-10">
+        <div className="grid grid-cols-5 items-center justify-between text-xs">
           {BENEFITS.map((item, idx) => {
             const Icon = item.icon;
             return (
-              <div key={idx} className="flex items-center gap-3">
-                <Icon size={20} className="text-white/80 flex-shrink-0" />
+              <div
+                key={idx}
+                className={`flex items-center gap-4 px-5 ${idx > 0 ? 'border-l border-white/15' : ''}`}
+              >
+                <Icon size={24} strokeWidth={1.8} className="flex-shrink-0 text-white" />
                 <div>
-                  <p className="font-bold text-white leading-tight">{item.title}</p>
-                  <p className="text-[11px] text-zinc-400">{item.subtitle}</p>
+                  <p className="whitespace-nowrap text-[11px] font-bold leading-tight text-white">
+                    {item.title}
+                  </p>
+                  <p className="mt-0.5 whitespace-nowrap text-[11px] text-zinc-400">
+                    {item.subtitle}
+                  </p>
                 </div>
               </div>
             );
@@ -53,22 +60,22 @@ export function BenefitsBar() {
       </div>
 
       {/* 2. VERSÃO MOBILE (Barra contínua animada em movimento estilo 'Portal de Notícias' / Ticker) */}
-      <div className="block lg:hidden relative w-full overflow-hidden">
+      <div className="relative block w-full overflow-hidden xl:hidden">
         {/* Sombras suaves nas bordas para transição perfeita */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#0A0A0A] to-transparent z-10" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0A0A0A] to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-[#0A0A0A] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-[#0A0A0A] to-transparent" />
 
         {/* Ticker contínuo infinito */}
-        <div className="animate-marquee items-center gap-6 text-xs whitespace-nowrap py-0.5">
+        <div className="animate-marquee items-center gap-6 whitespace-nowrap py-0.5 text-xs">
           {/* Duplicado para loop infinito 100% fluido */}
           {[...BENEFITS, ...BENEFITS].map((item, idx) => {
             const Icon = item.icon;
             return (
               <div key={idx} className="flex items-center gap-2.5 px-3 flex-shrink-0">
-                <Icon size={16} className="text-[#FF6500] flex-shrink-0" />
-                <span className="font-bold text-white text-xs">{item.title}</span>
-                <span className="text-zinc-500 text-[11px] font-medium">• {item.subtitle}</span>
-                <span className="text-zinc-700 ml-3 text-xs">|</span>
+                <Icon size={16} className="flex-shrink-0 text-[#FF6500]" />
+                <span className="text-[11px] font-bold text-white">{item.title}</span>
+                <span className="text-[11px] font-medium text-zinc-400">• {item.subtitle}</span>
+                <span className="ml-3 text-xs text-zinc-700">|</span>
               </div>
             );
           })}

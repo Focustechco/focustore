@@ -20,9 +20,16 @@ export async function generateMetadata({ params }: Props) {
     return { title: 'Coleção | FOCUS STORE®' };
   }
 
+  const collectionName = slug === 'focus-amsterda'
+    ? 'Focus Linguagens de Programação'
+    : collection.name;
+  const collectionDescription = slug === 'focus-amsterda'
+    ? 'Linha exclusiva inspirada no universo da programação, com Laranja Focus e logotipo oficial em branco puro.'
+    : collection.description || collection.headline;
+
   return {
-    title: `Coleção ${collection.name} | FOCUS STORE®`,
-    description: collection.description || collection.headline,
+    title: `Coleção ${collectionName} | FOCUS STORE®`,
+    description: collectionDescription,
   };
 }
 
@@ -36,6 +43,13 @@ export default async function CollectionPage({ params }: Props) {
   );
 
   const isAmsterda = slug === 'focus-amsterda';
+  const collectionName = isAmsterda
+    ? 'Focus Linguagens de Programação'
+    : collection?.name || slug.replace('-', ' ');
+  const collectionDescription = isAmsterda
+    ? 'Linha exclusiva inspirada no universo da programação, com Laranja Focus e logotipo oficial em branco puro.'
+    : collection?.description ||
+      'Peças exclusivas projetadas com materiais nobres, tecnologia têxtil de ponta e estética minimalista techwear.';
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-10 sm:space-y-12">
@@ -65,12 +79,11 @@ export default async function CollectionPage({ params }: Props) {
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">
-            Coleção {collection?.name || slug.replace('-', ' ')}
+            Coleção {collectionName}
           </h1>
 
           <p className="text-sm sm:text-base text-zinc-300 leading-relaxed">
-            {collection?.description ||
-              'Peças exclusivas projetadas com materiais nobres, tecnologia têxtil de ponta e estética minimalista techwear.'}
+            {collectionDescription}
           </p>
 
           <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400 pt-2">

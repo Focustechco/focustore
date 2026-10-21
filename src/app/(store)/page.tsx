@@ -8,7 +8,6 @@ import { HeroCarousel } from '@/components/commerce/hero-carousel';
 import { FeaturedProductsCarousel } from '@/components/commerce/featured-products-carousel';
 import { CommunityInstagramGallery } from '@/components/commerce/community-instagram-gallery';
 import { FAQAccordion } from '@/components/commerce/faq-accordion';
-import { BenefitsBar } from '@/components/commerce/benefits-bar';
 import { Button } from '@/components/ui/button';
 import { Suspense } from "react";
 
@@ -124,17 +123,12 @@ async function HomePageContent() {
   return (
     <div className="bg-[#080808] text-white min-h-screen pb-20 space-y-12 sm:space-y-14">
       {/* =========================================================
-          1. BARRA SUPERIOR DE BENEFÍCIOS (5 ITENS COM TICKER NO MOBILE)
-          ========================================================= */}
-      <BenefitsBar />
-
-      {/* =========================================================
-          2. HERO CAROUSEL AUTO-LOOPING INTERATIVO
+          1. HERO CAROUSEL AUTO-LOOPING INTERATIVO
           ========================================================= */}
       <HeroCarousel initialBanners={heroBanners} />
 
       {/* =========================================================
-          3. TRIO DE BANNERS EM DESTAQUE (ABAIXO DA HERO)
+          2. TRIO DE BANNERS EM DESTAQUE (ABAIXO DA HERO)
           ========================================================= */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">

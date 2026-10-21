@@ -43,8 +43,30 @@ export interface CheckoutInput {
 
 export class CheckoutService {
   static async processCheckout(input: CheckoutInput) {
-    if (!input.items || input.items.length === 0) {
+    if (!input || !Array.isArray(input.items) || input.items.length === 0) {
       throw new Error('O carrinho está vazio.');
+    }
+
+    if (
+      input.items.some(
+        (item) =>
+          !item ||
+          typeof item.variantId !== 'string' ||
+          !Number.isSafeInteger(item.quantity) ||
+          item.quantity <= 0
+      )
+    ) {
+      throw new Error('Cada produto deve ter uma variante válida e quantidade inteira positiva.');
+    }
+
+    if (
+      !input.shippingAddress ||
+      typeof input.shippingAddress.postalCode !== 'string' ||
+      !input.shippingOption ||
+      typeof input.shippingOption.carrier !== 'string' ||
+      typeof input.shippingOption.serviceName !== 'string'
+    ) {
+      throw new Error('Endereço ou opção de frete inválida.');
     }
 
     if (input.idempotencyKey) {
@@ -104,17 +126,19 @@ export class CheckoutService {
       }
 
       // 3. Validar frete
-      let shippingCost = input.shippingOption.price;
       const validShippingOptions = ShippingService.calculateShipping(
         input.shippingAddress.postalCode,
         calculatedSubtotal
       );
       const selectedOption = validShippingOptions.find(
-        (o) => o.serviceName === input.shippingOption.serviceName
+        (option) =>
+          option.serviceName === input.shippingOption.serviceName &&
+          option.carrier === input.shippingOption.carrier
       );
-      if (selectedOption) {
-        shippingCost = selectedOption.price;
+      if (!selectedOption) {
+        throw new Error('A opção de frete selecionada não está disponível para este endereço.');
       }
+      const shippingCost = selectedOption.price;
 
       // 4. Validar cupom no backend
       let discountAmount = 0;
@@ -178,10 +202,10 @@ export class CheckoutService {
           },
           shipments: {
             create: {
-              carrier: input.shippingOption.carrier,
-              serviceName: input.shippingOption.serviceName,
+              carrier: selectedOption.carrier,
+              serviceName: selectedOption.serviceName,
               cost: Number(shippingCost.toFixed(2)),
-              estimatedDays: input.shippingOption.estimatedDays,
+              estimatedDays: selectedOption.estimatedDays,
             },
           },
         },

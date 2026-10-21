@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 
 export async function PUT(
@@ -6,6 +7,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params; // variantId or inventoryId
     const body = await request.json();
     const {

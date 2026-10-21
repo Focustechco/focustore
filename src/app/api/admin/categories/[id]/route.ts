@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
 
@@ -7,6 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     const category = await prisma.category.findUnique({
       where: { id },
@@ -45,6 +49,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     const body = await request.json();
 
@@ -121,6 +128,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     const existing = await prisma.category.findUnique({
       where: { id },

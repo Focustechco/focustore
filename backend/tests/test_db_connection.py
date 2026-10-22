@@ -1,12 +1,12 @@
-from sqlalchemy import text
-
-from app.db.session import engine
+from sqlalchemy import create_engine, text
 
 
 def test_database_connection():
-    with engine.connect() as connection:
-        result = connection.execute(
-            text("SELECT 1")
-        )
+    from app.config import get_settings
 
-        assert result.scalar_one() == 1
+    engine = create_engine(get_settings().database_url, pool_pre_ping=True)
+    try:
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT 1")).scalar_one() == 1
+    finally:
+        engine.dispose()

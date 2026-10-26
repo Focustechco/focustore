@@ -3,9 +3,9 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import { CatalogService } from '@/modules/catalog/catalog.service';
-import { ProductCard } from '@/components/commerce/product-card';
 import { HeroCarousel } from '@/components/commerce/hero-carousel';
 import { FeaturedProductsCarousel } from '@/components/commerce/featured-products-carousel';
+import { MobileProductsCarousel } from '@/components/commerce/mobile-products-carousel';
 import { CommunityInstagramGallery } from '@/components/commerce/community-instagram-gallery';
 import { FAQAccordion } from '@/components/commerce/faq-accordion';
 import { Button } from '@/components/ui/button';
@@ -200,20 +200,17 @@ async function HomePageContent() {
           </div>
           <Link
             href="/categoria/vestuario"
-            className="text-xs font-bold text-zinc-400 hover:text-white uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+            className="hidden sm:flex text-xs font-bold text-zinc-400 hover:text-white uppercase tracking-wider items-center gap-1.5 transition-colors"
           >
             Ver Coleção Completa <ArrowRight size={14} />
           </Link>
         </div>
 
-        {/* 4 Cards Escuros com Quick Add */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {streetwearProducts.map((product) => (
-            <div key={product.id} className="h-full">
-              <ProductCard product={product} variant="dark" />
-            </div>
-          ))}
-        </div>
+        <MobileProductsCarousel
+          products={streetwearProducts}
+          collectionHref="/categoria/vestuario"
+          collectionLabel="Ver Coleção Completa"
+        />
       </section>
 
       {/* =========================================================
@@ -229,20 +226,17 @@ async function HomePageContent() {
           </div>
           <Link
             href="/categoria/tecnologia"
-            className="text-xs font-bold text-zinc-400 hover:text-white uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+            className="hidden sm:flex text-xs font-bold text-zinc-400 hover:text-white uppercase tracking-wider items-center gap-1.5 transition-colors"
           >
             Ver Linha Tech <ArrowRight size={14} />
           </Link>
         </div>
 
-        {/* 4 Cards de Acessórios & Suportes */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {workspaceProducts.map((product) => (
-            <div key={product.id} className="h-full">
-              <ProductCard product={product} variant="dark" />
-            </div>
-          ))}
-        </div>
+        <MobileProductsCarousel
+          products={workspaceProducts}
+          collectionHref="/categoria/tecnologia"
+          collectionLabel="Ver Linha Tech"
+        />
       </section>
 
       {/* =========================================================

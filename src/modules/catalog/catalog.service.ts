@@ -1,16 +1,24 @@
 import { prisma } from '@/lib/db/prisma';
 
+const HIDDEN_PRODUCT_SLUGS = ['camisa-dev-collection-csharp'];
+
 export class CatalogService {
   static async getCollections() {
     try {
       return await prisma.collection.findMany({
         include: {
           products: {
+            where: {
+              product: { slug: { notIn: HIDDEN_PRODUCT_SLUGS } },
+            },
             include: {
               product: {
                 include: {
                   images: { orderBy: { position: 'asc' } },
-                  variants: { include: { inventory: true } },
+                  variants: {
+                    include: { inventory: true },
+                    orderBy: { position: 'asc' },
+                  },
                   categories: { include: { category: true } },
                   collections: { include: { collection: true } },
                 },
@@ -31,11 +39,17 @@ export class CatalogService {
         where: { slug },
         include: {
           products: {
+            where: {
+              product: { slug: { notIn: HIDDEN_PRODUCT_SLUGS } },
+            },
             include: {
               product: {
                 include: {
                   images: { orderBy: { position: 'asc' } },
-                  variants: { include: { inventory: true } },
+                  variants: {
+                    include: { inventory: true },
+                    orderBy: { position: 'asc' },
+                  },
                   categories: { include: { category: true } },
                   collections: { include: { collection: true } },
                 },
@@ -56,7 +70,15 @@ export class CatalogService {
         where: { isActive: true },
         orderBy: { position: 'asc' },
         include: {
-          _count: { select: { products: true } },
+          _count: {
+            select: {
+              products: {
+                where: {
+                  product: { slug: { notIn: HIDDEN_PRODUCT_SLUGS } },
+                },
+              },
+            },
+          },
         },
       });
     } catch (error) {
@@ -71,11 +93,17 @@ export class CatalogService {
         where: { slug },
         include: {
           products: {
+            where: {
+              product: { slug: { notIn: HIDDEN_PRODUCT_SLUGS } },
+            },
             include: {
               product: {
                 include: {
                   images: { orderBy: { position: 'asc' } },
-                  variants: { include: { inventory: true } },
+                  variants: {
+                    include: { inventory: true },
+                    orderBy: { position: 'asc' },
+                  },
                 },
               },
             },
@@ -91,10 +119,17 @@ export class CatalogService {
   static async getFeaturedProducts() {
     try {
       return await prisma.product.findMany({
-        where: { status: 'ACTIVE', isFeatured: true },
+        where: {
+          status: 'ACTIVE',
+          isFeatured: true,
+          slug: { notIn: HIDDEN_PRODUCT_SLUGS },
+        },
         include: {
           images: { orderBy: { position: 'asc' } },
-          variants: { include: { inventory: true } },
+          variants: {
+            include: { inventory: true },
+            orderBy: { position: 'asc' },
+          },
           categories: { include: { category: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -116,7 +151,10 @@ export class CatalogService {
     try {
       const { categorySlug, search, sortBy, minPrice, maxPrice } = params || {};
 
-      const where: any = { status: 'ACTIVE' };
+      const where: any = {
+        status: 'ACTIVE',
+        slug: { notIn: HIDDEN_PRODUCT_SLUGS },
+      };
 
       if (categorySlug && categorySlug !== 'todos') {
         where.categories = {
@@ -150,7 +188,10 @@ export class CatalogService {
         orderBy,
         include: {
           images: { orderBy: { position: 'asc' } },
-          variants: { include: { inventory: true } },
+          variants: {
+            include: { inventory: true },
+            orderBy: { position: 'asc' },
+          },
           categories: { include: { category: true } },
           collections: { include: { collection: true } },
         },
@@ -163,7 +204,7 @@ export class CatalogService {
 
   static async getProductBySlug(slug: string) {
     try {
-      return await prisma.product.findUnique({
+      const product = await prisma.product.findUnique({
         where: { slug },
         include: {
           images: { orderBy: { position: 'asc' } },
@@ -179,6 +220,9 @@ export class CatalogService {
           },
         },
       });
+      return product && !HIDDEN_PRODUCT_SLUGS.includes(product.slug)
+        ? product
+        : null;
     } catch (error) {
       console.error(`Error fetching product ${slug}:`, error);
       return null;
@@ -191,13 +235,17 @@ export class CatalogService {
         where: {
           id: { not: productId },
           status: 'ACTIVE',
+          slug: { notIn: HIDDEN_PRODUCT_SLUGS },
           ...(categoryId
             ? { categories: { some: { categoryId } } }
             : {}),
         },
         include: {
           images: { orderBy: { position: 'asc' } },
-          variants: { include: { inventory: true } },
+          variants: {
+            include: { inventory: true },
+            orderBy: { position: 'asc' },
+          },
         },
         take: 4,
       });

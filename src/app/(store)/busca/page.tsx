@@ -35,7 +35,7 @@ export default async function SearchPage({ searchParams }: Props) {
       {products.length === 0 ? (
         <div className="py-20 text-center space-y-3 bg-surface rounded-2xl border border-white/5">
           <h3 className="text-lg font-bold text-white uppercase">Nenhum resultado para sua busca</h3>
-          <p className="text-xs text-muted">Tente buscar por camiseta, moletom, garrafa, boné ou chaveiro.</p>
+          <p className="text-xs text-muted">Tente buscar por camisa, moletom, garrafa, boné ou chaveiro.</p>
           <Link href="/categoria/todos" className="inline-block pt-2 text-xs font-bold text-focus hover:underline">
             Explorar catálogo completo →
           </Link>

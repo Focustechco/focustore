@@ -24,7 +24,7 @@ const DEFAULT_BANNERS = [
   },
   {
     title: 'FAÇA PARTE DO\nMOVIMENTO.',
-    subtitle: 'Camisetas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.',
+    subtitle: 'Camisas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.',
     ctaText: 'Ver Coleção',
     ctaLink: '/categoria/vestuario',
     imageUrl: '/images/hero/hero-movimento-streetwear.png',

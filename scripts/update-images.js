@@ -5,10 +5,10 @@ async function updateImages() {
   const updates = [
     { slug: 'caneca-focus-lab', url: '/images/products/caneca-focus.jpg' },
     { slug: 'bone-focus-lab', url: '/images/products/bone-focus.jpg' },
-    { slug: 'camiseta-focus-lab', name: 'Camisa Focus', url: '/images/products/camiseta-focus.jpg' },
+    { slug: 'camisa-focus-lab', name: 'Camisa Focus', url: '/images/products/camiseta-focus.jpg' },
     { slug: 'moletom-focus-lab', name: 'Polo Focus Tech', url: '/images/products/polo-focus.jpg' },
     { slug: 'garrafa-termica-focus', name: 'Garrafa Térmica Focus', url: '/images/products/garrafa-focus.jpg' },
-    { slug: 'chaveiro-focus', name: 'Caderno Focus Lab', url: '/images/products/caderno-focus.jpg' },
+    { slug: 'chaveiro-focus', name: 'Chaveiro Focus', url: '/images/products/chaveiros-focus-kit.jpg' },
   ];
 
   for (const item of updates) {

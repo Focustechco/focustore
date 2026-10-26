@@ -369,7 +369,7 @@ export function ProductForm({
                 required
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Ex: Camiseta Focus Techwear Heavyweight"
+                placeholder="Ex: Camisa Focus Techwear Heavyweight"
                 className="w-full bg-[#161616] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white font-bold outline-none"
               />
             </div>
@@ -381,7 +381,7 @@ export function ProductForm({
                 required
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
-                placeholder="camiseta-focus-techwear"
+                placeholder="camisa-focus-techwear"
                 className="w-full bg-[#161616] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-zinc-300 font-mono text-xs outline-none"
               />
             </div>

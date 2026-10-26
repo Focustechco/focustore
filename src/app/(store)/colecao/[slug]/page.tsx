@@ -20,11 +20,11 @@ export async function generateMetadata({ params }: Props) {
     return { title: 'Coleção | FOCUS STORE®' };
   }
 
-  const collectionName = slug === 'focus-amsterda'
-    ? 'Focus Linguagens de Programação'
+  const collectionName = slug === 'dev-collection'
+    ? 'DEV COLLECTION'
     : collection.name;
-  const collectionDescription = slug === 'focus-amsterda'
-    ? 'Linha exclusiva inspirada no universo da programação, com Laranja Focus e logotipo oficial em branco puro.'
+  const collectionDescription = slug === 'dev-collection'
+    ? 'Linha exclusiva inspirada no universo da programação, tecnologia, estilo e personalidade'
     : collection.description || collection.headline;
 
   return {
@@ -42,12 +42,12 @@ export default async function CollectionPage({ params }: Props) {
     p.collections.some((c) => c.collection.slug === slug)
   );
 
-  const isAmsterda = slug === 'focus-amsterda';
-  const collectionName = isAmsterda
-    ? 'Focus Linguagens de Programação'
+  const isDevCollection = slug === 'dev-collection';
+  const collectionName = isDevCollection
+    ? 'DEV COLLECTION'
     : collection?.name || slug.replace('-', ' ');
-  const collectionDescription = isAmsterda
-    ? 'Linha exclusiva inspirada no universo da programação, com Laranja Focus e logotipo oficial em branco puro.'
+  const collectionDescription = isDevCollection
+    ? 'Linha exclusiva inspirada no universo da programação, unindo tecnologia, estilo e personalidade.'
     : collection?.description ||
       'Peças exclusivas projetadas com materiais nobres, tecnologia têxtil de ponta e estética minimalista techwear.';
 
@@ -59,23 +59,23 @@ export default async function CollectionPage({ params }: Props) {
         <ChevronRight size={14} />
         <Link href="/colecoes" className="hover:text-white transition-colors">Coleções</Link>
         <ChevronRight size={14} />
-        <span className="text-[#FF6500] font-semibold">{collection?.name || slug}</span>
+        <span className="text-[#FF6500] font-semibold">{collectionName}</span>
       </nav>
 
       {/* Banner Especial da Coleção */}
       <div className={`relative rounded-3xl overflow-hidden border p-6 sm:p-10 lg:p-12 ${
-        isAmsterda
+        isDevCollection
           ? 'border-[#FF6500]/40 bg-gradient-to-br from-[#200F00] via-[#0F0F0F] to-[#080808] shadow-[0_20px_60px_rgba(255,101,0,0.18)]'
           : 'border-white/10 bg-gradient-to-br from-[#141414] to-[#0A0A0A]'
       }`}>
-        {isAmsterda && (
+        {isDevCollection && (
           <div className="absolute top-0 right-0 w-[450px] h-[450px] bg-radial from-[#FF6500]/25 via-transparent to-transparent pointer-events-none blur-3xl" />
         )}
 
         <div className="relative z-10 max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6500]/15 border border-[#FF6500]/30 text-[#FF6500] text-xs font-bold uppercase tracking-wider">
-            {isAmsterda ? <Flame size={14} /> : <Sparkles size={14} />}
-            <span>{isAmsterda ? 'Cápsula Especial • Laranja Focus' : 'Linha Exclusiva Focus'}</span>
+            {isDevCollection ? <Flame size={14} /> : <Sparkles size={14} />}
+            <span>{isDevCollection ? 'DEV COLLECTION • Laranja Focus' : 'Linha Exclusiva Focus'}</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">

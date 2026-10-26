@@ -39,7 +39,7 @@ const REVIEW_COUNTS: Record<string, number> = {
   'garrafa-termica-focus': 256,
   'bone-focus-lab': 192,
   'moletom-focus-lab': 410,
-  'camiseta-focus-lab': 332,
+  'camisa-focus-lab': 332,
 };
 
 export function ProductCard({ product }: ProductCardProps) {
@@ -157,6 +157,7 @@ export function ProductCard({ product }: ProductCardProps) {
             fill
             className="object-cover group-hover:scale-108 transition-transform duration-500"
             sizes="(max-width: 768px) 50vw, 20vw"
+            quality={primaryImage.includes('/images/camisas/') ? 90 : undefined}
           />
         </Link>
       </div>

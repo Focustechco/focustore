@@ -29,6 +29,10 @@ h1, h2, h3, h4, h5, h6, .font-heading, nav, button {
   letter-spacing: -0.022em;
 }
 
+.font-collection-display {
+  letter-spacing: -0.04em;
+}
+
 /* Custom subtle scrollbar */
 *::-webkit-scrollbar {
   width: 8px;

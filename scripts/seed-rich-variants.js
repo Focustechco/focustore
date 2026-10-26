@@ -13,7 +13,7 @@ async function seedRichVariants() {
 
   const apparelProducts = await prisma.product.findMany({
     where: {
-      slug: { in: ['camiseta-focus-lab', 'moletom-focus-lab'] },
+      slug: { in: ['camisa-focus-lab', 'moletom-focus-lab'] },
     },
   });
 

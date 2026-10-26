@@ -35,7 +35,6 @@ const REAL_PRODUCT_IMAGES: Record<string, string> = {
   'hoodie': '/images/products/moletom-focus-hoodie.jpg',
   'polo': '/images/products/polo-focus.jpg',
   'camisa': '/images/products/camiseta-focus.jpg',
-  'camiseta': '/images/products/camiseta-focus.jpg',
   'bone': '/images/products/bone-focus.jpg',
   'boné': '/images/products/bone-focus.jpg',
   'garrafa': '/images/products/garrafa-focus.jpg',

@@ -46,7 +46,7 @@ const DEFAULT_SLIDES = [
     tagline: 'FOCUS STREETWEAR // LINHA ESSENCIAL',
     titleLine1: 'FAÇA PARTE DO',
     titleLine2: 'MOVIMENTO.',
-    subtitle: 'Camisetas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.',
+    subtitle: 'Camisas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.',
     primaryButtonText: 'Ver Coleção',
     primaryButtonHref: '/categoria/vestuario',
     secondaryButtonText: 'Focus Tech',

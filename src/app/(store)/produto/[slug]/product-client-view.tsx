@@ -273,6 +273,7 @@ export function ProductClientView({ product }: { product: any }) {
                     alt={img.altText || product.name}
                     fill
                     sizes="80px"
+                    quality={img.url.includes('/images/camisas/') ? 90 : undefined}
                     className="object-cover"
                   />
                 </button>
@@ -288,6 +289,7 @@ export function ProductClientView({ product }: { product: any }) {
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 55vw"
+              quality={(product.images[selectedImage]?.url || product.images[0]?.url || '').includes('/images/camisas/') ? 90 : undefined}
               className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
             />
             {currentPromoPrice && (
@@ -640,7 +642,7 @@ export function ProductClientView({ product }: { product: any }) {
               {product.description}
             </p>
 
-            {(product.slug?.includes('camiseta') ||
+            {(product.slug?.includes('camisa') ||
               product.slug?.includes('moletom') ||
               product.slug?.includes('polo') ||
               product.isApparel) ? (
@@ -720,7 +722,7 @@ export function ProductClientView({ product }: { product: any }) {
         {activeTab === 'details' && (
           <div className="max-w-3xl text-sm">
             <div className="divide-y divide-white/10 text-xs">
-              {(product.slug?.includes('camiseta') ||
+              {(product.slug?.includes('camisa') ||
                 product.slug?.includes('moletom') ||
                 product.slug?.includes('polo') ||
                 product.isApparel) ? (

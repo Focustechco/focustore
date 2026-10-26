@@ -7,7 +7,7 @@ import { CartDrawer } from '@/components/commerce/cart-drawer';
 export const metadata: Metadata = {
   title: 'Focus Store — Loja Oficial | Tecnologia, Design & Streetwear',
   description: 'Produtos exclusivos para quem vive tecnologia, criatividade e inovação. Streetwear, vestuário premium, garrafas térmicas e acessórios.',
-  keywords: ['focus store', 'streetwear tech', 'camisetas minimalistas', 'garrafas termicas', 'moletom tech', 'gadgets design'],
+  keywords: ['focus store', 'streetwear tech', 'camisas minimalistas', 'garrafas termicas', 'moletom tech', 'gadgets design'],
   icons: {
     icon: '/favicon.png',
     shortcut: '/favicon.png',

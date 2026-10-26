@@ -44,7 +44,7 @@ async function HomePageContent() {
     'garrafa-termica-focus',
     'mousepad-focus',
     'suporte-celular-focus',
-    'camiseta-focus-lab',
+    'camisa-focus-lab',
     'moletom-focus-lab',
     'bone-focus-lab',
     'suporte-headphone-focus',
@@ -68,7 +68,7 @@ async function HomePageContent() {
   // Produtos da Coleção Streetwear & Techwear (Focus Lab)
   const streetwearOrder = [
     'moletom-focus-hoodie',
-    'camiseta-focus-lab',
+    'camisa-focus-lab',
     'moletom-focus-lab',
     'bone-focus-lab',
   ];

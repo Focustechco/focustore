@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
     '/**': ['./prisma/**'],
   },
   images: {
+    qualities: [75, 90],
+    localPatterns: [
+      {
+        pathname: "/images/**",
+      },
+    ],
     remotePatterns: [
       {
         protocol: "https",

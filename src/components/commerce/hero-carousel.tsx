@@ -56,7 +56,7 @@ const DEFAULT_SLIDES = [
   },
 ];
 
-const AUTOPLAY_INTERVAL = 5500;
+const AUTOPLAY_INTERVAL = 4000;
 
 export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[] }) {
   const slides = (initialBanners && initialBanners.length > 0)

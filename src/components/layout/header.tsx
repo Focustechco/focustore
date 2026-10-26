@@ -123,7 +123,7 @@ export function Header() {
       <div className="relative mx-auto flex h-[76px] max-w-[1800px] items-center justify-between gap-3 px-4 sm:px-6 lg:h-[88px] lg:px-10">
         {/* LOGO FOCUS STORE OFICIAL */}
         <Link href="/" className="flex items-center flex-shrink-0 relative overflow-visible -ml-1 sm:ml-0">
-          <FocusLogo size="xl" />
+          <FocusLogo size="xl" mobileSize="md" />
         </Link>
 
         <nav ref={navRef} aria-label="Categorias" className="hidden flex-1 items-center justify-center gap-5 xl:flex xl:-translate-x-3 2xl:gap-8">
@@ -268,17 +268,6 @@ export function Header() {
 
       {mobileMenuOpen && (
         <div className="absolute left-0 right-0 top-full z-40 space-y-3 border-b border-white/10 bg-[#121212] px-4 py-4 shadow-lg xl:hidden">
-          <form onSubmit={handleSearch} className="relative flex items-center">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar produtos..."
-              className="w-full rounded-lg border border-white/10 bg-[#181818] py-2 pl-10 pr-3 text-sm text-white placeholder-zinc-500 focus:border-[#FF5500] focus:outline-none"
-            />
-            <Search className="absolute left-3 text-zinc-500" size={16} />
-          </form>
-
           <nav aria-label="Categorias" className="grid grid-cols-2 gap-2 border-b border-white/10 pb-3 text-xs font-semibold uppercase">
             {NAV_ITEMS.map((item) => (
               <Link

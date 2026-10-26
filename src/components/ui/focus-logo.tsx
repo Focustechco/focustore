@@ -5,6 +5,7 @@ interface FocusLogoProps {
   className?: string;
   iconOnly?: boolean;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
+  mobileSize?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
   priority?: boolean;
   variant?: 'dark' | 'light';
 }
@@ -31,6 +32,7 @@ export function FocusLogo({
   className,
   iconOnly = false,
   size = '3xl',
+  mobileSize,
   priority = true,
   variant = 'dark',
 }: FocusLogoProps) {
@@ -50,6 +52,24 @@ export function FocusLogo({
     xl: 'w-12 h-12',
     '2xl': 'w-16 h-16',
     '3xl': 'w-20 h-20',
+  };
+
+  const mobileHeights = {
+    sm: 'h-4 max-h-[18px]',
+    md: 'h-5 max-h-[24px]',
+    lg: 'h-6 max-h-[28px]',
+    xl: 'h-7 max-h-[34px]',
+    '2xl': 'h-9 max-h-[42px]',
+    '3xl': 'h-10 max-h-[48px]',
+  };
+
+  const desktopHeights = {
+    sm: 'sm:h-4 sm:max-h-[18px]',
+    md: 'sm:h-6 sm:max-h-[24px]',
+    lg: 'sm:h-7 sm:max-h-[28px]',
+    xl: 'sm:h-8 sm:max-h-[34px]',
+    '2xl': 'sm:h-10 sm:max-h-[42px]',
+    '3xl': 'sm:h-12 sm:max-h-[48px]',
   };
 
   if (iconOnly) {
@@ -77,7 +97,7 @@ export function FocusLogo({
         alt="FOCUS STORE®"
         className={cn(
           'w-auto object-contain transition-transform duration-300 group-hover:scale-105',
-          heights[size]
+          mobileSize ? `${mobileHeights[mobileSize]} ${desktopHeights[size]}` : heights[size]
         )}
         loading={priority ? 'eager' : 'lazy'}
       />

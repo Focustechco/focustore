@@ -3,15 +3,9 @@ name: Backend quality (no deploy)
 on:
   push:
     branches: [back-end]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-quality.yml'
 
   pull_request:
     branches: [back-end]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-quality.yml'
 
   workflow_dispatch:
 permissions:
@@ -60,10 +54,10 @@ jobs:
         run: python -m alembic check
       - name: Run tests including PostgreSQL integration
         run: python -m pytest -q -ra
-      - name: Check database integrity
+      - name: 'Integrity agent: PostgreSQL schema and data'
         if: ${{ !cancelled() }}
         run: python -m app.agents.integrity
-      - name: Check API documentation snapshot
+      - name: 'OpenAPI agent: committed contract'
         if: ${{ !cancelled() }}
         run: python -m app.agents.openapi_check
       - name: Publish job summary

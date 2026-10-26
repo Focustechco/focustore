@@ -176,8 +176,8 @@ async function main() {
       slug: "camisa-dev-collection-python",
       sku: "FS-AMS-TSHIRT-001",
       language: "Python",
-      image: "/images/camisas/01_Python_original.png?v=20261026-2",
-      whiteImage: "/images/camisas/camisa-python-branca.png?v=20261026-2",
+      image: "/images/camisas/01_Python_original.png?v=20261026-4",
+      whiteImage: "/images/camisas/camisa-python-branca.jpeg?v=20261026-4",
       variantPrefix: "FS-AMS-TSHIRT",
     },
     {
@@ -185,8 +185,8 @@ async function main() {
       slug: "camisa-dev-collection-java",
       sku: "FS-AMS-POLO-001",
       language: "Java",
-      image: "/images/camisas/02_Java_alta_resolucao.png?v=20261026-2",
-      whiteImage: "/images/camisas/camisa-java-branca.png?v=20261026-2",
+      image: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261026-4",
+      whiteImage: "/images/camisas/camisa-java-branca.jpeg?v=20261026-4",
       variantPrefix: "FS-AMS-POLO",
     },
     {
@@ -194,8 +194,8 @@ async function main() {
       slug: "camisa-dev-collection-javascript",
       sku: "FS-AMS-CAP-001",
       language: "JavaScript",
-      image: "/images/camisas/05_JavaScript_original.png?v=20261026-2",
-      whiteImage: "/images/camisas/camisa-js-branca.jfif?v=20261026-2",
+      image: "/images/camisas/05_JavaScript_original.png?v=20261026-4",
+      whiteImage: "/images/camisas/camisa-js-branca.jpg?v=20261026-4",
       variantPrefix: "FS-AMS-CAP",
     },
     {
@@ -203,8 +203,8 @@ async function main() {
       slug: "camisa-dev-collection-typescript",
       sku: "FS-DEV-TS-001",
       language: "TypeScript",
-      image: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-2",
-      whiteImage: "/images/camisas/camisa-ts-branca.png?v=20261026-2",
+      image: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-4",
+      whiteImage: "/images/camisas/camisa-ts-branca.jpeg?v=20261026-4",
       variantPrefix: "FS-DEV-TS",
     },
   ];

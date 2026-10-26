@@ -180,15 +180,15 @@ async function seedAllProducts() {
       shortDescription: "Camisa Python da DEV COLLECTION.",
       basePrice: 89.9,
       promotionalPrice: null,
-      imageUrl: "/images/camisas/01_Python_original.png?v=20261026-2",
+      imageUrl: "/images/camisas/01_Python_original.png?v=20261026-4",
       images: [
         {
-          url: "/images/camisas/01_Python_original.png?v=20261026-2",
+          url: "/images/camisas/01_Python_original.png?v=20261026-4",
           isPrimary: true,
           altText: "Camisa Python - Preto",
         },
         {
-          url: "/images/camisas/camisa-python-branca.png?v=20261026-2",
+          url: "/images/camisas/camisa-python-branca.jpeg?v=20261026-4",
           isPrimary: false,
           altText: "Camisa Python - Branco",
         },
@@ -207,15 +207,15 @@ async function seedAllProducts() {
       shortDescription: "Camisa Java da DEV COLLECTION.",
       basePrice: 89.9,
       promotionalPrice: null,
-      imageUrl: "/images/camisas/02_Java_alta_resolucao.png?v=20261026-2",
+      imageUrl: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261026-4",
       images: [
         {
-          url: "/images/camisas/02_Java_alta_resolucao.png?v=20261026-2",
+          url: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261026-4",
           isPrimary: true,
           altText: "Camisa Java - Preto",
         },
         {
-          url: "/images/camisas/camisa-java-branca.png?v=20261026-2",
+          url: "/images/camisas/camisa-java-branca.jpeg?v=20261026-4",
           isPrimary: false,
           altText: "Camisa Java - Branco",
         },
@@ -236,15 +236,15 @@ async function seedAllProducts() {
       shortDescription: "Camisa JavaScript da DEV COLLECTION.",
       basePrice: 89.9,
       promotionalPrice: null,
-      imageUrl: "/images/camisas/05_JavaScript_original.png?v=20261026-2",
+      imageUrl: "/images/camisas/05_JavaScript_original.png?v=20261026-4",
       images: [
         {
-          url: "/images/camisas/05_JavaScript_original.png?v=20261026-2",
+          url: "/images/camisas/05_JavaScript_original.png?v=20261026-4",
           isPrimary: true,
           altText: "Camisa JavaScript - Preto",
         },
         {
-          url: "/images/camisas/camisa-js-branca.jfif?v=20261026-2",
+          url: "/images/camisas/camisa-js-branca.jpg?v=20261026-4",
           isPrimary: false,
           altText: "Camisa JavaScript - Branco",
         },
@@ -263,15 +263,15 @@ async function seedAllProducts() {
       shortDescription: "Camisa TypeScript da DEV COLLECTION.",
       basePrice: 89.9,
       promotionalPrice: null,
-      imageUrl: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-2",
+      imageUrl: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-4",
       images: [
         {
-          url: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-2",
+          url: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-4",
           isPrimary: true,
           altText: "Camisa TypeScript - Preto",
         },
         {
-          url: "/images/camisas/camisa-ts-branca.png?v=20261026-2",
+          url: "/images/camisas/camisa-ts-branca.jpeg?v=20261026-4",
           isPrimary: false,
           altText: "Camisa TypeScript - Branco",
         },

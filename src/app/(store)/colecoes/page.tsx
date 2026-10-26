@@ -100,50 +100,35 @@ export default async function CollectionsPage() {
           <div className="lg:col-span-6 grid grid-cols-3 gap-3 sm:gap-4">
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
-                src="/images/camisas/01_Python_original.png?v=20261026-2"
+                src="/images/camisas/01_Python_original.png?v=20261026-4"
                 alt="Camisa Python"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
                 quality={90}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2 sm:p-2.5">
-                <span className="text-[10px] sm:text-xs font-bold text-white leading-tight">
-                  T-Shirt
-                </span>
-              </div>
             </div>
 
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
-                src="/images/camisas/02_Java_alta_resolucao.png?v=20261026-2"
+                src="/images/camisas/02_Java_alta_resolucao.jpeg?v=20261026-4"
                 alt="Camisa Java"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
                 quality={90}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2 sm:p-2.5">
-                <span className="text-[10px] sm:text-xs font-bold text-white leading-tight">
-                  Polo
-                </span>
-              </div>
             </div>
 
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
-                src="/images/camisas/05_JavaScript_original.png?v=20261026-2"
+                src="/images/camisas/05_JavaScript_original.png?v=20261026-4"
                 alt="Camisa JavaScript"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
                 quality={90}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2 sm:p-2.5">
-                <span className="text-[10px] sm:text-xs font-bold text-white leading-tight">
-                  Boné
-                </span>
-              </div>
             </div>
           </div>
         </div>

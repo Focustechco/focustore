@@ -448,7 +448,26 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setNotice('O login com Google ainda não está disponível.')}
+                    onClick={async (event) => {
+                      if (isSubmitting) return;
+                      const button = event.currentTarget;
+                      button.disabled = true;
+                      setIsSubmitting(true);
+                      setNotice('');
+                      let redirecting = false;
+                      try {
+                        const response = await fetch('/api/auth/social/google/start', {
+                          method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ returnTo: window.location.pathname + window.location.search }),
+                        });
+                        const result = await response.json() as { url?: string; error?: string };
+                        if (!response.ok || !result.url) { setNotice(result.error || 'Não foi possível iniciar o login com Google.'); return; }
+                        window.addEventListener('pageshow', () => { button.disabled = false; setIsSubmitting(false); }, { once: true });
+                        window.location.assign(result.url);
+                        redirecting = true;
+                      } catch { setNotice('Não foi possível conectar ao login com Google. Tente novamente.'); }
+                      finally { if (!redirecting) { button.disabled = false; setIsSubmitting(false); } }
+                    }}
                     className="flex h-[50px] items-center justify-center gap-2 rounded-[14px] border border-[#222226] bg-[#1a1a1c] text-sm font-bold text-[#d4d5d9] transition hover:border-white/15 hover:bg-[#202023] focus:outline-none focus:ring-2 focus:ring-[#FF5500]"
                   >
                     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[19px] w-[19px]">
@@ -461,7 +480,26 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
                   </button>
                   <button
                     type="button"
-                    onClick={() => setNotice('O login com Apple ainda não está disponível.')}
+                    onClick={async (event) => {
+                      if (isSubmitting) return;
+                      const button = event.currentTarget;
+                      button.disabled = true;
+                      setIsSubmitting(true);
+                      setNotice('');
+                      let redirecting = false;
+                      try {
+                        const response = await fetch('/api/auth/social/apple/start', {
+                          method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ returnTo: window.location.pathname + window.location.search }),
+                        });
+                        const result = await response.json() as { url?: string; error?: string };
+                        if (!response.ok || !result.url) { setNotice(result.error || 'Não foi possível iniciar o login com Apple.'); return; }
+                        window.addEventListener('pageshow', () => { button.disabled = false; setIsSubmitting(false); }, { once: true });
+                        window.location.assign(result.url);
+                        redirecting = true;
+                      } catch { setNotice('Não foi possível conectar ao login com Apple. Tente novamente.'); }
+                      finally { if (!redirecting) { button.disabled = false; setIsSubmitting(false); } }
+                    }}
                     className="flex h-[50px] items-center justify-center gap-2 rounded-[14px] border border-[#222226] bg-[#1a1a1c] text-sm font-bold text-[#d4d5d9] transition hover:border-white/15 hover:bg-[#202023] focus:outline-none focus:ring-2 focus:ring-[#FF5500]"
                   >
                     <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[19px] w-[19px] fill-current">

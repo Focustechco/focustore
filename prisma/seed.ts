@@ -3,10 +3,10 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 const DEV_COLLECTION_COLORS = [
-  { name: 'Preto', code: 'BLK', hex: '#0D0D0D' },
-  { name: 'Branco', code: 'WHT', hex: '#FFFFFF' },
+  { name: "Preto", code: "BLK", hex: "#0D0D0D" },
+  { name: "Branco", code: "WHT", hex: "#FFFFFF" },
 ];
-const DEV_COLLECTION_SIZES = ['PP', 'P', 'M', 'G', 'GG'];
+const DEV_COLLECTION_SIZES = ["PP", "P", "M", "G", "GG"];
 const DEV_COLLECTION_STOCK = [25, 35, 50, 40, 20];
 
 async function main() {
@@ -176,8 +176,15 @@ async function main() {
       slug: "camisa-dev-collection-python",
       sku: "FS-AMS-TSHIRT-001",
       language: "Python",
-      image: "/images/camisas/01_Python_original.png?v=20261026-4",
-      whiteImage: "/images/camisas/camisa-python-branca.jpeg?v=20261026-4",
+      description: `Dev Collection — Python
+Inspirada na versatilidade do Python, esta camiseta representa criatividade, inteligência e inovação. Sua estampa combina o símbolo da linguagem com traços tecnológicos em azul e amarelo, criando uma composição moderna e sofisticada.
+
+Desenvolvida para quem transforma ideias em código, a peça combina uma estética streetwear premium, modelagem oversized e identidade visual exclusiva da Focus Academy.
+
+Vista seu código. Expresse sua linguagem.`,
+      image: "/images/camisas/01_Python_original.png?v=20261027-2",
+      whiteImage: "/images/camisas/camisa-python-branca.jpeg?v=20261027-1",
+      frontImage: "/images/camisas/frente-camisa-py.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-TSHIRT",
     },
     {
@@ -185,8 +192,15 @@ async function main() {
       slug: "camisa-dev-collection-java",
       sku: "FS-AMS-POLO-001",
       language: "Java",
-      image: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261026-4",
-      whiteImage: "/images/camisas/camisa-java-branca.jpeg?v=20261026-4",
+      description: `Dev Collection — Java
+Uma homenagem à robustez e à evolução constante do Java. O design apresenta sua icônica identidade visual em laranja e azul, com elementos gráficos minimalistas que representam tecnologia, desempenho e inovação.
+
+Desenvolvida para quem transforma ideias em código, a peça combina uma estética streetwear premium, modelagem oversized e identidade visual exclusiva da Focus Academy.
+
+Vista seu código. Expresse sua linguagem.`,
+      image: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261027-2",
+      whiteImage: "/images/camisas/camisa-java-branca.jpeg?v=20261027-1",
+      frontImage: "/images/camisas/frente-camisa-java.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-POLO",
     },
     {
@@ -194,8 +208,15 @@ async function main() {
       slug: "camisa-dev-collection-javascript",
       sku: "FS-AMS-CAP-001",
       language: "JavaScript",
-      image: "/images/camisas/05_JavaScript_original.png?v=20261026-4",
-      whiteImage: "/images/camisas/camisa-js-branca.jpg?v=20261026-4",
+      description: `Dev Collection — JavaScript
+Inspirada na linguagem que movimenta a web, esta camiseta apresenta a identidade JavaScript em traços dourados discretos, com composição minimalista que une criatividade, tecnologia e estilo.
+
+Desenvolvida para quem transforma ideias em código, a peça combina uma estética streetwear premium, modelagem oversized e identidade visual exclusiva da Focus Academy.
+
+Vista seu código. Expresse sua linguagem.`,
+      image: "/images/camisas/05_JavaScript_original.jpg?v=20261027-2",
+      whiteImage: "/images/camisas/camisa-js-branca.jpeg?v=20261027-1",
+      frontImage: "/images/camisas/frente-camisa-js.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-CAP",
     },
     {
@@ -203,8 +224,15 @@ async function main() {
       slug: "camisa-dev-collection-typescript",
       sku: "FS-DEV-TS-001",
       language: "TypeScript",
-      image: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-4",
-      whiteImage: "/images/camisas/camisa-ts-branca.jpeg?v=20261026-4",
+      description: `<strong>Dev Collection — TypeScript</strong> <br>
+Inspirada na precisão e na estrutura do TypeScript, esta camiseta traduz organização e modernidade em uma estampa de linhas geométricas azuis, com acabamento visual clean e contemporâneo.
+
+Desenvolvida para quem transforma ideias em código, a peça combina uma estética streetwear premium, modelagem oversized e identidade visual exclusiva da Focus Academy.
+
+Vista seu código. Expresse sua linguagem.`,
+      image: "/images/camisas/03_TypeScript_alta_resolucao.jpeg?v=20261027-2",
+      whiteImage: "/images/camisas/camisa-ts-branca.jpeg?v=20261027-1",
+      frontImage: "/images/camisas/frente-camisa-ts.jpg?v=20261027-1",
       variantPrefix: "FS-DEV-TS",
     },
   ];
@@ -215,7 +243,7 @@ async function main() {
         name: item.name,
         slug: item.slug,
         sku: item.sku,
-        description: `Camisa ${item.language} da DEV COLLECTION, para quem transforma ideias em código.`,
+        description: item.description,
         shortDescription: `Camisa ${item.language} da DEV COLLECTION.`,
         basePrice: 89.9,
         isFeatured: true,
@@ -231,8 +259,24 @@ async function main() {
         },
         images: {
           create: [
-            { url: item.image, isPrimary: true, altText: `${item.name} - Preto` },
-            { url: item.whiteImage, isPrimary: false, altText: `${item.name} - Branco` },
+            {
+              url: item.image,
+              isPrimary: true,
+              altText: `${item.name} - Preto`,
+              position: 0,
+            },
+            {
+              url: item.whiteImage,
+              isPrimary: false,
+              altText: `${item.name} - Branco`,
+              position: 1,
+            },
+            {
+              url: item.frontImage,
+              isPrimary: false,
+              altText: `${item.name} - Frente`,
+              position: 2,
+            },
           ],
         },
         variants: {
@@ -245,7 +289,8 @@ async function main() {
               size,
               price: 89.9,
               position:
-                DEV_COLLECTION_COLORS.indexOf(color) * DEV_COLLECTION_SIZES.length +
+                DEV_COLLECTION_COLORS.indexOf(color) *
+                  DEV_COLLECTION_SIZES.length +
                 index,
               inventory: {
                 create: {

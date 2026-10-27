@@ -13,11 +13,11 @@ const DEFAULT_BANNERS = [
     isActive: true,
   },
   {
-    title: 'FEITO POR DEVS,\nPARA DEVS.',
-    subtitle: 'Peças criadas para sua rotina de código, café e alto desempenho. Canecas térmicas, cadernos e vestuário premium.',
-    ctaText: 'Explorar Linha',
-    ctaLink: '/categoria/todos',
-    imageUrl: '/images/hero/hero-tech-office.jpg',
+    title: 'EXPRESSE SUA\nLINGUAGEM.',
+    subtitle: 'Conheça a Dev Collection da Focus Academy. Camisetas exclusivas inspiradas na programação, com estilo, tecnologia e personalidade.',
+    ctaText: 'Explorar coleção',
+    ctaLink: '/colecao/dev-collection',
+    imageUrl: '/images/banners/banner-camisas-dev.png',
     position: 1,
     placement: 'home_hero',
     isActive: true,
@@ -38,7 +38,17 @@ async function seedBanners() {
   console.log('Seeding default banners in database...');
   for (const banner of DEFAULT_BANNERS) {
     const existing = await prisma.banner.findFirst({
-      where: { imageUrl: banner.imageUrl, placement: banner.placement },
+      where: {
+        placement: banner.placement,
+        ...(banner.position === 1
+          ? {
+              OR: [
+                { imageUrl: '/images/hero/hero-tech-office.jpg' },
+                { imageUrl: banner.imageUrl },
+              ],
+            }
+          : { imageUrl: banner.imageUrl }),
+      },
     });
 
     if (!existing) {
@@ -46,6 +56,12 @@ async function seedBanners() {
         data: banner,
       });
       console.log(`Created banner: ${banner.title.replace('\n', ' ')}`);
+    } else if (banner.position === 1) {
+      await prisma.banner.update({
+        where: { id: existing.id },
+        data: banner,
+      });
+      console.log(`Updated banner: ${banner.title.replace('\n', ' ')}`);
     } else {
       console.log(`Banner already exists: ${banner.title.replace('\n', ' ')}`);
     }

@@ -175,22 +175,34 @@ async function seedAllProducts() {
       name: "Camisa Python",
       slug: "tshirt-focus-collection",
       sku: "FS-AMS-TSHIRT-001",
-      description:
-        "Camisa Python da DEV COLLECTION, para quem transforma ideias em código.",
+      description: `Dev Collection — Python
+Inspirada na versatilidade do Python, esta camiseta representa criatividade, inteligência e inovação. Sua estampa combina o símbolo da linguagem com traços tecnológicos em azul e amarelo, criando uma composição moderna e sofisticada.
+
+Desenvolvida para quem transforma ideias em código, a peça combina uma estética streetwear premium, modelagem oversized e identidade visual exclusiva da Focus Academy.
+
+Vista seu código. Expresse sua linguagem.`,
       shortDescription: "Camisa Python da DEV COLLECTION.",
       basePrice: 89.9,
       promotionalPrice: null,
-      imageUrl: "/images/camisas/01_Python_original.png?v=20261026-4",
+      imageUrl: "/images/camisas/01_Python_original.png?v=20261027-2",
       images: [
         {
-          url: "/images/camisas/01_Python_original.png?v=20261026-4",
+          url: "/images/camisas/01_Python_original.png?v=20261027-2",
           isPrimary: true,
           altText: "Camisa Python - Preto",
+          position: 0,
         },
         {
-          url: "/images/camisas/camisa-python-branca.jpeg?v=20261026-4",
+          url: "/images/camisas/camisa-python-branca.jpeg?v=20261027-1",
           isPrimary: false,
           altText: "Camisa Python - Branco",
+          position: 1,
+        },
+        {
+          url: "/images/camisas/frente-camisa-py.jpg?v=20261027-1",
+          isPrimary: false,
+          altText: "Camisa Python - Frente",
+          position: 2,
         },
       ],
       categories: [catVestuario.id, catColecoes.id],
@@ -202,22 +214,34 @@ async function seedAllProducts() {
       name: "Camisa Java",
       slug: "polo-focus-collection",
       sku: "FS-AMS-POLO-001",
-      description:
-        "Camisa Java da DEV COLLECTION, para quem transforma ideias em código.",
+      description: `Dev Collection — Java
+Uma homenagem à robustez e à evolução constante do Java. O design apresenta sua icônica identidade visual em laranja e azul, com elementos gráficos minimalistas que representam tecnologia, desempenho e inovação.
+
+Desenvolvida para quem transforma ideias em código, a peça combina uma estética streetwear premium, modelagem oversized e identidade visual exclusiva da Focus Academy.
+
+Vista seu código. Expresse sua linguagem.`,
       shortDescription: "Camisa Java da DEV COLLECTION.",
       basePrice: 89.9,
       promotionalPrice: null,
-      imageUrl: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261026-4",
+      imageUrl: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261027-2",
       images: [
         {
-          url: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261026-4",
+          url: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261027-2",
           isPrimary: true,
           altText: "Camisa Java - Preto",
+          position: 0,
         },
         {
-          url: "/images/camisas/camisa-java-branca.jpeg?v=20261026-4",
+          url: "/images/camisas/camisa-java-branca.jpeg?v=20261027-1",
           isPrimary: false,
           altText: "Camisa Java - Branco",
+          position: 1,
+        },
+        {
+          url: "/images/camisas/frente-camisa-java.jpg?v=20261027-1",
+          isPrimary: false,
+          altText: "Camisa Java - Frente",
+          position: 2,
         },
       ],
       categories: [catVestuario.id, catColecoes.id],
@@ -231,22 +255,34 @@ async function seedAllProducts() {
       name: "Camisa JavaScript",
       slug: "bone-focus-collection",
       sku: "FS-AMS-CAP-001",
-      description:
-        "Camisa JavaScript da DEV COLLECTION, para quem transforma ideias em código.",
+      description: `Dev Collection — JavaScript
+Inspirada na linguagem que movimenta a web, esta camiseta apresenta a identidade JavaScript em traços dourados discretos, com composição minimalista que une criatividade, tecnologia e estilo.
+
+Desenvolvida para quem transforma ideias em código, a peça combina uma estética streetwear premium, modelagem oversized e identidade visual exclusiva da Focus Academy.
+
+Vista seu código. Expresse sua linguagem.`,
       shortDescription: "Camisa JavaScript da DEV COLLECTION.",
       basePrice: 89.9,
       promotionalPrice: null,
-      imageUrl: "/images/camisas/05_JavaScript_original.png?v=20261026-4",
+      imageUrl: "/images/camisas/05_JavaScript_original.jpg?v=20261027-2",
       images: [
         {
-          url: "/images/camisas/05_JavaScript_original.png?v=20261026-4",
+          url: "/images/camisas/05_JavaScript_original.jpg?v=20261027-2",
           isPrimary: true,
           altText: "Camisa JavaScript - Preto",
+          position: 0,
         },
         {
-          url: "/images/camisas/camisa-js-branca.jpg?v=20261026-4",
+          url: "/images/camisas/camisa-js-branca.jpeg?v=20261027-1",
           isPrimary: false,
           altText: "Camisa JavaScript - Branco",
+          position: 1,
+        },
+        {
+          url: "/images/camisas/frente-camisa-js.jpg?v=20261027-1",
+          isPrimary: false,
+          altText: "Camisa JavaScript - Frente",
+          position: 2,
         },
       ],
       categories: [catVestuario.id, catColecoes.id],
@@ -258,22 +294,34 @@ async function seedAllProducts() {
       name: "Camisa TypeScript",
       slug: "camisa-dev-collection-typescript",
       sku: "FS-DEV-TS-001",
-      description:
-        "Camisa TypeScript da DEV COLLECTION, para quem transforma ideias em código.",
+      description: `Dev Collection — TypeScript
+Inspirada na precisão e na estrutura do TypeScript, esta camiseta traduz organização e modernidade em uma estampa de linhas geométricas azuis, com acabamento visual clean e contemporâneo.
+
+Desenvolvida para quem transforma ideias em código, a peça combina uma estética streetwear premium, modelagem oversized e identidade visual exclusiva da Focus Academy.
+
+Vista seu código. Expresse sua linguagem.`,
       shortDescription: "Camisa TypeScript da DEV COLLECTION.",
       basePrice: 89.9,
       promotionalPrice: null,
-      imageUrl: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-4",
+      imageUrl: "/images/camisas/03_TypeScript_alta_resolucao.jpeg?v=20261027-2",
       images: [
         {
-          url: "/images/camisas/03_TypeScript_alta_resolucao.png?v=20261026-4",
+          url: "/images/camisas/03_TypeScript_alta_resolucao.jpeg?v=20261027-2",
           isPrimary: true,
           altText: "Camisa TypeScript - Preto",
+          position: 0,
         },
         {
-          url: "/images/camisas/camisa-ts-branca.jpeg?v=20261026-4",
+          url: "/images/camisas/camisa-ts-branca.jpeg?v=20261027-1",
           isPrimary: false,
           altText: "Camisa TypeScript - Branco",
+          position: 1,
+        },
+        {
+          url: "/images/camisas/frente-camisa-ts.jpg?v=20261027-1",
+          isPrimary: false,
+          altText: "Camisa TypeScript - Frente",
+          position: 2,
         },
       ],
       categories: [catVestuario.id, catColecoes.id],
@@ -793,13 +841,14 @@ async function seedAllProducts() {
     // Update images
     await prisma.productImage.deleteMany({ where: { productId: product.id } });
     if (item.images && item.images.length > 0) {
-      for (const img of item.images) {
+      for (const [position, img] of item.images.entries()) {
         await prisma.productImage.create({
           data: {
             productId: product.id,
             url: img.url,
             isPrimary: img.isPrimary,
             altText: img.altText,
+            position: img.position ?? position,
           },
         });
       }

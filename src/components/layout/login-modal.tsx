@@ -477,16 +477,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
                 )}
           </>
         )}
-
-        <p className="mt-5 text-center text-xs text-zinc-500">
-          Precisa de ajuda?{' '}
-          <a
-            href="mailto:contato@focusstore.com.br"
-            className="font-bold text-[#FF5500] hover:text-[#ff8a40]"
-          >
-            Central de Atendimento
-          </a>
-        </p>
+        
       </section>
     </div>
   ), document.body);

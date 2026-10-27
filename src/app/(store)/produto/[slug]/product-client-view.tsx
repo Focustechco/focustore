@@ -46,6 +46,10 @@ export function ProductClientView({ product }: { product: any }) {
   const [added, setAdded] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const frontImage = product.images.find((image: any) =>
+    image.altText?.toLowerCase().includes('frente')
+  );
+  const isDevCollectionShirt = product.slug?.startsWith('camisa-dev-collection-');
 
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
 
@@ -102,6 +106,20 @@ export function ProductClientView({ product }: { product: any }) {
   const [selectedSize, setSelectedSize] = useState<string>(
     availableSizes[0] || 'M'
   );
+  const galleryImages = isDevCollectionShirt
+    ? product.images
+        .map((image: any, index: number) => ({ image, index }))
+        .filter(({ image }: { image: any }) => {
+          const label = `${image.altText || ''} ${image.url || ''}`.toLowerCase();
+          const isWhite = selectedColor.toLowerCase().includes('branco');
+
+          return isWhite
+            ? label.includes('branco') || label.includes('white')
+            : label.includes('preto') ||
+                label.includes('black') ||
+                label.includes('frente');
+        })
+    : product.images.map((image: any, index: number) => ({ image, index }));
 
   // Variação selecionada com base na Cor + Tamanho
   const selectedVariant = useMemo(() => {
@@ -256,9 +274,11 @@ export function ProductClientView({ product }: { product: any }) {
         {/* 55% GALERIA DE FOTOS */}
         <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4">
           {/* Miniaturas Verticais */}
-          {product.images.length > 1 && (
+          {(isDevCollectionShirt
+            ? galleryImages.length > 0
+            : galleryImages.length > 1) && (
             <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[550px] scrollbar-none">
-              {product.images.map((img: any, idx: number) => (
+              {galleryImages.map(({ image: img, index: idx }: { image: any; index: number }) => (
                 <button
                   key={img.id || idx}
                   onClick={() => handleImageSelect(idx)}
@@ -292,6 +312,18 @@ export function ProductClientView({ product }: { product: any }) {
               quality={(product.images[selectedImage]?.url || product.images[0]?.url || '').includes('/images/camisas/') ? 90 : undefined}
               className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
             />
+            {selectedColor.toLowerCase().includes('preto') &&
+              selectedImage === 0 &&
+              frontImage && (
+              <Image
+                src={frontImage.url}
+                alt={frontImage.altText || `${product.name} - Frente`}
+                fill
+                sizes="(max-width: 1024px) 100vw, 55vw"
+                quality={frontImage.url.includes('/images/camisas/') ? 90 : undefined}
+                className="object-cover object-center opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 ease-in-out"
+              />
+            )}
             {currentPromoPrice && (
               <div className="absolute top-4 left-4">
                 <DiscountBadge price={currentPrice} promotionalPrice={currentPromoPrice} />
@@ -637,10 +669,20 @@ export function ProductClientView({ product }: { product: any }) {
         {/* 1. ABA DESCRIÇÃO & TECNOLOGIA (CLEAN & MINIMALISTA) */}
         {activeTab === 'description' && (
           <div className="space-y-6 max-w-3xl text-sm leading-relaxed">
-            {/* Parágrafo Principal */}
-            <p className="text-zinc-300 text-sm sm:text-base">
-              {product.description}
-            </p>
+            {product.description.startsWith('Dev Collection — ') ? (
+              <div className="space-y-3">
+                <h3 className="text-lg sm:text-xl font-bold text-[#FF6500]">
+                  {product.description.split('\n', 1)[0]}
+                </h3>
+                <p className="text-zinc-300 text-sm sm:text-base whitespace-pre-line">
+                  {product.description.split('\n').slice(1).join('\n').trimStart()}
+                </p>
+              </div>
+            ) : (
+              <p className="text-zinc-300 text-sm sm:text-base whitespace-pre-line">
+                {product.description}
+              </p>
+            )}
 
             {(product.slug?.includes('camisa') ||
               product.slug?.includes('moletom') ||

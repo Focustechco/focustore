@@ -115,7 +115,7 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="https://www.focustecnologias.com.br/#careers"
+                  href="/admin/dashboard"
                   className="text-[#FF6500] font-semibold hover:underline"
                 >
                   Painel Admin

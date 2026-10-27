@@ -49,7 +49,14 @@ export function ProductCard({ product }: ProductCardProps) {
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
-  const primaryImage = product.images[currentImageIndex]?.url || product.images[0]?.url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80';
+  const selectedImage = product.images[currentImageIndex] || product.images[0];
+  const primaryImage = selectedImage?.url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80';
+  const frontImage = product.images.find((image) =>
+    image.altText?.toLowerCase().includes('frente')
+  );
+  const canPreviewFront =
+    frontImage &&
+    !selectedImage?.altText?.toLowerCase().includes('branco');
   const defaultVariant = product.variants[0];
   const categoryName = product.categories?.[0]?.category.name || 'Vestuário';
   const price = defaultVariant?.price || product.basePrice;
@@ -134,9 +141,6 @@ export function ProductCard({ product }: ProductCardProps) {
     <div className="group relative flex flex-col bg-[#0F0F0F] rounded-2xl overflow-hidden border border-white/10 hover:border-[#FF6500]/50 transition-all duration-300 hover:shadow-[0_15px_30px_rgba(0,0,0,0.8)] hover:-translate-y-1 h-full justify-between select-none">
       {/* 1. TOPO: FOTO DO PRODUTO COM ILUMINAÇÃO AMBIENTE LARANJA */}
       <div className="relative aspect-square w-full bg-[#0F0F0F] overflow-hidden flex items-center justify-center">
-        {/* Glow de fundo traseiro do produto */}
-        <div className="absolute inset-0 bg-radial from-[#FF6500]/15 via-transparent to-transparent opacity-60 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-10" />
-
         {/* Botão de Favorito (Coração Outline Branco / Preenchido Laranja) */}
         <button
           onClick={handleToggleFavorite}
@@ -150,15 +154,29 @@ export function ProductCard({ product }: ProductCardProps) {
         </button>
 
         {/* Imagem do Produto */}
-        <Link href={`/produto/${product.slug}`} className="relative w-full h-full block">
+        <Link href={`/produto/${product.slug}`} className="group/image relative w-full h-full block">
           <Image
             src={primaryImage}
             alt={product.name}
             fill
-            className="object-cover group-hover:scale-108 transition-transform duration-500"
+            className={`object-cover ${
+              canPreviewFront
+                ? 'transition-opacity duration-500 ease-in-out'
+                : 'group-hover:scale-108 transition-transform duration-500'
+            } ${canPreviewFront ? 'group-hover/image:opacity-0' : ''}`}
             sizes="(max-width: 768px) 50vw, 20vw"
             quality={primaryImage.includes('/images/camisas/') ? 90 : undefined}
           />
+          {canPreviewFront && frontImage && (
+            <Image
+              src={frontImage.url}
+              alt={frontImage.altText || `${product.name} - Frente`}
+              fill
+              className="object-cover opacity-0 group-hover/image:opacity-100 transition-opacity duration-500 ease-in-out"
+              sizes="(max-width: 768px) 50vw, 20vw"
+              quality={frontImage.url.includes('/images/camisas/') ? 90 : undefined}
+            />
+          )}
         </Link>
       </div>
 

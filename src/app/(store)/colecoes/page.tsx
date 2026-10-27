@@ -100,7 +100,7 @@ export default async function CollectionsPage() {
           <div className="lg:col-span-6 grid grid-cols-3 gap-3 sm:gap-4">
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
-                src="/images/camisas/01_Python_original.png?v=20261026-4"
+                src="/images/camisas/01_Python_original.png?v=20261027-1"
                 alt="Camisa Python"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"
@@ -111,7 +111,7 @@ export default async function CollectionsPage() {
 
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
-                src="/images/camisas/02_Java_alta_resolucao.jpeg?v=20261026-4"
+                src="/images/camisas/02_Java_alta_resolucao.jpeg?v=20261027-1"
                 alt="Camisa Java"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"
@@ -122,7 +122,7 @@ export default async function CollectionsPage() {
 
             <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-white/10 bg-[#121212] group">
               <Image
-                src="/images/camisas/05_JavaScript_original.png?v=20261026-4"
+                src="/images/camisas/05_JavaScript_original.jpg?v=20261027-2"
                 alt="Camisa JavaScript"
                 fill
                 sizes="(max-width: 768px) 33vw, 15vw"

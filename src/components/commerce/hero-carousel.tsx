@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight } from "lucide-react";
 
 export interface HeroBanner {
   id: string;
@@ -16,67 +16,79 @@ export interface HeroBanner {
 
 const DEFAULT_SLIDES = [
   {
-    id: 'slide-1',
-    tagline: 'DROP OFICIAL 2026 // STREETWEAR & TECHWEAR',
-    titleLine1: 'IDEIAS TAMBÉM',
-    titleLine2: 'SE USAM.',
-    subtitle: 'Linha exclusiva desenvolvida para quem vive tecnologia, criatividade e inovação. Tecidos de alta gramatura e corte moderno.',
-    primaryButtonText: 'Ver coleção',
-    primaryButtonHref: '/categoria/vestuario',
-    secondaryButtonText: 'Focus Tech',
-    secondaryButtonHref: '/colecao/focus-tech',
-    imageUrl: '/images/hero/hero-models-banner.png',
-    imageAlt: 'Linha Streetwear Focus Store',
+    id: "slide-1",
+    tagline: "DROP OFICIAL 2026 // STREETWEAR & TECHWEAR",
+    titleLine1: "IDEIAS TAMBÉM",
+    titleLine2: "SE USAM.",
+    subtitle:
+      "Linha exclusiva desenvolvida para quem vive tecnologia, criatividade e inovação. Tecidos de alta gramatura e corte moderno.",
+    primaryButtonText: "Ver coleção",
+    primaryButtonHref: "/categoria/vestuario",
+    secondaryButtonText: "Focus Tech",
+    secondaryButtonHref: "/colecao/focus-tech",
+    imageUrl: "/images/hero/hero-models-banner.png",
+    imageAlt: "Linha Streetwear Focus Store",
   },
   {
-    id: 'slide-2',
-    tagline: 'TECH CULTURE // BUILD & SHIP',
-    titleLine1: 'FEITO POR DEVS,',
-    titleLine2: 'PARA DEVS.',
-    subtitle: 'Peças criadas para sua rotina de código, café e alto desempenho. Canecas térmicas, cadernos e vestuário premium.',
-    primaryButtonText: 'Explorar Linha',
-    primaryButtonHref: '/categoria/todos',
-    secondaryButtonText: 'Ver Acessórios',
-    secondaryButtonHref: '/categoria/acessorios',
-    imageUrl: '/images/hero/hero-tech-office.jpg',
-    imageAlt: 'Tech Culture Focus Store',
+    id: "slide-2",
+    titleLine1: "EXPRESSE SUA",
+    titleLine2: "LINGUAGEM.",
+    subtitle:
+      "Conheça a Dev Collection da Focus Academy. Camisetas exclusivas inspiradas na programação, com estilo, tecnologia e personalidade.",
+    primaryButtonText: "Explorar coleção",
+    primaryButtonHref: "/colecao/dev-collection",
+    secondaryButtonText: "",
+    secondaryButtonHref: "",
+    imageUrl: "/images/banners/banner-camisas-dev.png",
+    imageAlt: "Dev Collection da Focus Academy",
   },
   {
-    id: 'slide-3',
-    tagline: 'FOCUS STREETWEAR // LINHA ESSENCIAL',
-    titleLine1: 'FAÇA PARTE DO',
-    titleLine2: 'MOVIMENTO.',
-    subtitle: 'Camisas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.',
-    primaryButtonText: 'Ver Coleção',
-    primaryButtonHref: '/categoria/vestuario',
-    secondaryButtonText: 'Focus Tech',
-    secondaryButtonHref: '/colecao/focus-tech',
-    imageUrl: '/images/hero/hero-movimento-streetwear.png',
-    imageAlt: 'Trio Streetwear Focus - Faça Parte do Movimento',
+    id: "slide-3",
+    tagline: "FOCUS STREETWEAR // LINHA ESSENCIAL",
+    titleLine1: "FAÇA PARTE DO",
+    titleLine2: "MOVIMENTO.",
+    subtitle:
+      "Camisas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.",
+    primaryButtonText: "Ver Coleção",
+    primaryButtonHref: "/categoria/vestuario",
+    secondaryButtonText: "Focus Tech",
+    secondaryButtonHref: "/colecao/focus-tech",
+    imageUrl: "/images/hero/hero-movimento-streetwear.png",
+    imageAlt: "Trio Streetwear Focus - Faça Parte do Movimento",
   },
 ];
 
 const AUTOPLAY_INTERVAL = 4000;
 
-export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[] }) {
-  const slides = (initialBanners && initialBanners.length > 0)
-    ? initialBanners.map((b, idx) => {
-        const titleLines = b.title.split('\n');
-        return {
-          id: b.id,
-          tagline: `FOCUS EXCLUSIVE // DROP 2026`,
-          titleLine1: titleLines[0] || b.title,
-          titleLine2: titleLines[1] || '',
-          subtitle: b.subtitle || 'Linha exclusiva desenvolvida para quem vive tecnologia e inovação.',
-          primaryButtonText: b.ctaText || 'Ver Coleção',
-          primaryButtonHref: b.ctaLink || '/categoria/vestuario',
-          secondaryButtonText: 'Focus Tech',
-          secondaryButtonHref: '/colecao/focus-tech',
-          imageUrl: b.imageUrl,
-          imageAlt: b.title,
-        };
-      })
-    : DEFAULT_SLIDES;
+export function HeroCarousel({
+  initialBanners,
+}: {
+  initialBanners?: HeroBanner[];
+}) {
+  const slides =
+    initialBanners && initialBanners.length > 0
+      ? initialBanners.map((b, idx) => {
+          const titleLines = b.title.split("\n");
+          return {
+            id: b.id,
+            tagline:
+              b.imageUrl === "/images/banners/banner-camisas-dev.png"
+                ? "VISTA SEU CÓDIGO."
+                : "FOCUS EXCLUSIVE // DROP 2026",
+            titleLine1: titleLines[0] || b.title,
+            titleLine2: titleLines[1] || "",
+            subtitle:
+              b.subtitle ||
+              "Linha exclusiva desenvolvida para quem vive tecnologia e inovação.",
+            primaryButtonText: b.ctaText || "Ver Coleção",
+            primaryButtonHref: b.ctaLink || "/categoria/vestuario",
+            secondaryButtonText: "Focus Tech",
+            secondaryButtonHref: "/colecao/focus-tech",
+            imageUrl: b.imageUrl,
+            imageAlt: b.title,
+          };
+        })
+      : DEFAULT_SLIDES;
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -146,11 +158,16 @@ export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[]
 
         {/* 2. Conteúdo Editorial (No Desktop: layout padrão centralizado na vertical à esquerda; No Mobile: ancorado no rodapé) */}
         <div className="absolute left-5 right-5 bottom-[82px] z-20 max-w-xl space-y-1 sm:relative sm:left-auto sm:right-auto sm:bottom-auto sm:space-y-3.5 sm:mt-auto sm:my-auto">
+          {slide.tagline === "VISTA SEU CÓDIGO." && (
+            <p className="text-[9px] sm:text-xs font-bold uppercase tracking-[0.18em] text-[#FF6500] drop-shadow-sm">
+              {slide.tagline}
+            </p>
+          )}
           <h1 className="line-clamp-2 text-base sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1] sm:leading-[1.05] uppercase drop-shadow-md">
             {slide.titleLine1}
             {slide.titleLine2 && (
               <>
-                <br className="hidden xs:inline sm:inline" />{' '}
+                <br className="hidden xs:inline sm:inline" />{" "}
                 <span className="text-[#FF6500]">{slide.titleLine2}</span>
               </>
             )}
@@ -163,7 +180,8 @@ export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[]
           <div className="hidden sm:flex pt-1 sm:pt-2 flex-wrap items-center gap-2 sm:gap-3">
             <Link href={slide.primaryButtonHref}>
               <button className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[#FF6500] hover:bg-[#FF7A1A] text-white text-[11px] sm:text-sm font-bold uppercase tracking-wider transition-all inline-flex items-center gap-1.5 sm:gap-2 shadow-xl shadow-[#FF6500]/30 hover:scale-[1.02] active:scale-95">
-                {slide.primaryButtonText} <ArrowRight size={14} className="sm:w-4 sm:h-4" />
+                {slide.primaryButtonText}{" "}
+                <ArrowRight size={14} className="sm:w-4 sm:h-4" />
               </button>
             </Link>
             {slide.secondaryButtonText && (
@@ -185,8 +203,8 @@ export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[]
                 onClick={() => setCurrentSlide(idx)}
                 className={`cursor-pointer transition-all duration-300 rounded-full ${
                   idx === currentSlide
-                    ? 'w-6 sm:w-8 h-1 sm:h-1.5 bg-[#FF6500]'
-                    : 'w-1.5 sm:w-2 h-1 sm:h-1.5 bg-white/30 hover:bg-white/60'
+                    ? "w-6 sm:w-8 h-1 sm:h-1.5 bg-[#FF6500]"
+                    : "w-1.5 sm:w-2 h-1 sm:h-1.5 bg-white/30 hover:bg-white/60"
                 }`}
                 aria-label={`Ir para slide ${idx + 1}`}
               />
@@ -207,7 +225,6 @@ export function HeroCarousel({ initialBanners }: { initialBanners?: HeroBanner[]
             </Link>
           )}
         </div>
-
       </div>
     </section>
   );

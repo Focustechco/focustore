@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
 
@@ -7,6 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     const category = await prisma.category.findUnique({
       where: { id },
@@ -45,6 +49,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     const body = await request.json();
 
@@ -108,9 +115,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true, category: updated });
   } catch (error: any) {
-    console.error('Error updating category:', error);
+    console.error('Error updating category:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar categoria.' },
+      { success: false, error: 'Erro ao atualizar categoria.' },
       { status: 500 }
     );
   }
@@ -121,6 +128,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     const existing = await prisma.category.findUnique({
       where: { id },
@@ -135,8 +145,7 @@ export async function DELETE(
     }
 
     // Delete relationships from ProductCategory
-    await prisma.productCategory.deleteMany({ where: { categoryId: id } });
-    await prisma.category.delete({ where: { id } });
+    await prisma.category.update({ where: { id }, data: { isActive: false } });
 
     revalidatePath('/');
     revalidatePath(`/categoria/${existing.slug}`);
@@ -146,9 +155,9 @@ export async function DELETE(
       message: 'Categoria excluída com sucesso.',
     });
   } catch (error: any) {
-    console.error('Error deleting category:', error);
+    console.error('Error deleting category:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao excluir categoria.' },
+      { success: false, error: 'Erro ao excluir categoria.' },
       { status: 500 }
     );
   }

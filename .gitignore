@@ -36,9 +36,17 @@ prisma/*.db-journal
 prisma/*.db-shm
 prisma/*.db-wal
 
-# python
-.venv/
-__pycache__/
-.pytest_cache/
+# Python
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+*.py[cod]
+
+# Environment variables
 .env
-.env.example
+.env.*
+!.env.example
+
+# Local consistent backups and validation artifacts (never commit databases).
+/.local-backups/
+/.local-validation/

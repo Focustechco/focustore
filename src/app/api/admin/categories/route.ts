@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
 
 export async function GET(request: Request) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || undefined;
 
@@ -26,7 +30,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, categories });
   } catch (error: any) {
-    console.error('Error listing categories:', error);
+    console.error('Error listing categories:');
     return NextResponse.json(
       { success: false, error: 'Falha ao buscar categorias.' },
       { status: 500 }
@@ -36,6 +40,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const body = await request.json();
     const {
       name,
@@ -95,9 +102,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, category }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating category:', error);
+    console.error('Error creating category:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao criar categoria.' },
+      { success: false, error: 'Erro ao criar categoria.' },
       { status: 500 }
     );
   }

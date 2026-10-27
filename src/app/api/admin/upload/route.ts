@@ -1,67 +1,31 @@
 import { NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { requireAdmin } from '@/lib/auth/admin';
+import { writeFile, mkdir } from 'node:fs/promises';
+import path from 'node:path';
+import { imageDestination, limitedFormData, sanitizeImage } from '@/lib/security/upload';
+import { InputError } from '@/lib/security/input-error';
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File | null;
-    const folder = (formData.get('folder') as string) || 'uploads';
-
-    if (!file) {
-      return NextResponse.json(
-        { success: false, error: 'Nenhum arquivo enviado.' },
-        { status: 400 }
-      );
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+    if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      return NextResponse.json({ error: 'Upload requer armazenamento persistente configurado.' }, { status: 503 });
     }
-
-    // Validate mime type
-    const validMimes = [
-      'image/jpeg',
-      'image/png',
-      'image/webp',
-      'image/avif',
-      'image/svg+xml',
-      'image/jpg',
-    ];
-    if (!validMimes.includes(file.type)) {
-      return NextResponse.json(
-        { success: false, error: 'Formato inválido. Envie imagens JPG, PNG, WEBP ou SVG.' },
-        { status: 400 }
-      );
-    }
-
-    // Convert file to Buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Sanitize filename
-    const originalName = file.name
-      .toLowerCase()
-      .replace(/[^a-z0-9.]/g, '-');
-    const ext = path.extname(originalName) || '.jpg';
-    const baseName = path.basename(originalName, ext).slice(0, 30);
-    const uniqueFilename = `${baseName}-${Date.now()}${ext}`;
-
-    // Target directory: public/uploads or public/images/banners
-    const targetDir = path.join(process.cwd(), 'public', folder);
-    await mkdir(targetDir, { recursive: true });
-
-    const filePath = path.join(targetDir, uniqueFilename);
-    await writeFile(filePath, buffer);
-
-    const publicUrl = `/${folder}/${uniqueFilename}`;
-
-    return NextResponse.json({
-      success: true,
-      url: publicUrl,
-      fileName: uniqueFilename,
-    });
-  } catch (error: any) {
-    console.error('Upload error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao processar upload.' },
-      { status: 500 }
-    );
+    const form = await limitedFormData(request);
+    const file = form.get('file');
+    if (!(file instanceof File)) throw new InputError('Nenhum arquivo enviado.');
+    const folder = form.get('folder') ?? 'uploads';
+    if (typeof folder !== 'string') throw new InputError('Pasta inválida.');
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const target = imageDestination(folder, bytes, file.type,
+                                    path.join(process.cwd(), 'public'));
+    const sanitized = await sanitizeImage(bytes);
+    await mkdir(target.directory, { recursive: true });
+    await writeFile(path.join(target.directory, target.filename), sanitized, { flag: 'wx' });
+    return NextResponse.json({ success: true, url: target.url, fileName: target.filename });
+  } catch (error) {
+    return NextResponse.json({ success: false, error: error instanceof InputError ? error.message : 'Erro ao processar upload.' },
+                            { status: error instanceof InputError ? error.status : 500 });
   }
 }

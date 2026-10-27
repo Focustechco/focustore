@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
 
 export async function GET(request: Request) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { searchParams } = new URL(request.url);
     const placement = searchParams.get('placement') || undefined;
 
@@ -14,7 +18,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, banners });
   } catch (error: any) {
-    console.error('Error fetching banners:', error);
+    console.error('Error fetching banners:');
     return NextResponse.json(
       { success: false, error: 'Falha ao buscar banners.' },
       { status: 500 }
@@ -24,6 +28,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const body = await request.json();
     const {
       title,
@@ -61,9 +68,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, banner }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating banner:', error);
+    console.error('Error creating banner:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao criar banner.' },
+      { success: false, error: 'Erro ao criar banner.' },
       { status: 500 }
     );
   }

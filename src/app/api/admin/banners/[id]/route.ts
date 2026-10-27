@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
 
@@ -7,6 +8,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     const banner = await prisma.banner.findUnique({
       where: { id },
@@ -33,6 +37,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     const body = await request.json();
 
@@ -67,9 +74,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true, banner });
   } catch (error: any) {
-    console.error('Error updating banner:', error);
+    console.error('Error updating banner:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar banner.' },
+      { success: false, error: 'Erro ao atualizar banner.' },
       { status: 500 }
     );
   }
@@ -80,6 +87,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { id } = await params;
     await prisma.banner.delete({
       where: { id },
@@ -92,9 +102,9 @@ export async function DELETE(
       message: 'Banner excluído com sucesso.',
     });
   } catch (error: any) {
-    console.error('Error deleting banner:', error);
+    console.error('Error deleting banner:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao excluir banner.' },
+      { success: false, error: 'Erro ao excluir banner.' },
       { status: 500 }
     );
   }

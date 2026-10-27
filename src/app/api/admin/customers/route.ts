@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 
 export async function GET(request: Request) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || undefined;
     const role = searchParams.get('role') || undefined;
@@ -72,7 +76,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, customers: customersWithStats });
   } catch (error: any) {
-    console.error('Error fetching customers:', error);
+    console.error('Error fetching customers:');
     return NextResponse.json(
       { success: false, error: 'Falha ao buscar clientes.' },
       { status: 500 }

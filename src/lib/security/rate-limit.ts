@@ -7,6 +7,13 @@ const memoryStore = new Map<string, RateLimitTracker>();
 
 export function rateLimit(identifier: string, limit = 60, windowMs = 60 * 1000): { success: boolean; remaining: number; resetAt: number } {
   const now = Date.now();
+  // Bound memory usage even when callers rotate identifiers.
+  if (memoryStore.size >= 10000) {
+    for (const [key, value] of memoryStore) if (value.resetAt <= now) memoryStore.delete(key);
+    if (memoryStore.size >= 10000 && !memoryStore.has(identifier)) {
+      return { success: false, remaining: 0, resetAt: now + windowMs };
+    }
+  }
   const record = memoryStore.get(identifier);
 
   if (!record || now > record.resetAt) {

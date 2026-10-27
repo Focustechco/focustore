@@ -4,10 +4,13 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
+import { sameOrigin } from '@/lib/security/origin';
+import { rateLimit } from '@/lib/security/rate-limit';
 
 const loginSchema = z.object({
   identifier: z.string().trim().min(1, 'Informe seu e-mail ou CPF.').max(254),
-  password: z.string().min(1, 'Informe sua senha.').max(72),
+  password: z.string().min(1, 'Informe sua senha.').max(72)
+    .refine(value => Buffer.byteLength(value, 'utf8') <= 72, 'Senha inválida.'),
   remember: z.boolean().optional().default(false),
 });
 
@@ -16,6 +19,10 @@ function formatCpf(digits: string) {
 }
 
 export async function POST(request: Request) {
+  if (!sameOrigin(request)) return NextResponse.json({ error: 'Origem inválida.' }, { status: 403 });
+  if (!rateLimit(`login:${request.headers.get('x-forwarded-for')?.split(',')[0]?.trim().slice(0, 100) ?? 'unknown'}`, 20).success) {
+    return NextResponse.json({ error: 'Muitas tentativas. Aguarde.' }, { status: 429 });
+  }
   let body: unknown;
   try {
     body = await request.json();
@@ -78,7 +85,7 @@ export async function POST(request: Request) {
     });
     return response;
   } catch (error) {
-    console.error('Falha ao autenticar cliente:', error);
+    console.error('Falha ao autenticar cliente:');
     return NextResponse.json(
       { error: 'Não foi possível entrar. Tente novamente.' },
       { status: 500 },

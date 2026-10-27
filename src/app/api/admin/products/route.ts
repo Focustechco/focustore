@@ -1,9 +1,15 @@
+import { InputError } from '@/lib/security/input-error';
+import { validateProductInput, validatePromotionalPrice } from '@/modules/catalog/product-validation';
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
 
 export async function GET(request: Request) {
   try {
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || undefined;
     const categoryId = searchParams.get('categoryId') || undefined;
@@ -40,7 +46,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, products });
   } catch (error: any) {
-    console.error('Error listing products:', error);
+    console.error('Error listing products:');
     return NextResponse.json(
       { success: false, error: 'Falha ao buscar produtos.' },
       { status: 500 }
@@ -50,7 +56,12 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const authorization = await requireAdmin();
+    if (!authorization.authorized) return authorization.response;
+
+    const body = validateProductInput(await request.json());
+    validatePromotionalPrice(body.basePrice!, body.promotionalPrice);
+    for (const v of body.variants ?? []) validatePromotionalPrice(v.price ?? body.basePrice!, v.promotionalPrice ?? body.promotionalPrice);
     const {
       name,
       slug,
@@ -106,101 +117,116 @@ export async function POST(request: Request) {
       );
     }
 
-    const product = await prisma.product.create({
-      data: {
-        name,
-        slug: finalSlug,
-        sku,
-        description: description || name,
-        shortDescription: shortDescription || null,
-        brand: brand || 'Focus',
-        basePrice: Number(basePrice),
-        promotionalPrice: promotionalPrice ? Number(promotionalPrice) : null,
-        costPrice: costPrice ? Number(costPrice) : null,
-        status: status || 'ACTIVE',
-        isFeatured: Boolean(isFeatured),
-        weightGrams: Number(weightGrams) || 300,
-        heightCm: Number(heightCm) || 5,
-        widthCm: Number(widthCm) || 20,
-        lengthCm: Number(lengthCm) || 20,
-        categories: {
-          create: categoryIds.map((catId: string) => ({
-            categoryId: catId,
-          })),
+    const createdFullProduct = await prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: {
+          name,
+          slug: finalSlug,
+          sku,
+          description: description || name,
+          shortDescription: shortDescription || null,
+          brand: brand || 'Focus',
+          basePrice: Number(basePrice),
+          promotionalPrice: promotionalPrice ? Number(promotionalPrice) : null,
+          costPrice: costPrice ? Number(costPrice) : null,
+          status: status || 'ACTIVE',
+          isFeatured: Boolean(isFeatured),
+          weightGrams: Number(weightGrams) || 300,
+          heightCm: Number(heightCm) || 5,
+          widthCm: Number(widthCm) || 20,
+          lengthCm: Number(lengthCm) || 20,
+          categories: {
+            create: categoryIds.map((catId: string) => ({
+              categoryId: catId,
+            })),
+          },
+          collections: {
+            create: collectionIds.map((colId: string, idx: number) => ({
+              collectionId: colId,
+              position: idx,
+            })),
+          },
+          images: {
+            create: images.map((img: any, idx: number) => ({
+              url: typeof img === 'string' ? img : img.url,
+              altText: typeof img === 'object' ? img.altText : name,
+              position: idx,
+              isPrimary: idx === 0,
+            })),
+          },
         },
-        collections: {
-          create: collectionIds.map((colId: string, idx: number) => ({
-            collectionId: colId,
-            position: idx,
-          })),
-        },
-        images: {
-          create: images.map((img: any, idx: number) => ({
-            url: typeof img === 'string' ? img : img.url,
-            altText: typeof img === 'object' ? img.altText : name,
-            position: idx,
-            isPrimary: idx === 0,
-          })),
-        },
-      },
-    });
+      });
 
-    // Create variants if provided
-    if (Array.isArray(variants) && variants.length > 0) {
-      for (let i = 0; i < variants.length; i++) {
-        const v = variants[i];
-        const variantSku = v.sku || `${sku}-${v.color || 'STD'}-${v.size || i + 1}`;
-        const createdVariant = await prisma.productVariant.create({
+      // Create variants if provided
+      if (Array.isArray(variants) && variants.length > 0) {
+        for (let i = 0; i < variants.length; i++) {
+          const v = variants[i];
+          const variantSku = v.sku || `${sku}-${v.color || 'STD'}-${v.size || i + 1}`;
+          const createdVariant = await tx.productVariant.create({
+            data: {
+              productId: product.id,
+              sku: variantSku,
+              name: v.name || `${product.name} - ${v.color || ''} ${v.size || ''}`.trim(),
+              color: v.color || null,
+              colorHex: v.colorHex || null,
+              size: v.size || null,
+              model: v.model || null,
+              price: v.price ? Number(v.price) : Number(basePrice),
+              promotionalPrice: v.promotionalPrice ? Number(v.promotionalPrice) : (promotionalPrice ? Number(promotionalPrice) : null),
+              imageUrl: v.imageUrl || (images[0] ? (typeof images[0] === 'string' ? images[0] : images[0].url) : null),
+              position: i,
+              isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
+            },
+          });
+
+          // Create inventory
+          await tx.inventory.create({
+            data: {
+              variantId: createdVariant.id,
+              quantityAvailable: Number(v.stock ?? v.quantityAvailable ?? 0),
+              quantityReserved: 0,
+              lowStockThreshold: 5,
+            },
+          });
+        }
+      } else {
+        // Default standard variant
+        const defaultVariant = await tx.productVariant.create({
           data: {
             productId: product.id,
-            sku: variantSku,
-            name: v.name || `${product.name} - ${v.color || ''} ${v.size || ''}`.trim(),
-            color: v.color || null,
-            colorHex: v.colorHex || null,
-            size: v.size || null,
-            model: v.model || null,
-            price: v.price ? Number(v.price) : Number(basePrice),
-            promotionalPrice: v.promotionalPrice ? Number(v.promotionalPrice) : (promotionalPrice ? Number(promotionalPrice) : null),
-            imageUrl: v.imageUrl || (images[0] ? (typeof images[0] === 'string' ? images[0] : images[0].url) : null),
-            position: i,
-            isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
+            sku: `${sku}-STD`,
+            name: `${product.name} - Padrão`,
+            price: Number(basePrice),
+            promotionalPrice: promotionalPrice ? Number(promotionalPrice) : null,
+            imageUrl: images[0] ? (typeof images[0] === 'string' ? images[0] : images[0].url) : null,
+            position: 0,
+            isActive: true,
           },
         });
 
-        // Create inventory
-        await prisma.inventory.create({
+        await tx.inventory.create({
           data: {
-            variantId: createdVariant.id,
-            quantityAvailable: Number(v.stock ?? v.quantityAvailable ?? 50),
+            variantId: defaultVariant.id,
+            quantityAvailable: 0,
             quantityReserved: 0,
             lowStockThreshold: 5,
           },
         });
       }
-    } else {
-      // Default standard variant
-      const defaultVariant = await prisma.productVariant.create({
-        data: {
-          productId: product.id,
-          sku: `${sku}-STD`,
-          name: `${product.name} - Padrão`,
-          price: Number(basePrice),
-          promotionalPrice: promotionalPrice ? Number(promotionalPrice) : null,
-          imageUrl: images[0] ? (typeof images[0] === 'string' ? images[0] : images[0].url) : null,
-          position: 0,
-          isActive: true,
+
+      const createdFullProduct = await tx.product.findUnique({
+        where: { id: product.id },
+        include: {
+          images: true,
+          variants: { include: { inventory: true } },
+          categories: { include: { category: true } },
+          collections: { include: { collection: true } },
         },
       });
 
-      await prisma.inventory.create({
-        data: {
-          variantId: defaultVariant.id,
-          quantityAvailable: 50,
-          quantityReserved: 0,
-          lowStockThreshold: 5,
-        },
-      });
-    }
+
+      return createdFullProduct;
+    });
 
     // Revalidate store paths
     revalidatePath('/');
@@ -208,21 +234,14 @@ export async function POST(request: Request) {
     revalidatePath('/categoria/[slug]', 'page');
     revalidatePath('/produto/[slug]', 'page');
 
-    const createdFullProduct = await prisma.product.findUnique({
-      where: { id: product.id },
-      include: {
-        images: true,
-        variants: { include: { inventory: true } },
-        categories: { include: { category: true } },
-        collections: { include: { collection: true } },
-      },
-    });
-
     return NextResponse.json({ success: true, product: createdFullProduct }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating product:', error);
+    if (error instanceof InputError) return NextResponse.json({ success: false, error: error.message }, { status: error.status });
+    if (error instanceof SyntaxError) return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 });
+    if (error?.code === 'P2002') return NextResponse.json({ error: 'SKU ou slug já cadastrado.' }, { status: 409 });
+    console.error('Error creating product:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao cadastrar produto.' },
+      { success: false, error: 'Erro ao cadastrar produto.' },
       { status: 500 }
     );
   }

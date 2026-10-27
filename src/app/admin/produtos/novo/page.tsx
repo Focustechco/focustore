@@ -1,3 +1,4 @@
+import { requireAdminPage } from '@/lib/auth/admin';
 import React from 'react';
 import { prisma } from '@/lib/db/prisma';
 import { ProductForm } from '@/components/admin/product-form';
@@ -5,6 +6,7 @@ import { ProductForm } from '@/components/admin/product-form';
 export const dynamic = 'force-dynamic';
 
 export default async function NewProductPage() {
+  await requireAdminPage();
   let categories: any[] = [];
   let collections: any[] = [];
 

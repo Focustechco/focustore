@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
       {
         pathname: "/images/**",
       },
+      { pathname: "/uploads/**" },
     ],
     remotePatterns: [
       {

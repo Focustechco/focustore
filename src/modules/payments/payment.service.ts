@@ -1,122 +1,54 @@
+import { z } from 'zod';
 import { prisma } from '@/lib/db/prisma';
 import { InventoryService } from '../inventory/inventory.service';
-import { logger } from '@/lib/utils/logger';
+import { InputError } from '@/lib/security/input-error';
+
+const eventSchema = z.object({
+  eventId: z.string().min(1).max(200), eventType: z.string().min(1).max(100),
+  orderId: z.string().min(1).optional(), paymentId: z.string().min(1).optional(),
+  status: z.enum(['PAID', 'FAILED', 'CANCELLED']), provider: z.string().min(1).max(100),
+}).refine(value => value.orderId || value.paymentId);
 
 export class PaymentService {
-  static async handlePaymentWebhook(payload: {
-    eventId: string;
-    eventType: string;
-    orderId?: string;
-    paymentId?: string;
-    status: 'PAID' | 'FAILED' | 'CANCELLED';
-    provider: string;
-  }) {
-    logger.info('Processando webhook de pagamento', { eventId: payload.eventId });
-
-    // 1. Idempot?ncia: verificar se evento j? foi processado
-    const existingEvent = await prisma.webhookEvent.findUnique({
-      where: { eventId: payload.eventId },
-    });
-
-    if (existingEvent && existingEvent.processed) {
-      logger.info('Evento j? processado anteriormente', { eventId: payload.eventId });
-      return { status: 'already_processed' };
-    }
-
-    const webhookEvent = await prisma.webhookEvent.upsert({
-      where: { eventId: payload.eventId },
-      update: {},
-      create: {
-        eventId: payload.eventId,
-        provider: payload.provider,
-        eventType: payload.eventType,
-        payload: JSON.stringify(payload),
-      },
-    });
-
-    try {
-      await prisma.$transaction(async (tx) => {
-        let payment;
-        if (payload.paymentId) {
-          payment = await tx.payment.findUnique({
-            where: { id: payload.paymentId },
-            include: { order: true },
-          });
-        } else if (payload.orderId) {
-          payment = await tx.payment.findFirst({
-            where: { orderId: payload.orderId },
-            include: { order: true },
-          });
-        }
-
-        if (!payment) {
-          throw new Error('Pagamento correspondente n?o encontrado.');
-        }
-
-        if (payload.status === 'PAID') {
-          await tx.payment.update({
-            where: { id: payment.id },
-            data: {
-              status: 'PAID',
-              paidAt: new Date(),
-            },
-          });
-
-          await tx.order.update({
-            where: { id: payment.orderId },
-            data: { status: 'PAID' },
-          });
-
-          await tx.orderStatusHistory.create({
-            data: {
-              orderId: payment.orderId,
-              status: 'PAID',
-              comment: `Pagamento confirmado via webhook do ${payload.provider}`,
-            },
-          });
-
-          // Baixa definitiva no estoque
-          await InventoryService.commitStock(tx, payment.orderId);
-        } else if (payload.status === 'FAILED' || payload.status === 'CANCELLED') {
-          await tx.payment.update({
-            where: { id: payment.id },
-            data: { status: 'FAILED' },
-          });
-
-          await tx.order.update({
-            where: { id: payment.orderId },
-            data: { status: 'CANCELLED' },
-          });
-
-          await tx.orderStatusHistory.create({
-            data: {
-              orderId: payment.orderId,
-              status: 'CANCELLED',
-              comment: 'Pagamento recusado ou cancelado pelo gateway.',
-            },
-          });
-
-          // Libera estoque reservado de volta
-          await InventoryService.releaseStock(tx, payment.orderId);
-        }
-
-        await tx.webhookEvent.update({
-          where: { id: webhookEvent.id },
-          data: {
-            processed: true,
-            processedAt: new Date(),
-          },
+  // Demonstration only. Real providers require verified signatures before this call.
+  static async handlePaymentWebhook(input: z.input<typeof eventSchema>) {
+    const parsed = eventSchema.safeParse(input);
+    if (!parsed.success) throw new InputError('Evento de pagamento inválido.');
+    const payload = parsed.data;
+    return prisma.$transaction(async tx => {
+      const existing = await tx.webhookEvent.findUnique({ where: { eventId: payload.eventId } });
+      const serialized = JSON.stringify(payload);
+      if (existing && existing.payload !== serialized) throw new InputError('Evento reutilizado com dados diferentes.', 409);
+      if (existing?.processed) return { status: 'already_processed' };
+      const payment = payload.paymentId
+        ? await tx.payment.findUnique({ where: { id: payload.paymentId } })
+        : await tx.payment.findFirst({ where: { orderId: payload.orderId }, orderBy: { createdAt: 'desc' } });
+      if (!payment || (payload.orderId && payload.orderId !== payment.orderId)) {
+        throw new InputError('Pagamento não encontrado.', 404);
+      }
+      const event = await tx.webhookEvent.upsert({
+        where: { eventId: payload.eventId }, update: {},
+        create: { eventId: payload.eventId, provider: payload.provider,
+                  eventType: payload.eventType, payload: serialized },
+      });
+      if (payment.status !== 'PENDING') {
+        if (payment.status !== payload.status) throw new InputError('Transição de pagamento inválida.', 409);
+      } else {
+        const changed = await tx.payment.updateMany({
+          where: { id: payment.id, status: 'PENDING' },
+          data: { status: payload.status, paidAt: payload.status === 'PAID' ? new Date() : null },
         });
-      });
-
+        if (changed.count !== 1) throw new InputError('Pagamento alterado. Tente novamente.', 409);
+        const orderStatus = payload.status === 'PAID' ? 'PAID' : 'CANCELLED';
+        await tx.order.update({ where: { id: payment.orderId }, data: { status: orderStatus } });
+        await tx.orderStatusHistory.create({ data: {
+          orderId: payment.orderId, status: orderStatus, comment: 'Evento de pagamento demonstrativo.',
+        } });
+        if (payload.status === 'PAID') await InventoryService.commitStock(tx, payment.orderId);
+        else await InventoryService.releaseStock(tx, payment.orderId);
+      }
+      await tx.webhookEvent.update({ where: { id: event.id }, data: { processed: true, processedAt: new Date() } });
       return { status: 'success' };
-    } catch (err: any) {
-      logger.error('Falha ao processar webhook', { error: err.message, eventId: payload.eventId });
-      await prisma.webhookEvent.update({
-        where: { id: webhookEvent.id },
-        data: { error: err.message },
-      });
-      throw err;
-    }
+    });
   }
 }

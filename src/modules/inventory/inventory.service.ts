@@ -1,12 +1,14 @@
-import { prisma } from '@/lib/db/prisma';
+import type { Prisma } from '@prisma/client';
+import { InputError } from '@/lib/security/input-error';
 
 export class InventoryService {
   static async reserveStock(
-    tx: any,
+    tx: Prisma.TransactionClient,
     items: { variantId: string; quantity: number }[],
     referenceId: string
   ) {
     for (const item of items) {
+      if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0) throw new InputError('Quantidade inválida.');
       const inventory = await tx.inventory.findUnique({
         where: { variantId: item.variantId },
       });
@@ -21,13 +23,14 @@ export class InventoryService {
         );
       }
 
-      await tx.inventory.update({
-        where: { id: inventory.id },
+      const updated = await tx.inventory.updateMany({
+        where: { id: inventory.id, quantityAvailable: { gte: item.quantity } },
         data: {
           quantityAvailable: { decrement: item.quantity },
           quantityReserved: { increment: item.quantity },
         },
       });
+      if (updated.count !== 1) throw new InputError('Estoque insuficiente.', 409);
 
       await tx.inventoryMovement.create({
         data: {
@@ -41,7 +44,7 @@ export class InventoryService {
     }
   }
 
-  static async commitStock(tx: any, orderId: string) {
+  static async commitStock(tx: Prisma.TransactionClient, orderId: string) {
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: { items: true },
@@ -54,14 +57,15 @@ export class InventoryService {
         where: { variantId: item.variantId },
       });
 
-      if (!inventory) continue;
+      if (!inventory) throw new InputError('Estoque não encontrado.', 409);
 
-      await tx.inventory.update({
-        where: { id: inventory.id },
+      const updated = await tx.inventory.updateMany({
+        where: { id: inventory.id, quantityReserved: { gte: item.quantity } },
         data: {
           quantityReserved: { decrement: item.quantity },
         },
       });
+      if (updated.count !== 1) throw new InputError('Reserva de estoque inconsistente.', 409);
 
       await tx.inventoryMovement.create({
         data: {
@@ -75,7 +79,7 @@ export class InventoryService {
     }
   }
 
-  static async releaseStock(tx: any, orderId: string) {
+  static async releaseStock(tx: Prisma.TransactionClient, orderId: string) {
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: { items: true },
@@ -88,15 +92,16 @@ export class InventoryService {
         where: { variantId: item.variantId },
       });
 
-      if (!inventory) continue;
+      if (!inventory) throw new InputError('Estoque não encontrado.', 409);
 
-      await tx.inventory.update({
-        where: { id: inventory.id },
+      const updated = await tx.inventory.updateMany({
+        where: { id: inventory.id, quantityReserved: { gte: item.quantity } },
         data: {
           quantityAvailable: { increment: item.quantity },
           quantityReserved: { decrement: item.quantity },
         },
       });
+      if (updated.count !== 1) throw new InputError('Reserva de estoque inconsistente.', 409);
 
       await tx.inventoryMovement.create({
         data: {

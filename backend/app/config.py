@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
     debug: bool = Field(default=False, validation_alias="FOCUS_DEBUG")
     database_url: str = Field(min_length=1)
+    legacy_catalog_sqlite_path: Path | None = None
 
     model_config = SettingsConfigDict(
         env_file=Path(__file__).resolve().parents[1] / ".env",

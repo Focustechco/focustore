@@ -16,6 +16,7 @@ def isolated_settings(monkeypatch, tmp_path):
     monkeypatch.setenv("FOCUS_DEBUG", "false")
     monkeypatch.setenv("APP_NAME", "FocusStore API")
     monkeypatch.setenv("APP_VERSION", "0.1.0")
+    monkeypatch.delenv("LEGACY_CATALOG_SQLITE_PATH", raising=False)
     monkeypatch.setenv("DATABASE_URL", f"sqlite:///{(tmp_path / 'test.db').as_posix()}")
     monkeypatch.setitem(Settings.model_config, "env_file", None)
     get_settings.cache_clear()

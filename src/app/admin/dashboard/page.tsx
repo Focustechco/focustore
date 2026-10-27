@@ -1,3 +1,4 @@
+import { requireAdminPage } from '@/lib/auth/admin';
 import React from 'react';
 import Link from 'next/link';
 import {
@@ -15,6 +16,7 @@ import { formatPrice, formatDate } from '@/lib/utils/formatters';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardPage() {
+  await requireAdminPage();
   const stats = await AdminService.getDashboardStats();
 
   return (
@@ -27,7 +29,7 @@ export default async function AdminDashboardPage() {
           </h1>
         </div>
         <div className="text-xs text-muted">
-          Atualizado em tempo real • PostgreSQL
+          Dados do banco configurado
         </div>
       </div>
 

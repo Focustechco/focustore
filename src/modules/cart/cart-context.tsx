@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { restoredCart, validCartItem } from './cart-validation';
 
 export interface CartItem {
   variantId: string;
@@ -70,8 +71,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('focus_cart');
-      if (saved) {
-        const parsed: CartItem[] = JSON.parse(saved);
+      if (saved && saved.length <= 1024 * 1024) {
+        const parsed = restoredCart(JSON.parse(saved));
         const updated = parsed.map((item) => ({
           ...item,
           imageUrl: resolveProductImage(item.imageUrl, item.name),
@@ -95,6 +96,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, mounted]);
 
   const addItem = (rawItem: CartItem) => {
+    if (!validCartItem(rawItem).success) return;
     const newItem: CartItem = {
       ...rawItem,
       imageUrl: resolveProductImage(rawItem.imageUrl, rawItem.name),
@@ -104,7 +106,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (existing) {
         return prev.map((i) =>
           i.variantId === newItem.variantId
-            ? { ...i, quantity: i.quantity + newItem.quantity }
+            ? { ...i, quantity: Math.min(10000, i.quantity + newItem.quantity) }
             : i
         );
       }
@@ -118,6 +120,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQuantity = (variantId: string, quantity: number) => {
+    if (!Number.isSafeInteger(quantity) || quantity > 10000) return;
     if (quantity <= 0) {
       removeItem(variantId);
       return;

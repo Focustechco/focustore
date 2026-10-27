@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db
+from app.api.write_access import require_local_write_access
+from sqlalchemy.exc import IntegrityError
 from app.models.category import Category
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductResponse
@@ -19,6 +21,8 @@ DbSession = Annotated[Session, Depends(get_db)]
     "",
     response_model=ProductResponse,
     status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_local_write_access)],
+    responses={503: {'description': 'Write authorization unavailable'}},
 )
 def create_product(data: ProductCreate, db: DbSession):
     category = db.get(Category, data.category_id)
@@ -32,7 +36,11 @@ def create_product(data: ProductCreate, db: DbSession):
     product = Product(**data.model_dump())
 
     db.add(product)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail='Conflito ao cadastrar produto.') from None
     db.refresh(product)
 
     return product

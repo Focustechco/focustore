@@ -116,6 +116,19 @@ def test_non_postgres_rejected():
     assert agent.check_integrity('sqlite://') == ['Integrity agent requires PostgreSQL']
 
 
+def test_product_constraints_and_data(postgres):
+    engine, url = postgres
+    with engine.begin() as connection:
+        connection.execute(text('ALTER TABLE products DROP CONSTRAINT ck_products_price_positive'))
+        connection.execute(text('ALTER TABLE products DROP CONSTRAINT ck_products_stock_nonnegative'))
+        connection.execute(text("INSERT INTO categories (name, slug) VALUES ('Test', 'test')"))
+        connection.execute(text("INSERT INTO products (name, price, stock, category_id) SELECT 'Invalid', -1, -2, id FROM categories"))
+    failures = agent.check_integrity(url)
+    assert any('ck_products_price_positive' in failure for failure in failures)
+    assert any('ck_products_stock_nonnegative' in failure for failure in failures)
+    assert 'products with invalid data: 1' in failures
+
+
 def test_connection_failure_is_nonzero(monkeypatch):
     monkeypatch.setenv('DATABASE_URL', 'postgresql+psycopg://test@127.0.0.1:1/focusstore_test?connect_timeout=1')
     assert agent.main() == 1

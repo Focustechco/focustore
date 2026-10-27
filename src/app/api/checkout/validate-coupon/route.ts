@@ -11,6 +11,6 @@ export async function POST(req: Request) {
     const result = await CouponService.validateCoupon(code, Number(subtotal) || 0, Number(shippingCost) || 0);
     return NextResponse.json(result);
   } catch (e: any) {
-    return NextResponse.json({ valid: false, error: e.message }, { status: 500 });
+    return NextResponse.json({ valid: false, error: 'Falha ao processar requisição.' }, { status: 500 });
   }
 }

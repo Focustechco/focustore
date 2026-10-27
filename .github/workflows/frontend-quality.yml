@@ -1,0 +1,56 @@
+name: Frontend quality (no deploy)
+
+on:
+  push:
+    branches: [main, back-end]
+  pull_request:
+    branches: [main, back-end]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Configure disposable SQLite
+        run: |
+          touch "$RUNNER_TEMP/focusstore_build_test.db"
+          echo "DATABASE_URL=file:$RUNNER_TEMP/focusstore_build_test.db" >> "$GITHUB_ENV"
+      - run: npm ci
+      - name: Generate Prisma client
+        run: npm run db:generate
+      - name: TypeScript
+        run: npm run typecheck
+      - name: Isolated store integration and security tests
+        run: npm test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install FastAPI integration dependencies
+        run: python -m pip install -r backend/requirements.txt
+      - name: Cross-service persistence and catalog tests
+        env:
+          FOCUS_PYTHON_EXECUTABLE: python
+        run: npm run test:fullstack
+      - name: Create disposable build schema
+        run: npx prisma db push --skip-generate
+      - name: Build Next.js
+        run: npm run build
+      - name: Production build HTTP regression tests
+        env:
+          FOCUS_TEST_PRODUCTION: '1'
+        run: npm test

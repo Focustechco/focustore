@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { assertDemoSeed, requiredSeedPassword } from '../scripts/seed-safety.cjs';
 
 const prisma = new PrismaClient();
 const DEV_COLLECTION_COLORS = [
@@ -10,6 +11,9 @@ const DEV_COLLECTION_SIZES = ['PP', 'P', 'M', 'G', 'GG'];
 const DEV_COLLECTION_STOCK = [25, 35, 50, 40, 20];
 
 async function main() {
+  assertDemoSeed();
+  const adminSeedPassword = requiredSeedPassword('FOCUS_SEED_ADMIN_PASSWORD');
+  const customerSeedPassword = requiredSeedPassword('FOCUS_SEED_CUSTOMER_PASSWORD');
   console.log("--- Atualizando banco de dados com dados fieis ao mockup ---");
 
   await prisma.auditLog.deleteMany();
@@ -41,8 +45,8 @@ async function main() {
   await prisma.banner.deleteMany();
   await prisma.setting.deleteMany();
 
-  const adminPassword = await bcrypt.hash("admin123", 10);
-  const customerPassword = await bcrypt.hash("cliente123", 10);
+  const adminPassword = await bcrypt.hash(adminSeedPassword, 12);
+  const customerPassword = await bcrypt.hash(customerSeedPassword, 12);
 
   const admin = await prisma.user.create({
     data: {

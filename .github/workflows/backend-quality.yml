@@ -2,10 +2,10 @@ name: Backend quality (no deploy)
 
 on:
   push:
-    branches: [back-end]
+    branches: [main, back-end]
 
   pull_request:
-    branches: [back-end]
+    branches: [main, back-end]
 
   workflow_dispatch:
 permissions:

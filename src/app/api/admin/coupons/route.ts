@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, coupons });
   } catch (error: any) {
-    console.error('Error listing coupons:', error);
+    console.error('Error listing coupons:');
     return NextResponse.json(
       { success: false, error: 'Falha ao buscar cupons.' },
       { status: 500 }
@@ -103,9 +103,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, coupon }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating coupon:', error);
+    console.error('Error creating coupon:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao criar cupom.' },
+      { success: false, error: 'Erro ao criar cupom.' },
       { status: 500 }
     );
   }

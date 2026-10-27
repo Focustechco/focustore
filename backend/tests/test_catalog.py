@@ -1,5 +1,6 @@
 """Synthetic Prisma-shaped SQLite, independent from both real databases."""
 from decimal import Decimal
+from contextlib import contextmanager
 import sqlite3
 from uuid import uuid4
 
@@ -245,3 +246,41 @@ def test_money_rounding():
     for value in ('NaN', 'Infinity', '-0.001'):
         with pytest.raises(ValueError):
             money(value)
+
+
+def test_list_batches_related_queries(legacy, monkeypatch):
+    path, ids = legacy
+    with sqlite3.connect(path) as connection:
+        connection.execute('''
+            INSERT INTO products SELECT 'second', name, 'second', 'second', description,
+            short_description, brand, status, base_price, NULL FROM products WHERE id = ?
+        ''', (ids['product'],))
+    repository = LegacyCatalogRepository(path)
+    original_connection = repository.connection
+    statements = []
+
+    @contextmanager
+    def traced():
+        with original_connection() as connection:
+            connection.set_trace_callback(statements.append)
+            yield connection
+
+    monkeypatch.setattr(repository, 'connection', traced)
+    result = repository.products(0, 100)
+    assert len(result.items) == 2
+    assert len([statement for statement in statements if statement.lstrip().upper().startswith('SELECT')]) == 5
+
+
+def test_shared_visibility_policy(client, legacy, monkeypatch):
+    monkeypatch.setenv('LEGACY_CATALOG_EXCLUDED_SLUGS', '["teclado"]')
+    get_settings.cache_clear()
+    page = client.get('/api/v1/catalog/products').json()
+    assert page['total'] == 0 and page['items'] == []
+    assert client.get('/api/v1/catalog/products/teclado').status_code == 404
+
+
+def test_excluded_slugs_are_parameters(legacy):
+    path, _ = legacy
+    repository = LegacyCatalogRepository(path, ["' OR 1=1 --"])
+    assert repository.products(0, 20).total == 1
+    assert repository.product('teclado') is not None

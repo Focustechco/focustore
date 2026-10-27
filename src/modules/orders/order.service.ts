@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/db/prisma';
+import { requireAdminPage } from '@/lib/auth/admin';
+import { z } from 'zod';
 
 export class OrderService {
   static async getOrdersByUserId(userId: string) {
@@ -46,7 +48,10 @@ export class OrderService {
     comment?: string,
     actorId?: string
   ) {
+    await requireAdminPage();
+    z.enum(['PENDING', 'PAYMENT_PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED']).parse(status);
     return prisma.$transaction(async (tx) => {
+      const previous = await tx.order.findUniqueOrThrow({ where: { id: orderId } });
       const order = await tx.order.update({
         where: { id: orderId },
         data: { status },
@@ -67,7 +72,7 @@ export class OrderService {
           action: 'UPDATE_ORDER_STATUS',
           entity: 'Order',
           entityId: orderId,
-          metadata: JSON.stringify({ oldStatus: order.status, newStatus: status, comment }),
+          metadata: JSON.stringify({ oldStatus: previous.status, newStatus: status, comment }),
         },
       });
 

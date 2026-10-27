@@ -139,9 +139,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true, coupon: updated });
   } catch (error: any) {
-    console.error('Error updating coupon:', error);
+    console.error('Error updating coupon:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar cupom.' },
+      { success: false, error: 'Erro ao atualizar cupom.' },
       { status: 500 }
     );
   }
@@ -177,9 +177,9 @@ export async function DELETE(
       message: 'Cupom excluído com sucesso.',
     });
   } catch (error: any) {
-    console.error('Error deleting coupon:', error);
+    console.error('Error deleting coupon:');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao excluir cupom.' },
+      { success: false, error: 'Erro ao excluir cupom.' },
       { status: 500 }
     );
   }

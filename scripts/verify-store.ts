@@ -1,3 +1,5 @@
+import assert from 'node:assert/strict';
+import { assertDemoSeed } from './seed-safety.cjs';
 import { prisma } from '../src/lib/db/prisma';
 import { CheckoutService } from '../src/modules/checkout/checkout.service';
 import { CouponService } from '../src/modules/promotions/coupon.service';
@@ -5,17 +7,18 @@ import { PaymentService } from '../src/modules/payments/payment.service';
 import { ShippingService } from '../src/modules/shipping/shipping.service';
 
 async function runVerification() {
+  assertDemoSeed();
   console.log('--- EXECUTANDO TESTES DE VERIFICACAO FOCUS STORE ---');
 
   // 1. Teste de Calculo de Frete
   const shippingSP = ShippingService.calculateShipping('01310100', 100);
-  console.assert(shippingSP.length > 0, 'Erro: Frete SP nao calculado');
+  assert(shippingSP.length > 0, 'Erro: Frete SP nao calculado');
   console.log('[OK] 1. Calculo de frete verificado (SP/Brasil)');
 
   // 2. Teste de Validacao de Cupom
   const couponResult = await CouponService.validateCoupon('FOCUS10', 200, 15);
-  console.assert(couponResult.valid === true, 'Erro: Cupom FOCUS10 deveria ser valido');
-  console.assert(couponResult.coupon?.discountAmount === 20, 'Erro: Desconto de 10% de 200 deve ser 20');
+  assert(couponResult.valid === true, 'Erro: Cupom FOCUS10 deveria ser valido');
+  assert(couponResult.coupon?.discountAmount === 20, 'Erro: Desconto de 10% de 200 deve ser 20');
   console.log('[OK] 2. Validacao e calculo de cupom verificados (FOCUS10)');
 
   // 3. Teste de Transacao ACID de Checkout e Reserva de Estoque
@@ -55,19 +58,19 @@ async function runVerification() {
     idempotencyKey: `test_idemp_${Date.now()}`,
   });
 
-  console.assert(checkoutResult.order.id, 'Erro: Pedido nao gerado');
-  console.assert(checkoutResult.payment?.status === 'PENDING', 'Erro: Pagamento deve iniciar como PENDING');
+  assert(checkoutResult.order.id, 'Erro: Pedido nao gerado');
+  assert(checkoutResult.payment?.status === 'PENDING', 'Erro: Pagamento deve iniciar como PENDING');
 
   const updatedVariant = await prisma.productVariant.findUnique({
     where: { id: variant.id },
     include: { inventory: true },
   });
 
-  console.assert(
+  assert(
     updatedVariant?.inventory?.quantityAvailable === initialStock - 2,
     'Erro: Estoque disponivel nao decrementou'
   );
-  console.assert(
+  assert(
     updatedVariant?.inventory?.quantityReserved === initialReserved + 2,
     'Erro: Estoque reservado nao incrementou'
   );
@@ -83,18 +86,18 @@ async function runVerification() {
     provider: 'focus_pix_gateway',
   });
 
-  console.assert(webhookRes.status === 'success', 'Erro no processamento do webhook');
+  assert(webhookRes.status === 'success', 'Erro no processamento do webhook');
 
   const finalOrder = await prisma.order.findUnique({
     where: { id: checkoutResult.order.id },
   });
-  console.assert(finalOrder?.status === 'PAID', 'Erro: Pedido deveria estar como PAID');
+  assert(finalOrder?.status === 'PAID', 'Erro: Pedido deveria estar como PAID');
 
   const committedVariant = await prisma.productVariant.findUnique({
     where: { id: variant.id },
     include: { inventory: true },
   });
-  console.assert(
+  assert(
     committedVariant?.inventory?.quantityReserved === initialReserved,
     'Erro: Estoque reservado deveria ter sido liberado apos baixa definitiva'
   );

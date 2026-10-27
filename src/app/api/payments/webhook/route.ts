@@ -3,6 +3,13 @@ import { PaymentService } from '@/modules/payments/payment.service';
 
 export async function POST(req: Request) {
   try {
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json(
+        { error: 'Webhook fictício desativado em produção.' },
+        { status: 503 }
+      );
+    }
+
     const payload = await req.json();
 
     const result = await PaymentService.handlePaymentWebhook({

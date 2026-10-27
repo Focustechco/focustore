@@ -16,6 +16,7 @@ import { validateProductInput, validatePromotionalPrice } from '../src/modules/c
 import { sameOrigin } from '../src/lib/security/origin';
 import { restoredCart } from '../src/modules/cart/cart-validation';
 import { assertDemoSeed } from '../scripts/seed-safety.cjs';
+import { nextTestConfig } from './helpers/next-config';
 
 let directory: string;
 let fixtureRoot: string;
@@ -46,6 +47,7 @@ before(async () => {
   await writeFile(path.join(directory, 'store.db'), '');
   const url = `file:${path.join(directory, 'store.db').replace(/\\/g, '/')}`;
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', NEXTAUTH_SECRET: randomUUID() });
+  process.env.SOCIAL_LOGIN_ORIGIN = ''; // Never call real OAuth providers in this HTTP suite.
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'],
                { env: process.env, stdio: 'pipe' });
   prisma = (await import('../src/lib/db/prisma')).prisma;
@@ -61,15 +63,18 @@ before(async () => {
   await new Promise<void>(resolve => listener.close(() => resolve()));
   base = `http://127.0.0.1:${port}`;
   const production = process.env.FOCUS_TEST_PRODUCTION === '1';
+  const dist = production ? process.env.FOCUS_TEST_DIST_DIR : path.relative(process.cwd(), path.join(directory, 'next')).replace(/\\/g, '/');
+  const tsconfig = production ? process.env.FOCUS_TEST_TSCONFIG : await nextTestConfig(directory, dist!);
   server = spawn(process.execPath, ['node_modules/next/dist/bin/next', production ? 'start' : 'dev', '--hostname', '127.0.0.1', '--port', String(port)], {
-    env: { ...process.env, NODE_ENV: production ? 'production' : 'development', NEXT_TELEMETRY_DISABLED: '1' },
+    env: { ...process.env, NODE_ENV: production ? 'production' : 'development', NEXT_TELEMETRY_DISABLED: '1',
+      FOCUS_TEST_DIST_DIR: dist, FOCUS_TEST_TSCONFIG: tsconfig },
     windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
   });
   server.stdout?.on('data', data => { output = (output + data).slice(-8000); });
   server.stderr?.on('data', data => { output = (output + data).slice(-8000); });
   const deadline = Date.now() + 90000;
   while (Date.now() < deadline) {
-    try { await fetch(base + '/api/auth/session'); break; }
+    try { if ((await fetch(base + '/api/auth/session')).status === 200) break; }
     catch { if (server.exitCode !== null) throw new Error('Test server failed: ' + output); }
     await new Promise(resolve => setTimeout(resolve, 300));
   }
@@ -162,6 +167,22 @@ test('registration, duplicate email, hash, login, expiration and logout persist 
   assert.equal((await (await api('/api/auth/session', 'GET', undefined, customerCookie)).json()).user, null);
   response = await api('/api/auth/login', 'POST', { identifier: registration.email, password: registration.password });
   customerCookie = response.headers.get('set-cookie')!.split(';')[0];
+});
+
+test('social sessions work with existing session/logout APIs and password login still works', async () => {
+  const { persistIdentity } = await import('../src/lib/auth/social/persistence');
+  const identity = await persistIdentity(prisma, 'google', { sub: 'synthetic-social-http',
+    email: 'social-http@example.test', emailVerified: true }, {
+    provider: 'google', state: randomUUID(), nonce: randomUUID(), verifier: randomUUID(), proof: randomUUID(), returnTo: '/',
+  });
+  const socialCookie = `focus_session=${identity.sessionToken}`;
+  const session = await api('/api/auth/session', 'GET', undefined, socialCookie);
+  assert.equal((await session.json()).user.id, identity.user.id);
+  assert.equal((await api('/api/auth/session', 'DELETE', undefined, socialCookie)).status, 200);
+  assert.equal(await prisma.session.count({ where: { sessionToken: identity.sessionToken } }), 0);
+  assert.equal((await (await api('/api/auth/session', 'GET', undefined, socialCookie)).json()).user, null);
+  assert.equal((await api('/api/auth/login', 'POST', { identifier: 'customer@example.test', password: 'synthetic-password' })).status, 200);
+  assert.equal((await api('/api/auth/social/google/start', 'POST', {})).status, 503);
 });
 
 test('admin endpoints and server pages deny unauthenticated and ordinary users', async () => {

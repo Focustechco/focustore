@@ -60,7 +60,7 @@ def test_missing_table_and_stale_revision(postgres):
     engine, url = postgres
     with engine.begin() as connection:
         connection.execute(text("UPDATE alembic_version SET version_num = '7ec8ee7c05e5'"))
-        connection.execute(text('DROP TABLE categories'))
+        connection.execute(text("DROP TABLE categories CASCADE"))
     failures = agent.check_integrity(url)
     assert any('Alembic' in item for item in failures)
     assert 'Missing categories table' in failures
@@ -76,7 +76,7 @@ def test_missing_columns(postgres):
 def test_data_and_schema_violations(postgres):
     engine, url = postgres
     with engine.begin() as connection:
-        connection.execute(text('DROP TABLE categories'))
+        connection.execute(text("DROP TABLE categories CASCADE"))
         connection.execute(text('CREATE TABLE categories (id integer, name text, slug text)'))
         connection.execute(text("INSERT INTO categories VALUES (1, '', 'same'), (2, NULL, 'same'), (3, repeat('a', 121), '  ')"))
     failures = agent.check_integrity(url)

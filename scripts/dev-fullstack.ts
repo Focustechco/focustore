@@ -9,8 +9,7 @@ async function main() {
   if (process.env.NODE_ENV === 'production') throw new Error('Este comando é exclusivo de desenvolvimento local.');
   const root = process.cwd();
   loadEnvConfig(root, true);
-  const sourceUrl = verifiedDatabaseUrl(process.env, root);
-  const source = sourceUrl.slice(5);
+  const frontendDatabaseUrl = verifiedDatabaseUrl(process.env);
   const port = (name: string, fallback: number) => {
     const value = Number(process.env[name] ?? fallback);
     if (!Number.isInteger(value) || value < 1024 || value > 65535) throw new Error(`Porta inválida: ${name}`);
@@ -48,17 +47,22 @@ async function main() {
     return child;
   };
 
-  const frontendEnv = { ...process.env, NODE_ENV: 'development', DATABASE_URL: sourceUrl } as NodeJS.ProcessEnv;
+  const frontendEnv = { ...process.env, NODE_ENV: 'development', DATABASE_URL: frontendDatabaseUrl } as NodeJS.ProcessEnv;
   delete frontendEnv.FOCUS_BACKEND_DATABASE_URL;
-  const backendEnv = { ...process.env, LEGACY_CATALOG_SQLITE_PATH: source,
+  const backendEnv = { ...process.env,
     LEGACY_CATALOG_EXCLUDED_SLUGS: JSON.stringify(HIDDEN_PRODUCT_SLUGS),
     APP_ENVIRONMENT: 'development', ALLOW_LOCAL_WRITES: 'false' } as NodeJS.ProcessEnv;
-  // Never pass the frontend SQLite URL as SQLAlchemy's PostgreSQL DATABASE_URL.
+  // Never pass the frontend Prisma URL as SQLAlchemy's PostgreSQL DATABASE_URL.
   delete backendEnv.DATABASE_URL;
   delete backendEnv.NEXTAUTH_SECRET;
+  if (process.env.LEGACY_CATALOG_SQLITE_PATH) {
+    backendEnv.LEGACY_CATALOG_SQLITE_PATH = process.env.LEGACY_CATALOG_SQLITE_PATH;
+  } else {
+    delete backendEnv.LEGACY_CATALOG_SQLITE_PATH;
+  }
   if (process.env.FOCUS_BACKEND_DATABASE_URL) backendEnv.DATABASE_URL = process.env.FOCUS_BACKEND_DATABASE_URL;
 
-  console.log(`Catálogo compartilhado (FastAPI somente leitura): ${source}`);
+  console.log(`Frontend Prisma: PostgreSQL configurado | FastAPI: PostgreSQL próprio${backendEnv.LEGACY_CATALOG_SQLITE_PATH ? ' + catálogo SQLite legado somente leitura' : ''}`);
   console.log(`Next.js: http://127.0.0.1:${frontendPort} | FastAPI: http://127.0.0.1:${backendPort}/docs`);
   start(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', String(frontendPort)], root, frontendEnv);
   start(python, ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)], path.join(root, 'backend'), backendEnv);

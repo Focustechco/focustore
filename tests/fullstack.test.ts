@@ -11,6 +11,7 @@ import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { verifiedDatabaseUrl } from '../src/lib/db/database-url';
 import { HIDDEN_PRODUCT_SLUGS } from '../src/modules/catalog/catalog-policy';
+import { postgresTestUrl } from './helpers/postgres-test';
 
 let directory: string;
 let sqlite: string;
@@ -20,6 +21,7 @@ let frontend: string;
 let backend: string;
 let frontendPort: number;
 let backendPort: number;
+let frontendDatabaseUrl: string;
 let logs = '';
 let cookie = '';
 let productId = '';
@@ -57,7 +59,8 @@ async function startStack() {
   logs = '';
   stack = spawn(process.execPath, ['--import', 'tsx', 'scripts/dev-fullstack.ts'], {
     cwd: process.cwd(), windowsHide: true, detached: process.platform !== 'win32',
-    env: { ...process.env, NODE_ENV: 'development', DATABASE_URL: `file:${sqlite.replace(/\\/g, '/')}`,
+    env: { ...process.env, NODE_ENV: 'development', DATABASE_URL: frontendDatabaseUrl,
+      LEGACY_CATALOG_SQLITE_PATH: sqlite,
       FOCUS_FRONTEND_PORT: String(frontendPort), FOCUS_BACKEND_PORT: String(backendPort),
       // Deliberately unreachable SQLAlchemy database: this test never writes PostgreSQL.
       FOCUS_BACKEND_DATABASE_URL: 'postgresql+psycopg://unused@127.0.0.1:1/fullstack_test',
@@ -85,7 +88,7 @@ async function restartStack() {
   await stopStack();
   await client.$disconnect();
   await startStack();
-  client = new PrismaClient({ datasources: { db: { url: `file:${sqlite.replace(/\\/g, '/')}` } }, log: [] });
+  client = new PrismaClient({ datasources: { db: { url: frontendDatabaseUrl } }, log: [] });
   assert.notEqual(stack?.pid, previousPid);
 }
 
@@ -108,11 +111,11 @@ before(async () => {
   directory = await mkdtemp(path.join(root, 'fullstack-'));
   sqlite = path.join(directory, 'store.db');
   await writeFile(sqlite, '', { flag: 'wx' });
-  const url = `file:${sqlite.replace(/\\/g, '/')}`;
+  frontendDatabaseUrl = postgresTestUrl('fullstack');
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'],
-               { env: { ...process.env, DATABASE_URL: url }, stdio: 'pipe' });
-  Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test' });
-  client = new PrismaClient({ datasources: { db: { url } }, log: [] });
+               { env: { ...process.env, DATABASE_URL: frontendDatabaseUrl }, stdio: 'pipe' });
+  Object.assign(process.env, { DATABASE_URL: frontendDatabaseUrl, NODE_ENV: 'test' });
+  client = new PrismaClient({ datasources: { db: { url: frontendDatabaseUrl } }, log: [] });
   catalog = (await import('../src/modules/catalog/catalog.service')).CatalogService;
   frontendPort = await freePort();
   do { backendPort = await freePort(); } while (backendPort === frontendPort);
@@ -161,10 +164,9 @@ test('HTTP registration and sessions persist after logout, login and application
   assert.equal((await api('/api/auth/register', 'POST', registration)).status, 409);
 });
 
-test('admin HTTP writes are read from the same SQLite by CatalogService and FastAPI', { timeout: 60000 }, async () => {
+test('admin HTTP writes persist in Prisma PostgreSQL while FastAPI keeps its legacy catalog boundary', { timeout: 60000 }, async () => {
   const empty = await fetch(backend + '/api/v1/catalog/products');
-  assert.equal(empty.status, 200);
-  assert.equal((await empty.json()).total, 0);
+  assert.equal(empty.status, 503);
   const stored = await client.user.findUniqueOrThrow({ where: { email } });
   // Grant admin only in this newly created synthetic database.
   await client.user.update({ where: { id: stored.id }, data: { role: 'ADMIN' } });
@@ -185,55 +187,39 @@ test('admin HTTP writes are read from the same SQLite by CatalogService and Fast
   assert.equal(fromService!.id, productId);
   assert.equal(fromService!.variants[0].id, variantId);
   const before = createHash('sha256').update(await readFile(sqlite)).digest('hex');
-  const fromAPI = await adaptedProduct();
-  assert.equal(fromAPI.id, productId);
-  assert.equal(fromAPI.sku, 'FULLSTACK-1');
-  assert.equal(fromAPI.base_price, '129.90');
-  assert.equal(fromAPI.promotional_price, '119.90');
-  assert.equal(fromAPI.categories[0].id, categoryId);
-  assert.equal(fromAPI.images[0].url, '/images/fullstack-synthetic.png');
-  assert.equal(fromAPI.variants[0].id, variantId);
-  assert.equal(fromAPI.variants[0].price, '109.90');
-  assert.equal(fromAPI.variants[0].promotional_price, '99.90');
-  assert.equal(fromAPI.variants[0].quantity_available, 6);
-  assert.equal(fromAPI.variants[0].quantity_reserved, 0);
+  assert.equal((await fetch(backend + '/api/v1/catalog/products')).status, 503);
   assert.equal(createHash('sha256').update(await readFile(sqlite)).digest('hex'), before);
   assert.equal(await client.product.count(), 1);
 });
 
-test('updates appear on later catalog reads and survive restart of both services', { timeout: 120000 }, async () => {
+test('Prisma catalog updates survive restart without mutating the FastAPI legacy source', { timeout: 120000 }, async () => {
   const updated = await api(`/api/admin/products/${productId}`, 'PUT', {
     name: 'Updated product', basePrice: 149.90, promotionalPrice: 139.90,
     images: ['/images/fullstack-updated.png'],
     variants: [{ id: variantId, price: 119.90, promotionalPrice: 109.90, stock: 9 }],
   });
   assert.equal(updated.status, 200);
-  const expected = await adaptedProduct();
+  const expected = await catalog.getProductBySlug('fullstack-product');
+  assert.ok(expected);
   assert.equal(expected.id, productId);
   assert.equal(expected.name, 'Updated product');
-  assert.equal(expected.base_price, '149.90');
-  assert.equal(expected.variants[0].quantity_available, 9);
+  assert.equal(expected.variants[0].inventory?.quantityAvailable, 9);
   assert.equal(expected.images[0].url, '/images/fullstack-updated.png');
   await restartStack();
-  assert.deepEqual(await adaptedProduct(), expected);
   assert.equal((await catalog.getProductBySlug('fullstack-product'))!.name, 'Updated product');
-  const page = await (await fetch(backend + '/api/v1/catalog/products?offset=1&limit=1')).json();
-  assert.equal(page.total, 1);
-  assert.deepEqual(page.items, []);
+  assert.equal((await fetch(backend + '/api/v1/catalog/products?offset=1&limit=1')).status, 503);
   assert.equal(await client.product.count(), 1);
   const denied = await fetch(backend + '/products', { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ name: 'Must not write', price: '1.00', stock: 1, category_id: 1 }) });
   assert.equal(denied.status, 503);
 });
 
-test('both services apply the same existing merchandising exclusion', async () => {
+test('Prisma applies its merchandising exclusion without copying records into FastAPI', async () => {
   const created = await api('/api/admin/products', 'POST', {
     name: 'Hidden synthetic product', slug: HIDDEN_PRODUCT_SLUGS[0], sku: 'HIDDEN-SYNTHETIC', basePrice: 1,
   });
   assert.equal(created.status, 201);
   assert.equal(await catalog.getProductBySlug(HIDDEN_PRODUCT_SLUGS[0]), null);
-  const hidden = await fetch(backend + '/api/v1/catalog/products/' + HIDDEN_PRODUCT_SLUGS[0]);
-  assert.equal(hidden.status, 404);
-  assert.equal((await (await fetch(backend + '/api/v1/catalog/products')).json()).total, 1);
+  assert.equal((await fetch(backend + '/api/v1/catalog/products/' + HIDDEN_PRODUCT_SLUGS[0])).status, 503);
   assert.equal(await client.product.count(), 2); // Two distinct fixtures, no copied or duplicated products.
 });

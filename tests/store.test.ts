@@ -95,7 +95,26 @@ test('database configuration preserves explicit SQLite and rejects ephemeral/uns
   assert.equal(databaseUrl({ DATABASE_URL: 'file:./custom.db' }, '/app'), 'file:' + path.resolve('/app/prisma/custom.db').replace(/\\/g, '/'));
   assert.throws(() => databaseUrl({ NODE_ENV: 'production' }));
   assert.throws(() => databaseUrl({ DATABASE_URL: 'postgresql://placeholder' }));
+  assert.throws(() => databaseUrl({ VERCEL: '1', DATABASE_URL: 'file:./dev.db' }), /SQLite não é persistente/);
   if (process.platform !== 'win32') assert.throws(() => databaseUrl({ NODE_ENV: 'production', DATABASE_URL: 'file:/tmp/store.db' }));
+});
+
+test('Prisma defers database configuration until a database operation', () => {
+  const script = `
+    delete process.env.DATABASE_URL;
+    const { prisma } = await import('./src/lib/db/prisma.ts');
+    if (!prisma) throw new Error('Prisma client was not exported');
+    try {
+      void prisma.session;
+      throw new Error('Expected missing DATABASE_URL to fail on first database access');
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.includes('Configure DATABASE_URL')) throw error;
+    }
+  `;
+  execFileSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script], {
+    env: { ...process.env, NODE_ENV: 'production', VERCEL: '1' },
+    stdio: 'pipe',
+  });
 });
 
 test('guest access is signed, expires and is bound to one order', () => {
@@ -186,7 +205,7 @@ test('social sessions work with existing session/logout APIs and password login 
 });
 
 test('admin endpoints and server pages deny unauthenticated and ordinary users', async () => {
-  for (const endpoint of ['/api/admin/products', '/api/admin/customers', '/api/admin/inventory']) {
+  for (const endpoint of ['/api/admin/products', '/api/admin/customers', '/api/admin/inventory', '/api/admin/banners/synthetic-id']) {
     assert.equal((await api(endpoint)).status, 401);
     assert.equal((await api(endpoint, 'GET', undefined, customerCookie)).status, 403);
   }
@@ -197,6 +216,26 @@ test('admin endpoints and server pages deny unauthenticated and ordinary users',
   const login = await api('/api/auth/login', 'POST', { identifier: 'admin@example.test', password: 'synthetic-admin-password' });
   assert.equal(login.status, 200);
   adminCookie = login.headers.get('set-cookie')!.split(';')[0];
+});
+
+test('admin banner detail route preserves authorization and CRUD behavior', async () => {
+  const banner = await prisma.banner.create({
+    data: { title: 'Synthetic banner', imageUrl: '/images/synthetic.png' },
+  });
+  const endpoint = `/api/admin/banners/${banner.id}`;
+
+  assert.equal((await api(endpoint)).status, 401);
+  assert.equal((await api(endpoint, 'GET', undefined, customerCookie)).status, 403);
+  const read = await api(endpoint, 'GET', undefined, adminCookie);
+  assert.equal(read.status, 200);
+  assert.equal((await read.json()).banner.title, 'Synthetic banner');
+
+  const updated = await api(endpoint, 'PUT', { title: 'Updated banner' }, adminCookie);
+  assert.equal(updated.status, 200);
+  assert.equal((await updated.json()).banner.title, 'Updated banner');
+
+  assert.equal((await api(endpoint, 'DELETE', undefined, adminCookie)).status, 200);
+  assert.equal(await prisma.banner.findUnique({ where: { id: banner.id } }), null);
 });
 
 test('product transaction rolls back on duplicate variant SKU; default stock is zero', async () => {

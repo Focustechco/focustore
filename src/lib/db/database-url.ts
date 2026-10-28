@@ -4,7 +4,10 @@ import { closeSync, fstatSync, openSync, readSync, realpathSync } from 'node:fs'
 export function databaseUrl(env: Readonly<Record<string, string | undefined>>, cwd = process.cwd()): string {
   const configured = env.DATABASE_URL;
   if (!configured) {
-    throw new Error('Configure DATABASE_URL explicitamente para um SQLite existente. Nenhum banco foi criado.');
+    throw new Error('Configure DATABASE_URL explicitamente para um banco existente. Nenhum banco foi criado.');
+  }
+  if ((env.VERCEL || env.AWS_LAMBDA_FUNCTION_NAME) && configured.startsWith('file:')) {
+    throw new Error('SQLite não é persistente em ambientes serverless. O schema atual ainda exige SQLite; migre para PostgreSQL persistente antes do deploy.');
   }
   if (!configured.startsWith('file:')) {
     throw new Error('O schema Prisma atual exige uma URL SQLite file:.');

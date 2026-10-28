@@ -196,9 +196,9 @@ Configurar as variáveis de servidor no ambiente correto e usar a mesma origem
 canônica registrada nos provedores. Todos os workers precisam compartilhar
 SOCIAL_LOGIN_SECRET e armazenamento durável das quatro tabelas utilizadas.
 
-O código não muda a infraestrutura SQLite existente nem migra para PostgreSQL.
-Sem persistência compartilhada entre início e callback, state/conta/sessão não
-são confiáveis entre instâncias. Não usar SQLite efêmero em /tmp como solução.
+O frontend agora exige PostgreSQL persistente para que state/conta/sessão sejam
+compartilhados entre instâncias. A migração e o procedimento de corte estão em
+`docs/POSTGRES_MIGRATION.md`; não usar SQLite efêmero em /tmp como solução.
 A declaração de login tradicional funcionando não comprova durabilidade entre
 instâncias nem funcionamento OAuth real; validar esses pontos na implantação.
 

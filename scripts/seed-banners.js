@@ -9,7 +9,7 @@ const DEFAULT_BANNERS = [
       "Linha exclusiva desenvolvida para quem vive tecnologia, criatividade e inovação. Tecidos de alta gramatura e corte moderno.",
     ctaText: "Ver coleção",
     ctaLink: "/categoria/vestuario",
-    imageUrl: "https://i.ibb.co/23qC7wWF/hero-focus-academy-banner-2026.png",
+    imageUrl: "/images/hero/hero-focus-academy-banner-2026.png",
     position: 0,
     placement: "home_hero",
     isActive: true,

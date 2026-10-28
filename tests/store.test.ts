@@ -17,6 +17,7 @@ import { sameOrigin } from '../src/lib/security/origin';
 import { restoredCart } from '../src/modules/cart/cart-validation';
 import { assertDemoSeed } from '../scripts/seed-safety.cjs';
 import { nextTestConfig } from './helpers/next-config';
+import { postgresTestUrl } from './helpers/postgres-test';
 
 let directory: string;
 let fixtureRoot: string;
@@ -44,8 +45,7 @@ before(async () => {
   fixtureRoot = path.join(process.cwd(), '.local-validation');
   await mkdir(fixtureRoot, { recursive: true });
   directory = await mkdtemp(path.join(fixtureRoot, 'focusstore-audit-test-'));
-  await writeFile(path.join(directory, 'store.db'), '');
-  const url = `file:${path.join(directory, 'store.db').replace(/\\/g, '/')}`;
+  const url = postgresTestUrl('store');
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', NEXTAUTH_SECRET: randomUUID() });
   process.env.SOCIAL_LOGIN_ORIGIN = ''; // Never call real OAuth providers in this HTTP suite.
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'],
@@ -88,15 +88,15 @@ after(async () => {
     } else { server.kill('SIGTERM'); }
   }
   await prisma?.$disconnect();
-  // Preserve the synthetic SQLite for inspection; never clean existing .db files.
+  // Preserve the synthetic PostgreSQL schema for inspection; never clean databases.
 });
 
-test('database configuration preserves explicit SQLite and rejects ephemeral/unsupported production sources', () => {
-  assert.equal(databaseUrl({ DATABASE_URL: 'file:./custom.db' }, '/app'), 'file:' + path.resolve('/app/prisma/custom.db').replace(/\\/g, '/'));
+test('database configuration requires PostgreSQL and rejects local/unsupported sources', () => {
+  assert.throws(() => databaseUrl({ DATABASE_URL: 'file:./custom.db' }));
   assert.throws(() => databaseUrl({ NODE_ENV: 'production' }));
-  assert.throws(() => databaseUrl({ DATABASE_URL: 'postgresql://placeholder' }));
-  assert.throws(() => databaseUrl({ VERCEL: '1', DATABASE_URL: 'file:./dev.db' }), /SQLite não é persistente/);
-  if (process.platform !== 'win32') assert.throws(() => databaseUrl({ NODE_ENV: 'production', DATABASE_URL: 'file:/tmp/store.db' }));
+  assert.equal(databaseUrl({ DATABASE_URL: 'postgresql://user:pass@db.example/store?sslmode=require' }), 'postgresql://user:pass@db.example/store?sslmode=require');
+  assert.equal(databaseUrl({ DATABASE_URL: 'postgres://user:pass@db.example/store' }), 'postgres://user:pass@db.example/store');
+  assert.throws(() => databaseUrl({ DATABASE_URL: 'mysql://user:pass@db.example/store' }));
 });
 
 test('Prisma defers database configuration until a database operation', () => {
@@ -108,7 +108,7 @@ test('Prisma defers database configuration until a database operation', () => {
       void prisma.session;
       throw new Error('Expected missing DATABASE_URL to fail on first database access');
     } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes('Configure DATABASE_URL')) throw error;
+      if (!(error instanceof Error) || !/Configure DATABASE_URL|DATABASE_URL deve usar PostgreSQL/.test(error.message)) throw error;
     }
   `;
   execFileSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', script], {

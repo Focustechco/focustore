@@ -26,7 +26,7 @@ const DEFAULT_SLIDES = [
     primaryButtonHref: "/categoria/vestuario",
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
-    imageUrl: "/images/hero/hero-models-banner.png",
+    imageUrl: "/images/hero/hero-focus-academy-banner-2026.png",
     imageAlt: "Linha Streetwear Focus Store",
   },
   {
@@ -69,6 +69,10 @@ export function HeroCarousel({
     initialBanners && initialBanners.length > 0
       ? initialBanners.map((b, idx) => {
           const titleLines = b.title.split("\n");
+          const imageUrl =
+            b.imageUrl === "/images/hero/hero-models-banner.png"
+              ? "/images/hero/hero-focus-academy-banner-2026.png"
+              : b.imageUrl;
           return {
             id: b.id,
             tagline:
@@ -84,7 +88,7 @@ export function HeroCarousel({
             primaryButtonHref: b.ctaLink || "/categoria/vestuario",
             secondaryButtonText: "Focus Tech",
             secondaryButtonHref: "/colecao/focus-tech",
-            imageUrl: b.imageUrl,
+            imageUrl,
             imageAlt: b.title,
           };
         })

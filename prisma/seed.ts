@@ -221,8 +221,7 @@ Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/05_JavaScript_original.jpg?v=20261027-2",
       whiteImage: "/images/camisas/camisa-js-branca.jpeg?v=20261027-1",
       frontImage: "/images/camisas/frente-camisa-js.jpg?v=20261027-1",
-      variantPrefix: "FS-AMS
-      -CAP",
+      variantPrefix: "FS-AMS-CAP",
     },
     {
       name: "Camisa TypeScript",

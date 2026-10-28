@@ -70,7 +70,8 @@ export function HeroCarousel({
       ? initialBanners.map((b, idx) => {
           const titleLines = b.title.split("\n");
           const imageUrl =
-            b.imageUrl === "/images/hero/hero-models-banner.png"
+            b.imageUrl === "/images/hero/hero-models-banner.png" ||
+            b.imageUrl.startsWith("https://i.ibb.co/")
               ? "/images/hero/hero-focus-academy-banner-2026.png"
               : b.imageUrl;
           return {

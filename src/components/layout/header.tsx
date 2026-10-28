@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Search, Heart, User, Menu, X, LogOut, ShoppingBag } from 'lucide-react';
+import { Search, Heart, User, Menu, X, LogOut, ShoppingBag, ChevronRight } from 'lucide-react';
 import { useCart } from '@/modules/cart/cart-context';
 import { useFavorites } from '@/modules/favorites/favorites-context';
 import { FocusLogo } from '@/components/ui/focus-logo';
@@ -90,6 +90,16 @@ export function Header() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileMenuOpen]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -169,7 +179,7 @@ export function Header() {
               <form
                 ref={searchFormRef}
                 onSubmit={handleSearch}
-                className="animate-search-appear absolute right-0 top-1/2 z-50 flex w-[min(40vw,280px)] -translate-y-1/2 items-center rounded-full border border-white/15 bg-[#121212] px-4 py-1 shadow-xl transition-colors focus-within:border-[#FF5500]"
+                className="animate-search-appear absolute right-0 top-1/2 z-50 flex w-[min(40vw,280px)] -translate-y-1/2 items-center rounded-full border border-white/15 bg-[#121212] px-4 py-1 shadow-xl transition-colors focus-within:border-[#FF5500] max-sm:fixed max-sm:left-2 max-sm:right-auto max-sm:top-[38px] max-sm:w-[calc(100vw-170px)] max-sm:translate-y-[-50%] max-sm:px-3"
               >
                 <input
                   autoFocus
@@ -259,22 +269,34 @@ export function Header() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-            className="p-2 text-white transition-colors hover:text-[#FF5500] xl:hidden"
+            className="relative z-[60] p-2 text-white transition-colors hover:text-[#FF5500] xl:hidden"
           >
-            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            {!mobileMenuOpen && <Menu size={22} />}
           </button>
         </div>
       </div>
 
       {mobileMenuOpen && (
-        <div className="absolute left-0 right-0 top-full z-40 space-y-3 border-b border-white/10 bg-[#121212] px-4 py-4 shadow-lg xl:hidden">
-          <nav aria-label="Categorias" className="grid grid-cols-2 gap-2 border-b border-white/10 pb-3 text-xs font-semibold uppercase">
+        <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col overflow-y-auto bg-[#080808] px-5 pb-5 xl:hidden">
+          <div className="flex h-[76px] flex-shrink-0 items-center justify-between border-b border-white/10">
+            <FocusLogo size="xl" mobileSize="md" />
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Fechar menu"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition-colors hover:border-[#FF5500]/50 hover:text-[#FF5500]"
+            >
+              <X size={22} />
+            </button>
+          </div>
+
+          <nav aria-label="Categorias" className="mt-5 flex flex-col">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`rounded-md px-2.5 py-2.5 transition-colors ${
+                className={`group flex items-center justify-between border-b border-white/10 py-4 transition-colors ${
                   item.label === 'Ofertas'
                     ? 'text-white hover:text-[#FF5500]'
                     : pathname === item.href
@@ -282,32 +304,24 @@ export function Header() {
                     : 'text-white hover:text-[#FF5500]'
                 }`}
               >
-                {item.label}
+                <span className="flex items-center gap-3">
+                  <span className="text-[15px] font-black uppercase tracking-[0.08em]">{item.label}</span>
+                </span>
+                <ChevronRight size={18} className="text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-[#FF5500]" />
               </Link>
             ))}
           </nav>
 
-          <div className="grid grid-cols-2 gap-2 pt-1 text-xs font-medium">
+          <div className="grid grid-cols-2 gap-3 pt-5 text-xs font-bold uppercase">
             {customer ? (
-              <>
-                <Link
-                  href="/conta"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-md border border-white/10 bg-[#181818] p-2.5 text-white"
-                >
-                  <User size={16} className="text-[#FF6500]" /> Olá, {customerName}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    void handleLogout();
-                  }}
-                  className="flex items-center gap-2 rounded-md border border-white/10 bg-[#181818] p-2.5 text-white"
-                >
-                  <LogOut size={16} className="text-[#FF6500]" /> Sair
-                </button>
-              </>
+              <Link
+                href="/conta"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#181818] px-3 text-center text-white"
+              >
+                <User size={16} className="text-[#FF6500]" />
+                Minha Conta
+              </Link>
             ) : (
               <button
                 type="button"
@@ -315,22 +329,15 @@ export function Header() {
                   setMobileMenuOpen(false);
                   setIsLoginOpen(true);
                 }}
-                className="flex items-center gap-2 rounded-md border border-white/10 bg-[#181818] p-2.5 text-white"
+                className="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#181818] px-3 text-white"
               >
                 <User size={16} className="text-[#FF6500]" /> Entrar / Conta
               </button>
             )}
             <Link
-              href="/conta/favoritos"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-md border border-white/10 bg-[#181818] p-2.5 text-white"
-            >
-              <Heart size={16} className="text-[#FF6500]" /> Favoritos
-            </Link>
-            <Link
               href="/admin/dashboard"
               onClick={() => setMobileMenuOpen(false)}
-              className="col-span-2 flex items-center justify-center rounded-md border border-[#FF5500]/30 bg-[#FF5500]/10 p-2.5 font-bold text-[#FF5500]"
+              className="flex min-h-12 items-center justify-center rounded-lg border border-[#FF5500]/30 bg-[#FF5500]/10 px-3 text-center font-bold text-[#FF5500]"
             >
               Painel Administrativo
             </Link>

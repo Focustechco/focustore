@@ -27,6 +27,7 @@ const DEFAULT_SLIDES = [
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
     imageUrl: "/images/hero/hero-focus-academy-banner-2026.png",
+    mobileImageUrl: "/images/hero-mobile/hero-academy-mobile.png",
     imageAlt: "Linha Streetwear Focus Store",
   },
   {
@@ -40,6 +41,7 @@ const DEFAULT_SLIDES = [
     secondaryButtonText: "",
     secondaryButtonHref: "",
     imageUrl: "/images/banners/banner-camisas-dev.png",
+    mobileImageUrl: "/images/hero-mobile/hero-dev-mobile.png",
     imageAlt: "Dev Collection da Focus Academy",
   },
   {
@@ -54,6 +56,7 @@ const DEFAULT_SLIDES = [
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
     imageUrl: "/images/hero/hero-movimento-streetwear.png",
+    mobileImageUrl: "/images/hero-mobile/hero-streetwear-mobile.png",
     imageAlt: "Trio Streetwear Focus - Faça Parte do Movimento",
   },
 ];
@@ -73,6 +76,14 @@ export function HeroCarousel({
             b.imageUrl === "/images/hero/hero-models-banner.png"
               ? "/images/hero/hero-focus-academy-banner-2026.png"
               : b.imageUrl;
+          const mobileImageUrl =
+            imageUrl === "/images/hero/hero-focus-academy-banner-2026.png"
+              ? "/images/hero-mobile/hero-academy-mobile.png"
+              : imageUrl === "/images/banners/banner-camisas-dev.png"
+                ? "/images/hero-mobile/hero-dev-mobile.png"
+                : imageUrl === "/images/hero/hero-movimento-streetwear.png"
+                  ? "/images/hero-mobile/hero-streetwear-mobile.png"
+                  : DEFAULT_SLIDES[idx]?.mobileImageUrl;
           return {
             id: b.id,
             tagline:
@@ -89,6 +100,7 @@ export function HeroCarousel({
             secondaryButtonText: "Focus Tech",
             secondaryButtonHref: "/colecao/focus-tech",
             imageUrl,
+            mobileImageUrl,
             imageAlt: b.title,
           };
         })
@@ -96,7 +108,8 @@ export function HeroCarousel({
 
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const pointerStartXRef = useRef<number | null>(null);
+  const pointerStartYRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -119,18 +132,27 @@ export function HeroCarousel({
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.touches[0].clientX);
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    pointerStartXRef.current = e.clientX;
+    pointerStartYRef.current = e.clientY;
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const touchEndX = e.changedTouches[0].clientX;
-    const diff = touchStartX - touchEndX;
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (pointerStartXRef.current === null) return;
+    const diff = pointerStartXRef.current - e.clientX;
+    const verticalDiff =
+      pointerStartYRef.current === null
+        ? 0
+        : pointerStartYRef.current - e.clientY;
 
-    if (diff > 50) nextSlide();
-    else if (diff < -50) prevSlide();
-    setTouchStartX(null);
+    if (Math.abs(diff) > 50 && Math.abs(diff) > Math.abs(verticalDiff)) {
+      if (diff > 0) nextSlide();
+      else prevSlide();
+    }
+    pointerStartXRef.current = null;
+    pointerStartYRef.current = null;
   };
 
   const slide = slides[currentSlide] || slides[0];
@@ -138,21 +160,42 @@ export function HeroCarousel({
   return (
     <section className="max-w-[1440px] mx-auto mt-6 px-4 sm:px-6 lg:px-8 select-none sm:mt-8">
       <div
-        className="relative aspect-[1.55] min-h-0 sm:aspect-auto sm:min-h-[420px] lg:min-h-[460px] rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0A0A0A] border border-white/10 hover:border-[#FF6500]/30 transition-all duration-500 shadow-2xl flex flex-col justify-between p-0 sm:p-10 lg:p-12 group"
+        className="relative aspect-[0.75] min-h-0 sm:aspect-auto sm:min-h-[420px] lg:min-h-[460px] rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0A0A0A] border border-white/10 hover:border-[#FF6500]/30 transition-all duration-500 shadow-2xl flex flex-col justify-between p-0 sm:p-10 lg:p-12 group"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        style={{ touchAction: "pan-y" }}
       >
         {/* 1. Imagem de Fundo em Alta Resolução */}
         <div className="absolute inset-x-0 top-0 bottom-[68px] z-0 sm:inset-0">
           <Image
-            key={slide.imageUrl}
+            key={`${slide.imageUrl}-mobile`}
+            src={slide.mobileImageUrl || slide.imageUrl}
+            alt={slide.imageAlt}
+            draggable={false}
+            fill
+            sizes="(max-width: 639px) 100vw, 1px"
+            className={`object-cover ${
+              slide.imageUrl === "/images/banners/banner-camisas-dev.png"
+                ? "object-[center_35%]"
+                : "object-[center_25%]"
+            } sm:hidden`}
+            priority
+          />
+          <Image
+            key={`${slide.imageUrl}-desktop`}
             src={slide.imageUrl}
             alt={slide.imageAlt}
+            draggable={false}
             fill
-            sizes="(max-width: 1440px) 100vw, 1440px"
-            className="object-cover object-center sm:object-right md:object-center group-hover:scale-103 transition-transform duration-700 ease-out"
+            sizes="(min-width: 640px) 100vw, 1px"
+            className={`hidden object-cover ${
+              slide.imageUrl.includes('hero-focus-academy') ||
+              slide.imageUrl.includes('banner-camisas-dev')
+                ? 'object-[center_30%]'
+                : 'object-center'
+            } group-hover:scale-103 transition-transform duration-700 ease-out sm:block sm:object-right md:object-center`}
             priority
           />
           {/* Gradientes: no mobile protege o topo e a base; no desktop gradiente clássico da esquerda para direita */}

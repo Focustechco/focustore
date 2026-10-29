@@ -21,7 +21,7 @@ const DEFAULT_BANNERS = [
     ctaText: "Explorar coleção",
     ctaLink: "/colecao/dev-collection",
     imageUrl: "/images/banners/banner-camisas-dev.png",
-    position: 1,
+    position: 0,
     placement: "home_hero",
     isActive: true,
   },

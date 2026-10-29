@@ -171,7 +171,63 @@ async function seedAllProducts() {
     });
   }
 
+  let colFocusAcademy = await prisma.collection.findUnique({
+    where: { slug: "focus-academy" },
+  });
+  if (!colFocusAcademy) {
+    colFocusAcademy = await prisma.collection.create({
+      data: {
+        name: "FOCUS ACADEMY",
+        slug: "focus-academy",
+        headline: "Vista as ideias que transformam tecnologia em movimento",
+        description: "Camisas oficiais da Focus Academy para quem vive tecnologia, criatividade e inovação.",
+      },
+    });
+  }
+
   const PRODUCTS_DATA = [
+    {
+      name: "Camisa Focus Academy",
+      slug: "camisa-focus-academy",
+      sku: "FS-ACADEMY-TEE-001",
+      description:
+        "Camisa oficial Focus Academy com modelagem streetwear, acabamento preto e detalhes laranja nas mangas. Uma peca criada para quem vive tecnologia, criatividade e movimento.",
+      shortDescription: "Camisa oficial Focus Academy em preto com detalhes laranja.",
+      basePrice: 89.9,
+      promotionalPrice: null,
+      imageUrl: "/images/products/academy/camisa-focus-academy-masculina.png",
+      images: [
+        {
+          url: "/images/products/academy/camisa-focus-academy-masculina.png",
+          isPrimary: true,
+          altText: "Camisa Focus Academy vestida por modelo masculino",
+          position: 0,
+        },
+        {
+          url: "/images/products/academy/camisa-focus-academy-feminina.png",
+          isPrimary: false,
+          altText: "Camisa Focus Academy vestida por modelo feminino",
+          position: 1,
+        },
+        {
+          url: "/images/products/academy/camisa-focus-academy-feminina-costas.png",
+          isPrimary: false,
+          altText: "Camisa Focus Academy vista de costas no modelo feminino",
+          position: 2,
+        },
+        {
+          url: "/images/products/academy/camisa-focus-academy-costas.png",
+          isPrimary: false,
+          altText: "Camisa Focus Academy vista de costas",
+          position: 3,
+        },
+      ],
+      categories: [catVestuario.id, catColecoes.id],
+      collections: [colFocusAcademy.id],
+      isFeatured: true,
+      isApparel: true,
+      colors: [{ name: "Preto", code: "BLK", hex: "#0D0D0D" }],
+    },
     {
       name: "Camisa Python",
       slug: "tshirt-focus-collection",
@@ -699,7 +755,7 @@ Vista seu código. Expresse sua linguagem.`,
         "Couro legítimo, metal escovado e mosquetão tático reforçado.",
       basePrice: 39.9,
       promotionalPrice: null,
-      imageUrl: "/images/products/chaveiros-focus-kit.jpg",
+      imageUrl: "/images/products/Chaveiros de Programação em Composição Minimalista.png",
       categories: [catAcessorios.id],
       isFeatured: true,
       variants: [

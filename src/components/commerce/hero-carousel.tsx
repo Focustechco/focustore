@@ -14,6 +14,9 @@ export interface HeroBanner {
   imageUrl: string;
 }
 
+const ACADEMY_HERO_IMAGE =
+  "/images/hero/hero-focus-academy-banner-2026.png?v=20261028-2";
+
 const DEFAULT_SLIDES = [
   {
     id: "slide-1",
@@ -26,7 +29,7 @@ const DEFAULT_SLIDES = [
     primaryButtonHref: "/categoria/vestuario",
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
-    imageUrl: "/images/hero/hero-focus-academy-banner-2026.png",
+    imageUrl: ACADEMY_HERO_IMAGE,
     mobileImageUrl: "/images/hero-mobile/hero-academy-mobile.png",
     imageAlt: "Linha Streetwear Focus Store",
   },
@@ -70,12 +73,18 @@ export function HeroCarousel({
 }) {
   const slides =
     initialBanners && initialBanners.length > 0
-      ? initialBanners.map((b, idx) => {
+      ? [...initialBanners]
+          .sort(
+            (a, b) =>
+              Number(a.imageUrl !== "/images/banners/banner-camisas-dev.png") -
+              Number(b.imageUrl !== "/images/banners/banner-camisas-dev.png"),
+          )
+          .map((b, idx) => {
           const titleLines = b.title.split("\n");
           const imageUrl =
             b.imageUrl === "/images/hero/hero-models-banner.png" ||
             b.imageUrl.startsWith("https://i.ibb.co/")
-              ? "/images/hero/hero-focus-academy-banner-2026.png"
+              ? ACADEMY_HERO_IMAGE
               : b.imageUrl;
           const mobileImageUrl =
             imageUrl === "/images/hero/hero-focus-academy-banner-2026.png"
@@ -104,7 +113,7 @@ export function HeroCarousel({
             mobileImageUrl,
             imageAlt: b.title,
           };
-        })
+          })
       : DEFAULT_SLIDES;
 
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -157,6 +166,7 @@ export function HeroCarousel({
   };
 
   const slide = slides[currentSlide] || slides[0];
+  const isAcademyHero = slide.imageUrl.includes("hero-focus-academy-banner-2026");
 
   return (
     <section className="max-w-[1440px] mx-auto mt-6 px-4 sm:px-6 lg:px-8 select-none sm:mt-8">

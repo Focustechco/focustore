@@ -54,8 +54,12 @@ export function ProductCard({ product }: ProductCardProps) {
   const frontImage = product.images.find((image) =>
     image.altText?.toLowerCase().includes('frente')
   );
+  const academyFemaleImage = product.slug === 'camisa-focus-academy'
+    ? product.images.find((image) => image.url.includes('camisa-focus-academy-feminina.png'))
+    : undefined;
+  const hoverImage = academyFemaleImage || frontImage;
   const canPreviewFront =
-    frontImage &&
+    hoverImage &&
     !selectedImage?.altText?.toLowerCase().includes('branco');
   const defaultVariant = product.variants[0];
   const categoryName = product.categories?.[0]?.category.name || 'Vestuário';
@@ -167,14 +171,14 @@ export function ProductCard({ product }: ProductCardProps) {
             sizes="(max-width: 768px) 50vw, 20vw"
             quality={primaryImage.includes('/images/camisas/') ? 90 : undefined}
           />
-          {canPreviewFront && frontImage && (
+          {canPreviewFront && hoverImage && (
             <Image
-              src={frontImage.url}
-              alt={frontImage.altText || `${product.name} - Frente`}
+              src={hoverImage.url}
+              alt={hoverImage.altText || `${product.name} - Frente`}
               fill
               className="object-cover opacity-0 group-hover/image:opacity-100 transition-opacity duration-500 ease-in-out"
               sizes="(max-width: 768px) 50vw, 20vw"
-              quality={frontImage.url.includes('/images/camisas/') ? 90 : undefined}
+              quality={hoverImage.url.includes('/images/camisas/') ? 90 : undefined}
             />
           )}
         </Link>

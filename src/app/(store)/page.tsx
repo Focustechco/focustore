@@ -112,7 +112,7 @@ async function HomePageContent() {
       title: 'FAÇA PARTE\nDO MOVIMENTO',
       subtitle: 'Mais que uma loja, um movimento.',
       ctaText: 'Saiba mais',
-      ctaLink: '/comunidade',
+      ctaLink: '/colecao/focus-academy',
       imageUrl: '/images/banners/faca-parte-movimento.png',
     },
   ];
@@ -128,11 +128,17 @@ async function HomePageContent() {
       <HeroCarousel initialBanners={heroBanners} />
 
       {/* =========================================================
-          2. TRIO DE BANNERS EM DESTAQUE (ABAIXO DA HERO)
+          2. BANNERS EM DESTAQUE (ABAIXO DA HERO)
           ========================================================= */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5">
-          {activeFeaturedBanners.slice(0, 3).map((banner) => {
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+          {activeFeaturedBanners
+            .filter(
+              (banner) =>
+                !banner.title.toLowerCase().replace(/\s+/g, ' ').includes('produtos exclusivos'),
+            )
+            .slice(0, 2)
+            .map((banner) => {
             const lines = banner.title.split('\n');
             const firstLine = lines[0] || '';
             const secondLine = lines.slice(1).join(' ');
@@ -141,14 +147,14 @@ async function HomePageContent() {
               <Link
                 key={banner.id}
                 href={banner.ctaLink || '#'}
-                className="relative h-44 rounded-2xl overflow-hidden bg-[#0F0F0F] border border-white/10 p-6 flex flex-col justify-between group hover:border-[#FF6500]/50 transition-all shadow-xl"
+                className="relative h-52 rounded-2xl overflow-hidden bg-[#0F0F0F] border border-white/10 p-6 sm:p-8 flex flex-col justify-between group hover:border-[#FF6500]/50 transition-all shadow-xl"
               >
                 <div className="absolute inset-0 z-10 overflow-hidden">
                   <Image
                     src={banner.imageUrl}
                     alt={banner.title}
                     fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
+                    sizes="(max-width: 768px) 100vw, 50vw"
                     className="object-cover object-right group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-[#0F0F0F] via-[#0F0F0F]/50 to-transparent z-10" />

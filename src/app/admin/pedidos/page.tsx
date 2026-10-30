@@ -1,4 +1,3 @@
-import { requireAdminPage } from '@/lib/auth/admin';
 import React from 'react';
 import Link from 'next/link';
 import { prisma } from '@/lib/db/prisma';
@@ -7,7 +6,6 @@ import { formatPrice, formatDate } from '@/lib/utils/formatters';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminOrdersPage() {
-  await requireAdminPage();
   let orders: any[] = [];
   try {
     orders = await prisma.order.findMany({

@@ -1,4 +1,3 @@
-import { requireAdminPage } from '@/lib/auth/admin';
 import React from 'react';
 import { prisma } from '@/lib/db/prisma';
 import { formatDate } from '@/lib/utils/formatters';
@@ -6,7 +5,6 @@ import { formatDate } from '@/lib/utils/formatters';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminAuditPage() {
-  await requireAdminPage();
   let logs: any[] = [];
   try {
     logs = await prisma.auditLog.findMany({

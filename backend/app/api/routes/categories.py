@@ -6,7 +6,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.dependencies import get_db
-from app.api.write_access import require_local_write_access
 from app.models.category import Category
 from app.schemas.category import CategoryCreate, CategoryResponse
 
@@ -20,8 +19,6 @@ DbSession = Annotated[Session, Depends(get_db)]
     "",
     response_model=CategoryResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_local_write_access)],
-    responses={503: {'description': 'Write authorization unavailable'}},
 )
 def create_category(data: CategoryCreate, db: DbSession):
     category = Category(

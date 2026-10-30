@@ -11,8 +11,7 @@ router = APIRouter(prefix='/api/v1/catalog', tags=['Catalog'])
 
 
 def catalog_service() -> CatalogService:
-    settings = get_settings()
-    return CatalogService.from_path(settings.legacy_catalog_sqlite_path, settings.legacy_catalog_excluded_slugs)
+    return CatalogService.from_path(get_settings().legacy_catalog_sqlite_path)
 
 
 Service = Annotated[CatalogService, Depends(catalog_service)]

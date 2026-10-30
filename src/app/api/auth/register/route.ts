@@ -4,15 +4,12 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db/prisma';
 import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
-import { sameOrigin } from '@/lib/security/origin';
-import { rateLimit } from '@/lib/security/rate-limit';
 
 const registrationSchema = z.object({
   name: z.string().trim().min(2, 'Informe seu nome.').max(100),
   email: z.string().trim().email('Informe um e-mail válido.').max(254),
-  cpf: z.string().trim().max(20).optional(),
-  password: z.string().min(8, 'A senha deve ter ao menos 8 caracteres.').max(72)
-    .refine(value => Buffer.byteLength(value, 'utf8') <= 72, 'A senha deve ter até 72 bytes.'),
+  cpf: z.string().optional(),
+  password: z.string().min(8, 'A senha deve ter ao menos 8 caracteres.').max(72),
 });
 
 function isValidCpf(cpf: string) {
@@ -31,10 +28,6 @@ function isValidCpf(cpf: string) {
 }
 
 export async function POST(request: Request) {
-  if (!sameOrigin(request)) return NextResponse.json({ error: 'Origem inválida.' }, { status: 403 });
-  if (!rateLimit(`register:${request.headers.get('x-forwarded-for')?.split(',')[0]?.trim().slice(0, 100) ?? 'unknown'}`, 10).success) {
-    return NextResponse.json({ error: 'Muitas tentativas. Aguarde.' }, { status: 429 });
-  }
   let body: unknown;
   try {
     body = await request.json();
@@ -54,7 +47,7 @@ export async function POST(request: Request) {
   const email = parsed.data.email.toLowerCase();
   const cpf = parsed.data.cpf?.replace(/\D/g, '') || null;
 
-  if (parsed.data.cpf && !isValidCpf(cpf ?? '')) {
+  if (cpf && !isValidCpf(cpf)) {
     return NextResponse.json({ error: 'Informe um CPF válido.' }, { status: 400 });
   }
 
@@ -101,7 +94,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error('Falha ao criar conta:');
+    console.error('Falha ao criar conta:', error);
     return NextResponse.json(
       { error: 'Não foi possível criar sua conta. Tente novamente.' },
       { status: 500 },

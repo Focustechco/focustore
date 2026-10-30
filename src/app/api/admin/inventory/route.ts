@@ -69,7 +69,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, variants: filteredVariants });
   } catch (error: any) {
-    console.error('Error fetching inventory:');
+    console.error('Error fetching inventory:', error);
     return NextResponse.json(
       { success: false, error: 'Falha ao buscar estoque.' },
       { status: 500 }

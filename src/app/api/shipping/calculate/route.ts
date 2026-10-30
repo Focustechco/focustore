@@ -11,6 +11,6 @@ export async function POST(req: Request) {
     const options = ShippingService.calculateShipping(postalCode, Number(subtotal) || 0);
     return NextResponse.json(options);
   } catch (e: any) {
-    return NextResponse.json({ error: 'Falha ao processar requisição.' }, { status: 400 });
+    return NextResponse.json({ error: e.message }, { status: 400 });
   }
 }

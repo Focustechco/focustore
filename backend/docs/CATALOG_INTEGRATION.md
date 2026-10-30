@@ -92,11 +92,6 @@ Não há descoberta automática de dev.db nem fallback para backups.
 DATABASE_URL continua sendo exclusivamente a configuração SQLAlchemy existente.
 O `.env` local não foi modificado.
 
-Após a auditoria da main, os POSTs Python exigem `APP_ENVIRONMENT=development`
-ou `test` e `ALLOW_LOCAL_WRITES=true`. O padrão é produção com escrita
-desabilitada (503), até existir autenticação/autorização compartilhada validada.
-Essa opção local não é um mecanismo de autenticação nem deve ser exposta na rede.
-
 Pendente de infraestrutura: montar o MESMO banco de forma acessível ao FastAPI,
 com permissões e suporte a leituras concorrentes, inclusive arquivos auxiliares
 de WAL quando aplicável. Não usar immutable=1 em um banco que recebe escritas.

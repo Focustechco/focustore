@@ -6,9 +6,6 @@ import { OrderService } from '@/modules/orders/order.service';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { OrderConfirmationClient } from './order-confirmation-client';
-import { getAuthenticatedUser } from '@/lib/auth/session';
-import { cookies } from 'next/headers';
-import { canReadGuestOrder } from '@/lib/auth/guest-order';
 
 interface Props {
   params: Promise<{ orderId: string }>;
@@ -16,12 +13,9 @@ interface Props {
 
 export default async function OrderConfirmationPage({ params }: Props) {
   const { orderId } = await params;
-  const user = await getAuthenticatedUser();
-  const guestToken = (await cookies()).get('focus_guest_order')?.value;
-  if (!user && !canReadGuestOrder(guestToken, orderId)) notFound();
   const order = await OrderService.getOrderById(orderId);
 
-  if (!order || (order.userId ? order.userId !== user?.id : !canReadGuestOrder(guestToken, order.id))) {
+  if (!order) {
     notFound();
   }
 

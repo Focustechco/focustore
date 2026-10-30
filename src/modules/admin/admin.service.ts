@@ -1,9 +1,7 @@
-import { requireAdminPage } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 
 export class AdminService {
   static async getDashboardStats() {
-    await requireAdminPage();
     try {
       const totalRevenueResult = await prisma.order.aggregate({
         where: { status: { in: ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'] } },

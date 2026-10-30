@@ -1,20 +1,13 @@
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
-import { redirect } from 'next/navigation';
 
 type AdminAuthorization =
   | { authorized: true; role: 'ADMIN' | 'MANAGER' }
   | { authorized: false; response: NextResponse };
 
 export async function requireAdmin() {
-  const requestHeaders = await headers();
-  const origin = requestHeaders.get('origin');
-  if (requestHeaders.get('sec-fetch-site') === 'cross-site' ||
-      (origin && (!URL.canParse(origin) || new URL(origin).host !== requestHeaders.get('host')))) {
-    return { authorized: false, response: NextResponse.json({ error: 'Origem inválida.' }, { status: 403 }) } satisfies AdminAuthorization;
-  }
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
@@ -51,10 +44,4 @@ export async function requireAdmin() {
     authorized: true,
     role: session.user.role,
   } satisfies AdminAuthorization;
-}
-
-export async function requireAdminPage() {
-  const authorization = await requireAdmin();
-  if (!authorization.authorized) redirect('/login');
-  return authorization;
 }

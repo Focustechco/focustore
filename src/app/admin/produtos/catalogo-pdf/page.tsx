@@ -1,4 +1,3 @@
-import { requireAdminPage } from '@/lib/auth/admin';
 import React from 'react';
 import { prisma } from '@/lib/db/prisma';
 import { CatalogPdfView } from '@/components/admin/catalog-pdf-view';
@@ -6,7 +5,6 @@ import { CatalogPdfView } from '@/components/admin/catalog-pdf-view';
 export const dynamic = 'force-dynamic';
 
 export default async function CatalogPdfPage() {
-  await requireAdminPage();
   let products: any[] = [];
   try {
     products = await prisma.product.findMany({

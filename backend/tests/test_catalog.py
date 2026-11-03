@@ -10,62 +10,6 @@ from app.integrations.legacy_catalog.mapper import money
 from app.integrations.legacy_catalog.repository import LegacyCatalogRepository
 
 
-@pytest.fixture
-def legacy(tmp_path, monkeypatch, isolated_settings):
-    path = tmp_path / 'catalog with spaces.db'
-    ids = {name: str(uuid4()) for name in ('product', 'category', 'second_category', 'variant')}
-    with sqlite3.connect(path) as connection:
-        connection.executescript('''
-            CREATE TABLE products (
-                id TEXT PRIMARY KEY, name TEXT NOT NULL, slug TEXT NOT NULL UNIQUE,
-                sku TEXT NOT NULL UNIQUE, description TEXT NOT NULL,
-                short_description TEXT, brand TEXT NOT NULL, status TEXT NOT NULL,
-                base_price REAL NOT NULL, promotional_price REAL
-            );
-            CREATE TABLE categories (
-                id TEXT PRIMARY KEY, name TEXT, slug TEXT UNIQUE, description TEXT,
-                image_url TEXT, parent_id TEXT, position INTEGER, is_active BOOLEAN
-            );
-            CREATE TABLE product_categories (
-                product_id TEXT, category_id TEXT, PRIMARY KEY(product_id, category_id)
-            );
-            CREATE TABLE product_images (
-                id TEXT PRIMARY KEY, product_id TEXT, url TEXT, alt_text TEXT,
-                position INTEGER, is_primary BOOLEAN
-            );
-            CREATE TABLE product_variants (
-                id TEXT PRIMARY KEY, product_id TEXT, sku TEXT UNIQUE, name TEXT,
-                color TEXT, color_hex TEXT, size TEXT, model TEXT, price REAL,
-                promotional_price REAL, image_url TEXT, position INTEGER, is_active BOOLEAN
-            );
-            CREATE TABLE inventory (
-                id TEXT PRIMARY KEY, variant_id TEXT UNIQUE,
-                quantity_available INTEGER, quantity_reserved INTEGER
-            );
-        ''')
-        connection.execute(
-            'INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            (ids['product'], 'Teclado', 'teclado', 'KEY-1', 'Descrição', None,
-             'Focus', 'ACTIVE', 199.90, 179.90),
-        )
-        for position, key in enumerate(('category', 'second_category')):
-            connection.execute('INSERT INTO categories VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                               (ids[key], key, key, None, '/images/category.jpg', None, position, 1))
-            connection.execute('INSERT INTO product_categories VALUES (?, ?)',
-                               (ids['product'], ids[key]))
-        connection.executemany('INSERT INTO product_images VALUES (?, ?, ?, ?, ?, ?)', [
-            ('img-b', ids['product'], 'https://cdn.example/primary.jpg', 'Primary', 2, 1),
-            ('img-a', ids['product'], '/images/detail.jpg', None, 0, 0),
-        ])
-        connection.execute('INSERT INTO product_variants VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                           (ids['variant'], ids['product'], 'KEY-1-B', 'Preto', 'Preto',
-                            '#000000', 'M', None, 199.90, 169.90, '/images/black.jpg', 0, 1))
-        connection.execute('INSERT INTO inventory VALUES (?, ?, ?, ?)',
-                           ('inventory-1', ids['variant'], 3, 7))
-    monkeypatch.setenv('LEGACY_CATALOG_SQLITE_PATH', str(path))
-    get_settings.cache_clear()
-    return path, ids
-
 
 def test_full_mapping_and_original_identifiers(client, legacy):
     path, ids = legacy

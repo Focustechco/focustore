@@ -46,3 +46,12 @@ prisma/*.db-wal
 .env
 .env.*
 !.env.example
+# Project-local Node runtime
+/.local-tools/
+# Local SQLite databases and backups (existing tracked files remain tracked)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3

@@ -184,6 +184,7 @@ Desenvolvida para quem transforma ideias em código, a peça combina uma estéti
 Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/01_Python_original.png?v=20261027-2",
       whiteImage: "/images/camisas/camisa-python-branca.jpeg?v=20261027-1",
+      whiteFrontImage: "/images/camisas/Retrato%20minimalista%20com%20camiseta%20Python%20branca.png",
       frontImage: "/images/camisas/frente-camisa-py.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-TSHIRT",
     },
@@ -200,6 +201,7 @@ Desenvolvida para quem transforma ideias em código, a peça combina uma estéti
 Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261027-2",
       whiteImage: "/images/camisas/camisa-java-branca.jpeg?v=20261027-1",
+      whiteFrontImage: "/images/camisas/Retrato%20masculino%20com%20camiseta%20branca%20Java.png",
       frontImage: "/images/camisas/frente-camisa-java.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-POLO",
     },
@@ -216,6 +218,7 @@ Desenvolvida para quem transforma ideias em código, a peça combina uma estéti
 Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/05_JavaScript_original.jpg?v=20261027-2",
       whiteImage: "/images/camisas/camisa-js-branca.jpeg?v=20261027-1",
+      whiteFrontImage: "/images/camisas/Retrato%20editorial%20com%20camiseta%20JS%20branca.png",
       frontImage: "/images/camisas/frente-camisa-js.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-CAP",
     },
@@ -232,6 +235,7 @@ Desenvolvida para quem transforma ideias em código, a peça combina uma estéti
 Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/03_TypeScript_alta_resolucao.jpeg?v=20261027-2",
       whiteImage: "/images/camisas/camisa-ts-branca.jpeg?v=20261027-1",
+      whiteFrontImage: "/images/camisas/Retrato%20de%20moda%20com%20logo%20TS%20azul.png",
       frontImage: "/images/camisas/frente-camisa-ts.jpg?v=20261027-1",
       variantPrefix: "FS-DEV-TS",
     },
@@ -277,6 +281,14 @@ Vista seu código. Expresse sua linguagem.`,
               altText: `${item.name} - Frente`,
               position: 2,
             },
+            ...(item.whiteFrontImage
+              ? [{
+                  url: item.whiteFrontImage,
+                  isPrimary: false,
+                  altText: `${item.name} - Branco - Frente`,
+                  position: 3,
+                }]
+              : []),
           ],
         },
         variants: {
@@ -323,7 +335,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/products/camisa-focus.jpg",
+            url: "/images/products/camiseta-focus.jpg",
             isPrimary: true,
             altText: "Camisa Focus",
           },

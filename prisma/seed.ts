@@ -170,6 +170,83 @@ async function main() {
     },
   });
 
+  const colFocusAcademy = await prisma.collection.create({
+    data: {
+      name: "Focus Academy",
+      slug: "focus-academy",
+      headline: "Vista seu conhecimento",
+      description: "Produtos oficiais da Focus Academy.",
+    },
+  });
+
+  await prisma.product.create({
+    data: {
+      name: "Camisa Focus Academy",
+      slug: "camisa-focus-academy",
+      sku: "FS-ACADEMY-TEE-001",
+      description:
+        "Camisa oficial Focus Academy com modelagem streetwear e identidade exclusiva da coleção.",
+      shortDescription: "Camisa oficial Focus Academy.",
+      basePrice: 89.9,
+      isFeatured: true,
+      status: "ACTIVE",
+      categories: {
+        create: [
+          { categoryId: catVestuario.id },
+          { categoryId: catColecoes.id },
+        ],
+      },
+      collections: {
+        create: [{ collectionId: colFocusAcademy.id }],
+      },
+      images: {
+        create: [
+          {
+            url: "/images/products/academy/camisa-focus-academy-masculina.png",
+            isPrimary: true,
+            altText: "Camisa Focus Academy vestida por modelo masculino",
+            position: 0,
+          },
+          {
+            url: "/images/products/academy/camisa-focus-academy-feminina.png",
+            isPrimary: false,
+            altText: "Camisa Focus Academy vestida por modelo feminino",
+            position: 1,
+          },
+          {
+            url: "/images/products/academy/camisa-focus-academy-feminina-costas.png",
+            isPrimary: false,
+            altText: "Camisa Focus Academy vista de costas no modelo feminino",
+            position: 2,
+          },
+          {
+            url: "/images/products/academy/camisa-focus-academy-costas.png",
+            isPrimary: false,
+            altText: "Camisa Focus Academy vista de costas",
+            position: 3,
+          },
+        ],
+      },
+      variants: {
+        create: DEV_COLLECTION_SIZES.map((size, index) => ({
+          name: `Camisa Focus Academy - Preto / ${size}`,
+          sku: `FS-ACADEMY-BLK-${size}`,
+          color: "Preto",
+          colorHex: "#0D0D0D",
+          size,
+          price: 89.9,
+          position: index,
+          inventory: {
+            create: {
+              quantityAvailable: DEV_COLLECTION_STOCK[index],
+              quantityReserved: 0,
+            },
+          },
+        })),
+      },
+    },
+  });
+
   const devCollectionProducts = [
     {
       name: "Camisa Python",
@@ -184,6 +261,7 @@ Desenvolvida para quem transforma ideias em código, a peça combina uma estéti
 Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/01_Python_original.png?v=20261027-2",
       whiteImage: "/images/camisas/camisa-python-branca.jpeg?v=20261027-1",
+      whiteFrontImage: "/images/camisas/Retrato%20minimalista%20com%20camiseta%20Python%20branca.png",
       frontImage: "/images/camisas/frente-camisa-py.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-TSHIRT",
     },
@@ -200,6 +278,7 @@ Desenvolvida para quem transforma ideias em código, a peça combina uma estéti
 Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/02_Java_alta_resolucao.jpeg?v=20261027-2",
       whiteImage: "/images/camisas/camisa-java-branca.jpeg?v=20261027-1",
+      whiteFrontImage: "/images/camisas/Retrato%20masculino%20com%20camiseta%20branca%20Java.png",
       frontImage: "/images/camisas/frente-camisa-java.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-POLO",
     },
@@ -216,6 +295,7 @@ Desenvolvida para quem transforma ideias em código, a peça combina uma estéti
 Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/05_JavaScript_original.jpg?v=20261027-2",
       whiteImage: "/images/camisas/camisa-js-branca.jpeg?v=20261027-1",
+      whiteFrontImage: "/images/camisas/Retrato%20editorial%20com%20camiseta%20JS%20branca.png",
       frontImage: "/images/camisas/frente-camisa-js.jpg?v=20261027-1",
       variantPrefix: "FS-AMS-CAP",
     },
@@ -232,6 +312,7 @@ Desenvolvida para quem transforma ideias em código, a peça combina uma estéti
 Vista seu código. Expresse sua linguagem.`,
       image: "/images/camisas/03_TypeScript_alta_resolucao.jpeg?v=20261027-2",
       whiteImage: "/images/camisas/camisa-ts-branca.jpeg?v=20261027-1",
+      whiteFrontImage: "/images/camisas/Retrato%20de%20moda%20com%20logo%20TS%20azul.png",
       frontImage: "/images/camisas/frente-camisa-ts.jpg?v=20261027-1",
       variantPrefix: "FS-DEV-TS",
     },
@@ -277,6 +358,14 @@ Vista seu código. Expresse sua linguagem.`,
               altText: `${item.name} - Frente`,
               position: 2,
             },
+            ...(item.whiteFrontImage
+              ? [{
+                  url: item.whiteFrontImage,
+                  isPrimary: false,
+                  altText: `${item.name} - Branco - Frente`,
+                  position: 3,
+                }]
+              : []),
           ],
         },
         variants: {
@@ -323,7 +412,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/products/camisa-focus.jpg",
+            url: "/images/products/camiseta-focus.jpg",
             isPrimary: true,
             altText: "Camisa Focus",
           },

@@ -1,9 +1,8 @@
 """Explicit, read-only queries against the Prisma SQLite catalog only."""
-from contextlib import contextmanager
 from pathlib import Path
 import sqlite3
-from collections.abc import Iterator
 
+from app.integrations.prisma_sqlite import readonly_connection
 from app.integrations.legacy_catalog.mapper import map_category, map_product
 from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct
 
@@ -22,19 +21,8 @@ class LegacyCatalogRepository:
     def __init__(self, path: Path) -> None:
         self.path = path
 
-    @contextmanager
-    def connection(self) -> Iterator[sqlite3.Connection]:
-        if not self.path.is_absolute():
-            raise ValueError('Catalog path must be absolute')
-        # mode=ro must fail if missing; never create an empty source database.
-        connection = sqlite3.connect(self.path.as_uri() + '?mode=ro', uri=True, timeout=2)
-        connection.row_factory = sqlite3.Row
-        try:
-            connection.execute('PRAGMA query_only = ON')
-            connection.execute('BEGIN')
-            yield connection
-        finally:
-            connection.close()
+    def connection(self):
+        return readonly_connection(self.path)
 
     def _product(self, connection: sqlite3.Connection, row: sqlite3.Row) -> CatalogProduct:
         images = connection.execute('''

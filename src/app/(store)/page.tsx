@@ -160,7 +160,7 @@ async function HomePageContent() {
                     alt={banner.title}
                     fill
                     sizes="(max-width: 768px) 100vw, 50vw"
-                    className="object-cover object-right group-hover:scale-105 transition-transform duration-700"
+                    className="object-cover object-[right_58%] group-hover:scale-105 transition-transform duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-[#0F0F0F] via-[#0F0F0F]/50 to-transparent z-10" />
                 </div>

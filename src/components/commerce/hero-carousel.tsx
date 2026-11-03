@@ -59,7 +59,7 @@ const DEFAULT_SLIDES = [
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
     imageUrl: "/images/hero/hero-movimento-streetwear.png",
-    mobileImageUrl: "/images/hero-mobile/hero-streetwear-mobile.png",
+    mobileImageUrl: "/images/hero-mobile/hero-streetwear-mobile.png?v=20261103-1",
     imageAlt: "Trio Streetwear Focus - Faça Parte do Movimento",
   },
 ];
@@ -92,7 +92,7 @@ export function HeroCarousel({
               : imageUrl === "/images/banners/banner-camisas-dev.png"
                 ? "/images/hero-mobile/hero-dev-mobile.png"
                 : imageUrl === "/images/hero/hero-movimento-streetwear.png"
-                  ? "/images/hero-mobile/hero-streetwear-mobile.png"
+                  ? "/images/hero-mobile/hero-streetwear-mobile.png?v=20261103-1"
                   : DEFAULT_SLIDES[idx]?.mobileImageUrl;
           return {
             id: b.id,
@@ -212,7 +212,7 @@ export function HeroCarousel({
   return (
     <section className="max-w-[1440px] mx-auto mt-6 px-4 sm:px-6 lg:px-8 select-none sm:mt-8">
       <div
-        className="relative aspect-[0.75] min-h-0 sm:aspect-auto sm:min-h-[420px] lg:min-h-[460px] rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0A0A0A] border border-white/10 hover:border-[#FF6500]/30 transition-all duration-500 shadow-2xl flex flex-col justify-between p-0 sm:p-10 lg:p-12 group"
+        className="relative h-[calc(100svh-96px)] min-h-[520px] max-h-[680px] sm:h-auto sm:min-h-[420px] lg:min-h-[460px] rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0A0A0A] border border-white/10 hover:border-[#FF6500]/30 transition-all duration-500 shadow-2xl flex flex-col justify-between p-0 sm:p-10 lg:p-12 group"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onPointerDown={handlePointerDown}
@@ -260,13 +260,13 @@ export function HeroCarousel({
         </div>
 
         {/* 2. Conteúdo Editorial (No Desktop: layout padrão centralizado na vertical à esquerda; No Mobile: ancorado no rodapé) */}
-        <div className="absolute left-5 right-5 bottom-[82px] z-20 max-w-xl space-y-1 sm:relative sm:left-auto sm:right-auto sm:bottom-auto sm:space-y-3.5 sm:mt-auto sm:my-auto">
+        <div className="absolute left-5 right-5 bottom-[96px] z-20 max-w-xl space-y-2 sm:relative sm:left-auto sm:right-auto sm:bottom-auto sm:space-y-3.5 sm:mt-auto sm:my-auto">
           {slide.tagline === "VISTA SEU CÓDIGO." && (
-            <p className="text-[9px] sm:text-xs font-bold uppercase tracking-[0.18em] text-[#FF6500] drop-shadow-sm">
+            <p className="text-xs sm:text-xs font-bold uppercase tracking-[0.18em] text-[#FF6500] drop-shadow-sm">
               {slide.tagline}
             </p>
           )}
-          <h1 className="line-clamp-2 text-base sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1] sm:leading-[1.05] uppercase drop-shadow-md">
+          <h1 className="line-clamp-2 text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.08] sm:leading-[1.05] uppercase drop-shadow-md">
             {slide.titleLine1}
             {slide.titleLine2 && (
               <>
@@ -276,7 +276,7 @@ export function HeroCarousel({
             )}
           </h1>
 
-          <p className="text-zinc-300 text-[10px] sm:text-sm lg:text-base leading-snug sm:leading-relaxed max-w-sm sm:max-w-md font-normal drop-shadow-sm line-clamp-2 sm:line-clamp-none">
+          <p className="text-zinc-300 text-base sm:text-sm lg:text-base leading-snug sm:leading-relaxed max-w-md font-normal drop-shadow-sm line-clamp-3 sm:line-clamp-none">
             {slide.subtitle}
           </p>
 
@@ -316,13 +316,13 @@ export function HeroCarousel({
         )}
         <div className="absolute inset-x-0 bottom-[18px] z-30 flex items-center justify-end gap-1.5 pr-5 sm:hidden">
           <Link href={slide.primaryButtonHref}>
-            <button className="whitespace-nowrap px-3 py-2 rounded-lg bg-[#FF6500] hover:bg-[#FF7A1A] text-white text-[10px] font-bold uppercase tracking-wide transition-all inline-flex items-center gap-1 shadow-xl shadow-[#FF6500]/30 hover:scale-[1.02] active:scale-95">
+            <button className="whitespace-nowrap px-3 py-2 rounded-lg bg-[#FF6500] hover:bg-[#FF7A1A] text-white text-xs font-bold uppercase tracking-wide transition-all inline-flex items-center gap-1 shadow-xl shadow-[#FF6500]/30 hover:scale-[1.02] active:scale-95">
               {slide.primaryButtonText} <ArrowRight size={12} />
             </button>
           </Link>
           {slide.secondaryButtonText && (
             <Link href={slide.secondaryButtonHref}>
-              <button className="whitespace-nowrap px-3 py-2 rounded-lg bg-black/60 backdrop-blur-md border border-white/20 hover:border-white/40 text-white text-[10px] font-semibold uppercase tracking-wide transition-all hover:bg-black/80 active:scale-95">
+              <button className="whitespace-nowrap px-3 py-2 rounded-lg bg-black/60 backdrop-blur-md border border-white/20 hover:border-white/40 text-white text-xs font-semibold uppercase tracking-wide transition-all hover:bg-black/80 active:scale-95">
                 {slide.secondaryButtonText}
               </button>
             </Link>

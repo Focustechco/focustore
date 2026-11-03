@@ -1,13 +1,13 @@
 import pytest
 
 
-def test_create_product_success(client):
-    category = client.post(
+def test_create_product_success(admin_client):
+    category = admin_client.post(
         "/categories", json={"name": "Eletrônicos", "slug": "eletronicos"}
     )
     assert category.status_code == 201
     category_id = category.json()["id"]
-    response = client.post(
+    response = admin_client.post(
         "/products",
         json={
             "name": "Teclado mecânico",
@@ -25,8 +25,8 @@ def test_create_product_success(client):
     assert data["category_id"] == category_id
 
 
-def test_create_product_category_not_found(client):
-    response = client.post(
+def test_create_product_category_not_found(admin_client):
+    response = admin_client.post(
         "/products",
         json={
             "name": "Mouse",
@@ -40,16 +40,16 @@ def test_create_product_category_not_found(client):
 
 
 @pytest.mark.parametrize("price", ["0", "-10.00"])
-def test_create_product_invalid_price(client, price):
-    response = client.post(
+def test_create_product_invalid_price(admin_client, price):
+    response = admin_client.post(
         "/products",
         json={"name": "Monitor", "price": price, "stock": 3, "category_id": 1},
     )
     assert response.status_code == 422
 
 
-def test_create_product_negative_stock(client):
-    response = client.post(
+def test_create_product_negative_stock(admin_client):
+    response = admin_client.post(
         "/products",
         json={
             "name": "Monitor",
@@ -61,15 +61,15 @@ def test_create_product_negative_stock(client):
     assert response.status_code == 422
 
 
-def test_list_products_empty(client):
-    response = client.get("/products")
+def test_list_products_empty(admin_client):
+    response = admin_client.get("/products")
 
     assert response.status_code == 200
     assert response.json() == []
 
 
-def test_list_products(client):
-    category_response = client.post(
+def test_list_products(admin_client):
+    category_response = admin_client.post(
         "/categories",
         json={"name": "Periféricos", "slug": "perifericos"},
     )
@@ -77,7 +77,7 @@ def test_list_products(client):
     category_id = category_response.json()["id"]
 
     for name in ["Mouse", "Teclado"]:
-        response = client.post(
+        response = admin_client.post(
             "/products",
             json={
                 "name": name,
@@ -88,7 +88,7 @@ def test_list_products(client):
         )
         assert response.status_code == 201
 
-    response = client.get("/products")
+    response = admin_client.get("/products")
 
     assert response.status_code == 200
     assert len(response.json()) == 2
@@ -97,8 +97,8 @@ def test_list_products(client):
     assert names == ["Mouse", "Teclado"]
 
 
-def test_list_products_pagination(client):
-    category_response = client.post(
+def test_list_products_pagination(admin_client):
+    category_response = admin_client.post(
         "/categories",
         json={"name": "Informática", "slug": "informatica"},
     )
@@ -106,7 +106,7 @@ def test_list_products_pagination(client):
     category_id = category_response.json()["id"]
 
     for name in ["Produto A", "Produto B", "Produto C"]:
-        response = client.post(
+        response = admin_client.post(
             "/products",
             json={
                 "name": name,
@@ -117,22 +117,22 @@ def test_list_products_pagination(client):
         )
         assert response.status_code == 201
 
-    response = client.get("/products?skip=1&limit=1")
+    response = admin_client.get("/products?skip=1&limit=1")
 
     assert response.status_code == 200
     assert len(response.json()) == 1
     assert response.json()[0]["name"] == "Produto B"
 
 
-def test_get_product_success(client):
-    category_response = client.post(
+def test_get_product_success(admin_client):
+    category_response = admin_client.post(
         "/categories",
         json={"name": "Acessórios", "slug": "acessorios"},
     )
     assert category_response.status_code == 201
     category_id = category_response.json()["id"]
 
-    created = client.post(
+    created = admin_client.post(
         "/products",
         json={
             "name": "Webcam",
@@ -144,21 +144,21 @@ def test_get_product_success(client):
     assert created.status_code == 201
     product_id = created.json()["id"]
 
-    response = client.get(f"/products/{product_id}")
+    response = admin_client.get(f"/products/{product_id}")
 
     assert response.status_code == 200
     assert response.json()["id"] == product_id
     assert response.json()["name"] == "Webcam"
 
 
-def test_get_product_not_found(client):
-    response = client.get("/products/99999")
+def test_get_product_not_found(admin_client):
+    response = admin_client.get("/products/99999")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Produto não encontrado."
 
 
-def test_list_products_invalid_pagination(client):
-    response = client.get("/products?skip=-1&limit=0")
+def test_list_products_invalid_pagination(admin_client):
+    response = admin_client.get("/products?skip=-1&limit=0")
 
     assert response.status_code == 422

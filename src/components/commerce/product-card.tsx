@@ -54,13 +54,28 @@ export function ProductCard({ product }: ProductCardProps) {
   const frontImage = product.images.find((image) =>
     image.altText?.toLowerCase().includes('frente')
   );
+  const selectedImageLabel =
+    `${selectedImage?.altText || ''} ${selectedImage?.url || ''}`.toLowerCase();
+  const isWhiteSelected =
+    selectedImageLabel.includes('branco') || selectedImageLabel.includes('white');
+  const blackFrontImage = product.images.find((image) => {
+    const label = `${image.altText || ''} ${image.url || ''}`.toLowerCase();
+    return label.includes('frente') &&
+      !label.includes('branco') &&
+      !label.includes('white');
+  });
+  const whiteFrontImage = product.images.find((image) => {
+    const label = `${image.altText || ''} ${image.url || ''}`.toLowerCase();
+    return label.includes('frente') &&
+      (label.includes('branco') || label.includes('white'));
+  });
   const academyFemaleImage = product.slug === 'camisa-focus-academy'
     ? product.images.find((image) => image.url.includes('camisa-focus-academy-feminina.png'))
     : undefined;
-  const hoverImage = academyFemaleImage || frontImage;
-  const canPreviewFront =
-    hoverImage &&
-    !selectedImage?.altText?.toLowerCase().includes('branco');
+  const hoverImage =
+    academyFemaleImage ||
+    (isWhiteSelected ? whiteFrontImage : blackFrontImage || frontImage);
+  const canPreviewFront = Boolean(hoverImage);
   const defaultVariant = product.variants[0];
   const categoryName = product.categories?.[0]?.category.name || 'Vestuário';
   const price = defaultVariant?.price || product.basePrice;

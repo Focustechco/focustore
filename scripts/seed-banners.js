@@ -1,9 +1,6 @@
-<<<<<<< HEAD
 require("./seed-safety.cjs").assertDemoSeed();
 const { PrismaClient } = require("@prisma/client");
-=======
 const { PrismaClient } = require('@prisma/client');
->>>>>>> parent of 678ac11 (Correções Gerais(Talvez sem banco de dados))
 const prisma = new PrismaClient();
 
 const DEFAULT_BANNERS = [

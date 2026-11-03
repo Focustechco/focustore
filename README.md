@@ -1,6 +1,4 @@
-<<<<<<< HEAD
 teste
-=======
 ﻿# FocusStore — agentes internos de qualidade
 
 Implementação local na branch `back-end`, integrada ao backend existente.
@@ -31,4 +29,3 @@ python -m app.agents.openapi_check --write
 ```
 
 As alterações ainda precisam de autorização para commit, push ou abertura de PR.
->>>>>>> back-end

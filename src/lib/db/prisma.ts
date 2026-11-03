@@ -1,28 +1,28 @@
 import { PrismaClient } from "@prisma/client";
-import { verifiedDatabaseUrl } from "./database-url";
+import { verifiedDatabaseUrl } from "@/lib/db/database-url";
 
 const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+  prisma?: PrismaClient;
 };
-
-let prismaClient = globalForPrisma.prisma;
-
 function getPrismaClient(): PrismaClient {
-  if (!prismaClient) {
-    const dbUrl = verifiedDatabaseUrl(process.env);
-    prismaClient = new PrismaClient({
-      datasources: {
-        db: {
-          url: dbUrl,
-        },
-      },
-      log: [],
-    });
-
-    if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prismaClient;
+  if (globalForPrisma.prisma) {
+    return globalForPrisma.prisma;
   }
 
-  return prismaClient;
+  const client = new PrismaClient({
+    datasources: {
+      db: {
+        url: verifiedDatabaseUrl(process.env),
+      },
+    },
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
+  });
+
+  if (process.env.NODE_ENV !== "production") {
+    globalForPrisma.prisma = client;
+  }
+
+  return client;
 }
 
 export const prisma = new Proxy({} as PrismaClient, {

@@ -62,36 +62,6 @@ const COMMUNITY_POSTS: CommunityPost[] = [
     imageUrl: '/images/community/real-office-desk.jpg',
     productName: 'Camisa Focus & Caderno Focus',
   },
-  {
-    id: 'post-6',
-    handle: '@lucas.dev',
-    imageUrl: '/images/community/post-hoodie-cafe.jpg',
-    productName: 'Moletom Focus Streetwear',
-  },
-  {
-    id: 'post-7',
-    handle: '@tech.mariana',
-    imageUrl: '/images/community/post-tee-workspace.jpg',
-    productName: 'Camisa Focus Classic Black',
-  },
-  {
-    id: 'post-8',
-    handle: '@yuki.code',
-    imageUrl: '/images/community/post-cap-street.jpg',
-    productName: 'Boné Focus Lab Structured',
-  },
-  {
-    id: 'post-9',
-    handle: '@gabriela.design',
-    imageUrl: '/images/community/post-sweatshirt-loft.jpg',
-    productName: 'Sweatshirt Focus Lab Arch',
-  },
-  {
-    id: 'post-10',
-    handle: '@pedro.founder',
-    imageUrl: '/images/community/post-polo-rooftop.jpg',
-    productName: 'Polo Focus Tech & Copo Térmico',
-  },
 ];
 
 export function CommunityInstagramGallery({ banners }: { banners?: any[] }) {

@@ -754,7 +754,7 @@ Vista seu código. Expresse sua linguagem.`,
         "Couro legítimo, metal escovado e mosquetão tático reforçado.",
       basePrice: 39.9,
       promotionalPrice: null,
-      imageUrl: "/images/products/Chaveiros de Programação em Composição Minimalista.png",
+      imageUrl: "/images/products/chaveiro-focus.jpg",
       categories: [catAcessorios.id],
       isFeatured: true,
       variants: [

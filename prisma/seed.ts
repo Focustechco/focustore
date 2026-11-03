@@ -553,7 +553,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/products/Chaveiros de Programação em Composição Minimalista.png",
+            url: "/images/products/chaveiro-focus.jpg",
             isPrimary: true,
             altText: "Chaveiros Focus",
           },

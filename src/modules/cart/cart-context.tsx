@@ -42,7 +42,7 @@ const REAL_PRODUCT_IMAGES: Record<string, string> = {
   'headphone': '/images/products/suporte-headphone-focus.jpg',
   'sticker': '/images/products/stickers-focus.jpg',
   'adesivo': '/images/products/stickers-focus.jpg',
-  'chaveiro': '/images/products/Chaveiros de Programação em Composição Minimalista.png',
+  'chaveiro': '/images/products/chaveiro-focus.jpg',
   'copo': '/images/products/copo-termico-focus.jpg',
   'mousepad': '/images/products/mousepad-focus.jpg',
   'desk mat': '/images/products/mousepad-focus.jpg',

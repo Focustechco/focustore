@@ -163,10 +163,12 @@ export function ProductCard({ product }: ProductCardProps) {
             src={primaryImage}
             alt={product.name}
             fill
-            className={`object-cover ${
+            className={`${product.slug === 'chaveiro-focus' ? 'object-cover scale-[1.12]' : 'object-cover'} ${
               canPreviewFront
                 ? 'transition-opacity duration-500 ease-in-out'
-                : 'group-hover:scale-108 transition-transform duration-500'
+                : product.slug === 'chaveiro-focus'
+                  ? 'transition-transform duration-500'
+                  : 'group-hover:scale-108 transition-transform duration-500'
             } ${canPreviewFront ? 'group-hover/image:opacity-0' : ''}`}
             sizes="(max-width: 768px) 50vw, 20vw"
             quality={primaryImage.includes('/images/camisas/') ? 90 : undefined}
@@ -176,7 +178,7 @@ export function ProductCard({ product }: ProductCardProps) {
               src={hoverImage.url}
               alt={hoverImage.altText || `${product.name} - Frente`}
               fill
-              className="object-cover opacity-0 group-hover/image:opacity-100 transition-opacity duration-500 ease-in-out"
+              className={`${product.slug === 'chaveiro-focus' ? 'object-cover scale-[1.12]' : 'object-cover'} opacity-0 group-hover/image:opacity-100 transition-opacity duration-500 ease-in-out`}
               sizes="(max-width: 768px) 50vw, 20vw"
               quality={hoverImage.url.includes('/images/camisas/') ? 90 : undefined}
             />

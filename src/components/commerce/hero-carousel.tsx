@@ -233,8 +233,8 @@ export function HeroCarousel({
             sizes="(max-width: 639px) 100vw, 1px"
             className={`object-cover ${
               slide.imageUrl === "/images/banners/banner-camisas-dev.png"
-                ? "object-[center_35%]"
-                : "object-[center_25%]"
+                ? "object-[center_45%]"
+                : "object-[center_35%]"
             } sm:hidden`}
             priority
           />
@@ -246,11 +246,12 @@ export function HeroCarousel({
             fill
             sizes="(min-width: 640px) 100vw, 1px"
             className={`hidden object-cover ${
-              slide.imageUrl.includes('hero-focus-academy') ||
-              slide.imageUrl.includes('banner-camisas-dev')
+              slide.imageUrl.includes('hero-focus-academy')
                 ? 'object-[center_30%]'
-                : 'object-center'
-            } group-hover:scale-103 transition-transform duration-700 ease-out sm:block sm:object-right md:object-center`}
+                : slide.imageUrl.includes('banner-camisas-dev')
+                  ? 'object-[center_50%]'
+                  : 'object-[center_45%] sm:object-right md:object-center'
+            } group-hover:scale-103 transition-transform duration-700 ease-out sm:block`}
             priority
           />
           {/* Gradientes: no mobile protege o topo e a base; no desktop gradiente clássico da esquerda para direita */}

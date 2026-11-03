@@ -102,7 +102,7 @@ async function HomePageContent() {
       subtitle: 'Para quem pensa diferente.',
       ctaText: 'Ver kits',
       ctaLink: '/categoria/kits-e-presentes',
-      imageUrl: '/images/banners/kits-presentes-banner.jpg',
+      imageUrl: '/images/banners/kits-presentes-banner.png',
     },
     {
       id: 'default-feat-2',

@@ -9,6 +9,7 @@ settings = get_settings()
 engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,
+    hide_parameters=True,
 )
 
 SessionLocal = sessionmaker(

@@ -29,7 +29,7 @@ export async function persistIdentity(db: PrismaClient, provider: Provider, iden
       userId = flow.linkUserId;
       await tx.account.create({ data: { userId, provider, providerAccountId: identity.sub, type: 'oidc' } });
     } else {
-      if (!identity.emailVerified || !identity.email || !z.email().max(254).safeParse(identity.email).success) {
+      if (!identity.emailVerified || !identity.email || !z.string().email().max(254).safeParse(identity.email).success) {
         throw new SocialLoginError('verified_email_required', 403);
       }
       const email = identity.email.toLowerCase();

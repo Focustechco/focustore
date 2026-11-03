@@ -6,11 +6,8 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-<<<<<<< HEAD
     "lint": "next lint",
-=======
     "lint": "npm run typecheck",
->>>>>>> 680d9dc25669bd21e8f25939cde9c657f998fb71
     "typecheck": "tsc --noEmit",
     "test": "tsx --test --test-concurrency=1 tests/social.test.ts tests/store.test.ts",
     "test:fullstack": "tsx --test --test-concurrency=1 tests/fullstack.test.ts",

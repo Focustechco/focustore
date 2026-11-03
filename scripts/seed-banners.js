@@ -1,9 +1,6 @@
 require("./seed-safety.cjs").assertDemoSeed();
 const { PrismaClient } = require("@prisma/client");
-<<<<<<< HEAD
 const { PrismaClient } = require('@prisma/client');
-=======
->>>>>>> 680d9dc25669bd21e8f25939cde9c657f998fb71
 const prisma = new PrismaClient();
 
 const DEFAULT_BANNERS = [

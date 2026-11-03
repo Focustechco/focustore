@@ -21,8 +21,18 @@ export const metadata = {
 };
 
 export default async function CollectionsPage() {
-  const collections = await CatalogService.getCollections();
-  const allProducts = await CatalogService.getAllProducts();
+  let collections: Awaited<ReturnType<typeof CatalogService.getCollections>> = [];
+  let allProducts: Awaited<ReturnType<typeof CatalogService.getAllProducts>> = [];
+  try {
+    collections = await CatalogService.getCollections();
+  } catch {
+    collections = [];
+  }
+  try {
+    allProducts = await CatalogService.getAllProducts();
+  } catch {
+    allProducts = [];
+  }
 
   const devCollectionProducts = allProducts.filter((p) =>
     p.collections.some((c) => c.collection.slug === "dev-collection"),

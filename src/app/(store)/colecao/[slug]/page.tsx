@@ -35,8 +35,18 @@ export async function generateMetadata({ params }: Props) {
 
 export default async function CollectionPage({ params }: Props) {
   const { slug } = await params;
-  const collection = await CatalogService.getCollectionBySlug(slug);
-  const allProducts = await CatalogService.getAllProducts();
+  let collection: Awaited<ReturnType<typeof CatalogService.getCollectionBySlug>> = null;
+  let allProducts: Awaited<ReturnType<typeof CatalogService.getAllProducts>> = [];
+  try {
+    collection = await CatalogService.getCollectionBySlug(slug);
+  } catch {
+    collection = null;
+  }
+  try {
+    allProducts = await CatalogService.getAllProducts();
+  } catch {
+    allProducts = [];
+  }
 
   const collectionProducts = allProducts.filter((p) =>
     p.collections.some((c) => c.collection.slug === slug)

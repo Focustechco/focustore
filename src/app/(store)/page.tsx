@@ -28,12 +28,17 @@ export default function HomePage() {
 }
 
 async function HomePageContent() {
-  const [products, heroBanners, featuredBanners, realLifeBanners] = await Promise.all([
+  const [productsResult, heroBannersResult, featuredBannersResult, realLifeBannersResult] =
+    await Promise.allSettled([
     CatalogService.getAllProducts(),
     CatalogService.getBanners('home_hero'),
     CatalogService.getBanners('home_featured'),
     CatalogService.getBanners('home_real_life'),
   ]);
+  const products = productsResult.status === 'fulfilled' ? productsResult.value : [];
+  const heroBanners = heroBannersResult.status === 'fulfilled' ? heroBannersResult.value : [];
+  const featuredBanners = featuredBannersResult.status === 'fulfilled' ? featuredBannersResult.value : [];
+  const realLifeBanners = realLifeBannersResult.status === 'fulfilled' ? realLifeBannersResult.value : [];
 
   // Ordenação dos produtos para o carrossel interativo de destaques (com navegação pelas setas)
   const priorityOrder = [

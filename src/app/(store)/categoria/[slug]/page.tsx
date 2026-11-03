@@ -14,13 +14,25 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const { sort, min, max } = await searchParams;
 
-  const category = slug !== 'todos' ? await CatalogService.getCategoryBySlug(slug) : null;
-  const products = await CatalogService.getAllProducts({
-    categorySlug: slug,
-    sortBy: (sort as any) || 'relevance',
-    minPrice: min ? Number(min) : undefined,
-    maxPrice: max ? Number(max) : undefined,
-  });
+  let category = null;
+  let products: Awaited<ReturnType<typeof CatalogService.getAllProducts>> = [];
+
+  try {
+    category = slug !== 'todos' ? await CatalogService.getCategoryBySlug(slug) : null;
+  } catch {
+    category = null;
+  }
+
+  try {
+    products = await CatalogService.getAllProducts({
+      categorySlug: slug,
+      sortBy: (sort as any) || 'relevance',
+      minPrice: min ? Number(min) : undefined,
+      maxPrice: max ? Number(max) : undefined,
+    });
+  } catch {
+    products = [];
+  }
 
   const title = slug === 'todos' ? 'Todos os Produtos' : category?.name || slug;
   const description = category?.description || 'Explore a linha completa de tecnologia, streetwear e design.';

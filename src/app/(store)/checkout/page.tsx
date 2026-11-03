@@ -67,7 +67,7 @@ export default function CheckoutPage() {
   const [idempotencyKey, setIdempotencyKey] = useState('');
 
   useEffect(() => {
-    setIdempotencyKey(crypto.randomUUID());
+    setIdempotencyKey(`idemp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
   }, []);
 
   const total = subtotal + shippingOption.price;

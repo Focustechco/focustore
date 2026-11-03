@@ -1,4 +1,3 @@
-import { requireAdminPage } from '@/lib/auth/admin';
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db/prisma';
@@ -11,7 +10,6 @@ export default async function EditProductPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdminPage();
   const { id } = await params;
 
   const [product, categories, collections] = await Promise.all([

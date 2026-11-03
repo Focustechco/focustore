@@ -46,7 +46,3 @@ prisma/*.db-wal
 .env
 .env.*
 !.env.example
-
-# Local consistent backups and validation artifacts (never commit databases).
-/.local-backups/
-/.local-validation/

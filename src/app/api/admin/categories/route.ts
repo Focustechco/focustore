@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ success: true, categories });
   } catch (error: any) {
-    console.error('Error listing categories:');
+    console.error('Error listing categories:', error);
     return NextResponse.json(
       { success: false, error: 'Falha ao buscar categorias.' },
       { status: 500 }
@@ -102,9 +102,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, category }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating category:');
+    console.error('Error creating category:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro ao criar categoria.' },
+      { success: false, error: error.message || 'Erro ao criar categoria.' },
       { status: 500 }
     );
   }

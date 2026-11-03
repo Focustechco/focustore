@@ -22,12 +22,12 @@ class CatalogService:
         self.repository = repository
 
     @classmethod
-    def from_path(cls, path: Path | None, excluded_slugs: list[str] | None = None) -> 'CatalogService':
+    def from_path(cls, path: Path | None) -> 'CatalogService':
         from app.integrations.legacy_catalog.repository import LegacyCatalogRepository
 
         if path is None:
             raise CatalogUnavailable
-        return cls(LegacyCatalogRepository(path, excluded_slugs or []))
+        return cls(LegacyCatalogRepository(path))
 
     def products(self, offset: int, limit: int) -> CatalogPage[CatalogProduct]:
         try:

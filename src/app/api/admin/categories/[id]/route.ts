@@ -115,9 +115,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true, category: updated });
   } catch (error: any) {
-    console.error('Error updating category:');
+    console.error('Error updating category:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro ao atualizar categoria.' },
+      { success: false, error: error.message || 'Erro ao atualizar categoria.' },
       { status: 500 }
     );
   }
@@ -145,7 +145,8 @@ export async function DELETE(
     }
 
     // Delete relationships from ProductCategory
-    await prisma.category.update({ where: { id }, data: { isActive: false } });
+    await prisma.productCategory.deleteMany({ where: { categoryId: id } });
+    await prisma.category.delete({ where: { id } });
 
     revalidatePath('/');
     revalidatePath(`/categoria/${existing.slug}`);
@@ -155,9 +156,9 @@ export async function DELETE(
       message: 'Categoria excluída com sucesso.',
     });
   } catch (error: any) {
-    console.error('Error deleting category:');
+    console.error('Error deleting category:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro ao excluir categoria.' },
+      { success: false, error: error.message || 'Erro ao excluir categoria.' },
       { status: 500 }
     );
   }

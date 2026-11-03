@@ -55,7 +55,7 @@ export async function GET(
       },
     });
   } catch (error: any) {
-    console.error('Error fetching customer details:');
+    console.error('Error fetching customer details:', error);
     return NextResponse.json(
       { success: false, error: 'Erro ao buscar detalhes do cliente.' },
       { status: 500 }
@@ -100,9 +100,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true, customer: updated });
   } catch (error: any) {
-    console.error('Error updating customer:');
+    console.error('Error updating customer:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro ao atualizar cliente.' },
+      { success: false, error: error.message || 'Erro ao atualizar cliente.' },
       { status: 500 }
     );
   }

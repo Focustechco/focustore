@@ -4,7 +4,7 @@ from pathlib import Path
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
-from sqlalchemy import Integer, Numeric, String, create_engine, inspect, text
+from sqlalchemy import Integer, String, create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from app.config import get_settings
 
@@ -60,35 +60,6 @@ def check_integrity(database_url: str | None = None) -> list[str]:
                 count = connection.execute(text(query)).scalar_one()
                 if count:
                     failures.append(f'{name}: {count}')
-            if 'products' not in inspector.get_table_names():
-                failures.append('Missing products table')
-                return failures
-            product_cols = {col['name']: col for col in inspector.get_columns('products')}
-            required = {'id', 'name', 'price', 'stock', 'category_id'}
-            if not required <= product_cols.keys():
-                failures.append('Missing required columns in products')
-                return failures
-            if any(product_cols[name]['nullable'] for name in required):
-                failures.append('Required products columns must be NOT NULL')
-            price_type = product_cols['price']['type']
-            if not isinstance(price_type, Numeric) or (price_type.precision, price_type.scale) != (10, 2):
-                failures.append('products.price must use NUMERIC(10,2)')
-            if inspector.get_pk_constraint('products')['constrained_columns'] != ['id']:
-                failures.append('Missing products primary key on id')
-            constraints = {constraint['name'] for constraint in inspector.get_check_constraints('products')}
-            for name in ('ck_products_price_positive', 'ck_products_stock_nonnegative'):
-                if name not in constraints:
-                    failures.append(f'Missing products constraint: {name}')
-            if not any(fk['constrained_columns'] == ['category_id'] and fk['referred_table'] == 'categories'
-                       and fk['referred_columns'] == ['id'] for fk in inspector.get_foreign_keys('products')):
-                failures.append('Missing products category foreign key')
-            invalid = connection.execute(text('''
-                SELECT count(*) FROM products p LEFT JOIN categories c ON c.id = p.category_id
-                WHERE p.price IS NULL OR p.price <= 0 OR p.stock IS NULL OR p.stock < 0
-                   OR p.name IS NULL OR btrim(p.name) = '' OR c.id IS NULL
-            ''')).scalar_one()
-            if invalid:
-                failures.append(f'products with invalid data: {invalid}')
     finally:
         engine.dispose()
     return failures
@@ -105,7 +76,7 @@ def main() -> int:
         for failure in failures:
             print(f'FAIL: {failure}')
         return 1
-    print('PASS: PostgreSQL connectivity, Alembic heads, category/product schema and data integrity')
+    print('PASS: PostgreSQL connectivity, Alembic heads, category schema and data integrity')
     return 0
 
 

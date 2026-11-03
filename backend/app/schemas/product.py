@@ -4,7 +4,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProductCreate(BaseModel):
-    model_config = ConfigDict(str_strip_whitespace=True)
     name: str = Field(min_length=1, max_length=150)
     description: str | None = None
     price: Decimal = Field(gt=0, max_digits=10, decimal_places=2)

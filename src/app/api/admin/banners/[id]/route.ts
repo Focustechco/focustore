@@ -74,9 +74,9 @@ export async function PUT(
 
     return NextResponse.json({ success: true, banner });
   } catch (error: any) {
-    console.error('Error updating banner:');
+    console.error('Error updating banner:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro ao atualizar banner.' },
+      { success: false, error: error.message || 'Erro ao atualizar banner.' },
       { status: 500 }
     );
   }
@@ -102,9 +102,9 @@ export async function DELETE(
       message: 'Banner excluído com sucesso.',
     });
   } catch (error: any) {
-    console.error('Error deleting banner:');
+    console.error('Error deleting banner:', error);
     return NextResponse.json(
-      { success: false, error: 'Erro ao excluir banner.' },
+      { success: false, error: error.message || 'Erro ao excluir banner.' },
       { status: 500 }
     );
   }

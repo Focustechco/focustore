@@ -819,9 +819,6 @@
               }
             },
             "description": "Validation Error"
-          },
-          "503": {
-            "description": "Write authorization unavailable"
           }
         },
         "summary": "Create Category",
@@ -934,9 +931,6 @@
               }
             },
             "description": "Validation Error"
-          },
-          "503": {
-            "description": "Write authorization unavailable"
           }
         },
         "summary": "Create Product",

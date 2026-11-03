@@ -170,6 +170,83 @@ async function main() {
     },
   });
 
+  const colFocusAcademy = await prisma.collection.create({
+    data: {
+      name: "Focus Academy",
+      slug: "focus-academy",
+      headline: "Vista seu conhecimento",
+      description: "Produtos oficiais da Focus Academy.",
+    },
+  });
+
+  await prisma.product.create({
+    data: {
+      name: "Camisa Focus Academy",
+      slug: "camisa-focus-academy",
+      sku: "FS-ACADEMY-TEE-001",
+      description:
+        "Camisa oficial Focus Academy com modelagem streetwear e identidade exclusiva da coleção.",
+      shortDescription: "Camisa oficial Focus Academy.",
+      basePrice: 89.9,
+      isFeatured: true,
+      status: "ACTIVE",
+      categories: {
+        create: [
+          { categoryId: catVestuario.id },
+          { categoryId: catColecoes.id },
+        ],
+      },
+      collections: {
+        create: [{ collectionId: colFocusAcademy.id }],
+      },
+      images: {
+        create: [
+          {
+            url: "/images/products/academy/camisa-focus-academy-masculina.png",
+            isPrimary: true,
+            altText: "Camisa Focus Academy vestida por modelo masculino",
+            position: 0,
+          },
+          {
+            url: "/images/products/academy/camisa-focus-academy-feminina.png",
+            isPrimary: false,
+            altText: "Camisa Focus Academy vestida por modelo feminino",
+            position: 1,
+          },
+          {
+            url: "/images/products/academy/camisa-focus-academy-feminina-costas.png",
+            isPrimary: false,
+            altText: "Camisa Focus Academy vista de costas no modelo feminino",
+            position: 2,
+          },
+          {
+            url: "/images/products/academy/camisa-focus-academy-costas.png",
+            isPrimary: false,
+            altText: "Camisa Focus Academy vista de costas",
+            position: 3,
+          },
+        ],
+      },
+      variants: {
+        create: DEV_COLLECTION_SIZES.map((size, index) => ({
+          name: `Camisa Focus Academy - Preto / ${size}`,
+          sku: `FS-ACADEMY-BLK-${size}`,
+          color: "Preto",
+          colorHex: "#0D0D0D",
+          size,
+          price: 89.9,
+          position: index,
+          inventory: {
+            create: {
+              quantityAvailable: DEV_COLLECTION_STOCK[index],
+              quantityReserved: 0,
+            },
+          },
+        })),
+      },
+    },
+  });
+
   const devCollectionProducts = [
     {
       name: "Camisa Python",
@@ -565,7 +642,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/products/Chaveiros de Programação em Composição Minimalista.png",
+            url: "/images/products/chaveiro-programacao.png?v=20261103-2",
             isPrimary: true,
             altText: "Chaveiros Focus",
           },

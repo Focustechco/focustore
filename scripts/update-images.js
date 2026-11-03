@@ -8,7 +8,7 @@ async function updateImages() {
     { slug: 'camisa-focus-lab', name: 'Camisa Focus', url: '/images/products/camiseta-focus.jpg' },
     { slug: 'moletom-focus-lab', name: 'Polo Focus Tech', url: '/images/products/polo-focus.jpg' },
     { slug: 'garrafa-termica-focus', name: 'Garrafa Térmica Focus', url: '/images/products/garrafa-focus.jpg' },
-    { slug: 'chaveiro-focus', name: 'Chaveiro Focus', url: '/images/products/chaveiros-focus-kit.jpg' },
+    { slug: 'chaveiro-focus', name: 'Chaveiro Focus', url: '/images/products/chaveiro-programacao.png?v=20261103-2' },
   ];
 
   for (const item of updates) {

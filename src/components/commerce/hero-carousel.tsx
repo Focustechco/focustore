@@ -120,6 +120,8 @@ export function HeroCarousel({
   const [isPaused, setIsPaused] = useState(false);
   const pointerStartXRef = useRef<number | null>(null);
   const pointerStartYRef = useRef<number | null>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -143,6 +145,8 @@ export function HeroCarousel({
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "touch") return;
+    if ((e.target as HTMLElement).closest("a, button")) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     pointerStartXRef.current = e.clientX;
     pointerStartYRef.current = e.clientY;
@@ -150,6 +154,12 @@ export function HeroCarousel({
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (e.pointerType === "touch") return;
+    if ((e.target as HTMLElement).closest("a, button")) {
+      pointerStartXRef.current = null;
+      pointerStartYRef.current = null;
+      return;
+    }
     if (pointerStartXRef.current === null) return;
     const diff = pointerStartXRef.current - e.clientX;
     const verticalDiff =
@@ -165,6 +175,37 @@ export function HeroCarousel({
     pointerStartYRef.current = null;
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest("a, button")) return;
+    const touch = e.changedTouches[0];
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+
+    const touch = e.changedTouches[0];
+    const horizontalDiff = touchStartXRef.current - touch.clientX;
+    const verticalDiff = touchStartYRef.current - touch.clientY;
+
+    if (
+      Math.abs(horizontalDiff) > 50 &&
+      Math.abs(horizontalDiff) > Math.abs(verticalDiff)
+    ) {
+      if (horizontalDiff > 0) nextSlide();
+      else prevSlide();
+    }
+
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
+
+  const handleTouchCancel = () => {
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
+
   const slide = slides[currentSlide] || slides[0];
   const isAcademyHero = slide.imageUrl.includes("hero-focus-academy-banner-2026");
 
@@ -176,6 +217,9 @@ export function HeroCarousel({
         onMouseLeave={() => setIsPaused(false)}
         onPointerDown={handlePointerDown}
         onPointerUp={handlePointerUp}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         style={{ touchAction: "pan-y" }}
       >
         {/* 1. Imagem de Fundo em Alta Resolução */}

@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/button';
 import { useCart } from '@/modules/cart/cart-context';
 import { useFavorites } from '@/modules/favorites/favorites-context';
 import { formatInstallments, formatPrice } from '@/lib/utils/formatters';
+import PRODUCT_WARRANTY from '@/modules/catalog/product-warranty.json';
 
 const SIZE_ORDER = ['PP', 'P', 'M', 'G', 'GG', 'Único', '350ml', '750ml'];
 
@@ -74,7 +75,7 @@ function parseProductDescription(description: string) {
       'Instruções específicas de conservação não disponibilizadas no cadastro.',
     returns:
       sections.returns.join('\n') ||
-      'Aplicam-se a política de trocas da loja e os direitos previstos no Código de Defesa do Consumidor.',
+      PRODUCT_WARRANTY.text,
   };
 }
 
@@ -838,7 +839,22 @@ export function ProductClientView({ product }: { product: any }) {
         {activeTab === 'returns' && (
           <section className="max-w-3xl space-y-3 text-sm leading-relaxed">
             <h3 className="text-lg font-bold text-white">Garantia & Trocas</h3>
-            <p className="whitespace-pre-line text-zinc-300">{descriptionSections.returns}</p>
+            <div className="space-y-4 text-zinc-300">
+              {descriptionSections.returns.split(/\n{2,}/).map((paragraph) => {
+                const match = paragraph.match(/^([^:\n]+):\s*(.*)$/s);
+                return (
+                  <p key={paragraph}>
+                    {match ? (
+                      <>
+                        <strong className="text-white">{match[1]}:</strong> {match[2]}
+                      </>
+                    ) : (
+                      paragraph
+                    )}
+                  </p>
+                );
+              })}
+            </div>
           </section>
         )}
       </div>

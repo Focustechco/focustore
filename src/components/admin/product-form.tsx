@@ -21,6 +21,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PRODUCT_WARRANTY from '@/modules/catalog/product-warranty.json';
 
 interface Category {
   id: string;
@@ -53,6 +54,54 @@ interface ProductFormProps {
   categories: Category[];
   collections: Collection[];
   isEditing?: boolean;
+}
+
+const DESCRIPTION_SECTIONS = [
+  'Descrição & Tecnologia',
+  'Especificações Técnicas',
+  'Cuidados & Lavagem',
+] as const;
+
+type DescriptionSections = Record<(typeof DESCRIPTION_SECTIONS)[number], string>;
+
+function parseDescriptionSections(description: string): DescriptionSections {
+  const sections: DescriptionSections = {
+    'Descrição & Tecnologia': '',
+    'Especificações Técnicas': '',
+    'Cuidados & Lavagem': '',
+  };
+  const headingPattern = /^###\s+\d+\.\s*(.+)\s*$/gm;
+  const headings = Array.from(description.matchAll(headingPattern));
+
+  if (headings.length === 0) {
+    sections['Descrição & Tecnologia'] = description;
+    return sections;
+  }
+
+  for (let index = 0; index < headings.length; index += 1) {
+    const heading = headings[index];
+    const title = heading[1].trim() as keyof DescriptionSections;
+    const contentStart = heading.index! + heading[0].length;
+    const contentEnd =
+      index + 1 < headings.length ? headings[index + 1].index! : description.length;
+    const content = description.slice(contentStart, contentEnd).trim();
+
+    if (Object.hasOwn(sections, title)) {
+      sections[title] = content;
+    }
+  }
+
+  return sections;
+}
+
+function serializeDescriptionSections(sections: DescriptionSections) {
+  const editableSections = DESCRIPTION_SECTIONS.map(
+    (title, index) => `### ${index + 1}. ${title}\n${sections[title].trim()}`,
+  );
+  return [
+    ...editableSections,
+    `### 4. Garantia & Trocas\n${PRODUCT_WARRANTY.text}`,
+  ].join('\n\n');
 }
 
 export function ProductForm({
@@ -91,7 +140,9 @@ export function ProductForm({
   const [shortDescription, setShortDescription] = useState(
     initialProduct?.shortDescription || ''
   );
-  const [description, setDescription] = useState(initialProduct?.description || '');
+  const [descriptionSections, setDescriptionSections] = useState<DescriptionSections>(
+    () => parseDescriptionSections(initialProduct?.description || ''),
+  );
 
   // Selected Categories & Collections
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
@@ -250,7 +301,7 @@ export function ProductForm({
         promotionalPrice: promotionalPrice !== '' ? Number(promotionalPrice) : null,
         costPrice: costPrice !== '' ? Number(costPrice) : null,
         shortDescription,
-        description,
+        description: serializeDescriptionSections(descriptionSections),
         categoryIds: selectedCategoryIds,
         collectionIds: selectedCollectionIds,
         images: cleanedImages,
@@ -777,18 +828,23 @@ export function ProductForm({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-zinc-300 font-semibold block">
-                Descrição Completa / Especificações Técnicas
-              </label>
-              <textarea
-                rows={5}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Detalhes sobre composição, gramatura, modelagem, orientações de lavagem e diferenciais techwear..."
-                className="w-full bg-[#161616] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none text-xs leading-relaxed"
-              />
-            </div>
+            {DESCRIPTION_SECTIONS.map((title) => (
+              <div key={title} className="space-y-1.5">
+                <label className="text-zinc-300 font-semibold block">{title}</label>
+                <textarea
+                  rows={title === 'Descrição & Tecnologia' ? 6 : 4}
+                  value={descriptionSections[title]}
+                  onChange={(event) =>
+                    setDescriptionSections((current) => ({
+                      ...current,
+                      [title]: event.target.value,
+                    }))
+                  }
+                  placeholder={`Informe ${title.toLowerCase()} do produto...`}
+                  className="w-full bg-[#161616] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none text-xs leading-relaxed"
+                />
+              </div>
+            ))}
           </div>
         </div>
 

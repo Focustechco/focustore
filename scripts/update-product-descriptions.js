@@ -2,6 +2,7 @@ require("dotenv/config");
 
 const { PrismaClient } = require("@prisma/client");
 const PRODUCT_DESCRIPTIONS = require("./product-descriptions.json");
+const PRODUCT_WARRANTY = require("../src/modules/catalog/product-warranty.json");
 
 const prisma = new PrismaClient();
 const LEGACY_DEV_COLLECTION_SLUGS = new Set([
@@ -20,10 +21,18 @@ function isDevCollectionProduct(product) {
   );
 }
 
+function withProductWarranty(description) {
+  const descriptionWithoutWarranty = description
+    .replace(/^### 4\.\s*Garantia & Trocas\s*$[\s\S]*$/m, "")
+    .trimEnd();
+  return `${descriptionWithoutWarranty}\n\n### 4. Garantia & Trocas\n${PRODUCT_WARRANTY.text}`;
+}
+
 async function updateProductDescriptions() {
   const allProducts = await prisma.product.findMany({
     select: {
       slug: true,
+      description: true,
       collections: {
         select: { collection: { select: { slug: true } } },
       },
@@ -40,17 +49,23 @@ async function updateProductDescriptions() {
   }
 
   const configuredSlugs = new Set(allProducts.map((product) => product.slug));
-  const products = allProducts.filter(
-    (product) =>
-      !isDevCollectionProduct(product) && PRODUCT_DESCRIPTIONS[product.slug],
-  );
+  const products = allProducts.filter((product) => PRODUCT_DESCRIPTIONS[product.slug]);
   await prisma.$transaction(
     products.map((product) =>
       prisma.product.update({
         where: { slug: product.slug },
         data: {
-          description: PRODUCT_DESCRIPTIONS[product.slug].description,
-          shortDescription: PRODUCT_DESCRIPTIONS[product.slug].shortDescription,
+          description: withProductWarranty(
+            isDevCollectionProduct(product)
+              ? product.description
+              : PRODUCT_DESCRIPTIONS[product.slug].description,
+          ),
+          ...(isDevCollectionProduct(product)
+            ? {}
+            : {
+                shortDescription:
+                  PRODUCT_DESCRIPTIONS[product.slug].shortDescription,
+              }),
         },
       }),
     ),
@@ -63,7 +78,7 @@ async function updateProductDescriptions() {
       !slug.startsWith("camisa-dev-collection-"),
   );
   console.log(
-    `Updated descriptions for ${products.length} catalog products; Dev Collection descriptions were preserved.`,
+    `Updated warranty text for ${products.length} catalog products; Dev Collection descriptions were otherwise preserved.`,
   );
   if (missingSlugs.length > 0) {
     console.log(`Skipped products not present in this database: ${missingSlugs.join(", ")}`);

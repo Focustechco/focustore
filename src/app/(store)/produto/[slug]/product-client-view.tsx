@@ -10,6 +10,7 @@ import {
   Truck,
   RotateCcw,
   Check,
+  KeyRound,
   ChevronRight,
   Star,
   Ruler,
@@ -87,8 +88,17 @@ export function ProductClientView({ product }: { product: any }) {
   const [added, setAdded] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [keychainQuantities, setKeychainQuantities] = useState<Record<string, number>>({});
   const isFocusCap = product.slug === 'bone-focus-lab';
-  const isDevCollectionShirt = product.slug?.startsWith('camisa-dev-collection-');
+  const devCollectionShirtSlugs = [
+    'tshirt-focus-collection',
+    'polo-focus-collection',
+    'bone-focus-collection',
+    'camisa-dev-collection-typescript',
+  ];
+  const isDevCollectionShirt =
+    product.slug?.startsWith('camisa-dev-collection-') ||
+    devCollectionShirtSlugs.includes(product.slug);
   const capImages = [
     {
       id: 'bone-focus-black',
@@ -101,6 +111,9 @@ export function ProductClientView({ product }: { product: any }) {
       altText: 'Boné Focus Lab - Branco',
     },
   ];
+  const isKeychainProduct =
+    product.slug === 'chaveiro-focus' ||
+    product.name?.toLowerCase().includes('chaveiro');
 
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
   const descriptionSections = useMemo(
@@ -317,6 +330,33 @@ export function ProductClientView({ product }: { product: any }) {
   const handleAddToCart = () => {
     if (!selectedVariant) return;
 
+    const keychainTotal = Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0);
+    if (isKeychainProduct && keychainTotal === 0) return;
+
+    if (isKeychainProduct && Object.values(keychainQuantities).some((amount) => amount > 0)) {
+      const selectedTypes = Object.entries(keychainQuantities)
+        .filter(([, amount]) => amount > 0)
+        .map(([type, amount]) => `${type} (${amount})`)
+        .join(', ');
+      const totalQuantity = Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0);
+
+      addItem({
+        variantId: selectedVariant.id,
+        productId: product.id,
+        name: product.name,
+        variantName: `Selecionados: ${selectedTypes}`,
+        price: 12.9,
+        promotionalPrice: null,
+        imageUrl: product.images[selectedImage]?.url || product.images[0]?.url,
+        sku: selectedVariant.sku,
+        quantity: totalQuantity,
+        size: selectedTypes,
+      });
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+      return;
+    }
+
     addItem({
       variantId: selectedVariant.id,
       productId: product.id,
@@ -373,9 +413,7 @@ export function ProductClientView({ product }: { product: any }) {
         {/* 55% GALERIA DE FOTOS */}
         <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4">
           {/* Miniaturas Verticais */}
-          {(isDevCollectionShirt
-            ? galleryImages.length > 0
-            : galleryImages.length > 1) && (
+          {galleryImages.length > 1 && (
             <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[550px] scrollbar-none">
               {galleryImages.map(({ image: img, index: idx }: { image: any; index: number }) => (
                 <button
@@ -487,7 +525,7 @@ export function ProductClientView({ product }: { product: any }) {
           {/* =========================================================
               SELETOR DE CORES FIEL AO PRINT 1 (COR: PRETA)
               ========================================================= */}
-          {availableColors.length > 0 && (
+          {!isKeychainProduct && availableColors.length > 0 && (
             <div className="space-y-2.5 pt-3 border-t border-white/10">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black text-white uppercase tracking-wider">
@@ -536,7 +574,7 @@ export function ProductClientView({ product }: { product: any }) {
           {/* =========================================================
               SELETOR DE TAMANHOS FIEL AO PRINT 1 (TAMANHO)
               ========================================================= */}
-          {availableSizes.length > 0 && (
+          {!isKeychainProduct && availableSizes.length > 0 && (
             <div className="space-y-2.5 pt-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-black text-white uppercase tracking-wider">
@@ -548,7 +586,7 @@ export function ProductClientView({ product }: { product: any }) {
                   className="text-[11px] text-zinc-400 hover:text-white underline tracking-wide font-medium flex items-center gap-1 transition-colors"
                 >
                   <Ruler size={13} />
-                  <span>Tabela de medidas</span>
+                  <span>Tabela de chaveiros</span>
                 </button>
               </div>
 
@@ -584,13 +622,30 @@ export function ProductClientView({ product }: { product: any }) {
             </div>
           )}
 
+          {isKeychainProduct && (
+            <button
+              type="button"
+              onClick={() => setShowSizeGuide(true)}
+              className="cursor-pointer text-sm text-zinc-300 hover:text-white underline decoration-[#FF6500] underline-offset-4 tracking-wide font-semibold flex items-center gap-2 transition-colors"
+            >
+              <KeyRound size={18} />
+              <span>Selecionar chaveiro</span>
+            </button>
+          )}
+
           {/* Quantidade e Disponibilidade */}
           <div className="flex items-center justify-between pt-2 border-t border-white/10">
             <div className="flex items-center gap-3">
               <span className="text-xs font-bold text-white uppercase tracking-wider">Qtd:</span>
               <div className="flex items-center border border-white/10 rounded-lg bg-[#141414]">
                 <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  onClick={() => {
+                    const nextQuantity = Math.max(0, quantity - 1);
+                    setQuantity(nextQuantity);
+                    if (isKeychainProduct && nextQuantity === 0) {
+                      setKeychainQuantities({});
+                    }
+                  }}
                   className="w-8 h-8 text-xs text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
                 >
                   -
@@ -616,7 +671,7 @@ export function ProductClientView({ product }: { product: any }) {
               onClick={handleAddToCart}
               fullWidth
               size="lg"
-              disabled={availableStock <= 0}
+              disabled={availableStock <= 0 || (isKeychainProduct && Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0) <= 0)}
               className="gap-2 bg-[#FF6500] hover:bg-[#FF7A1A] font-black uppercase text-white shadow-lg shadow-[#FF6500]/25"
             >
               {added ? (
@@ -636,7 +691,7 @@ export function ProductClientView({ product }: { product: any }) {
                 variant="secondary"
                 fullWidth
                 size="md"
-                disabled={availableStock <= 0}
+                disabled={availableStock <= 0 || (isKeychainProduct && Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0) <= 0)}
                 className="font-bold border border-white/15 hover:border-white/30"
               >
                 COMPRAR AGORA
@@ -794,8 +849,14 @@ export function ProductClientView({ product }: { product: any }) {
           <div className="bg-[#141414] border border-white/15 rounded-2xl max-w-md w-full p-6 space-y-4 relative shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
-                <Ruler size={18} className="text-[#FF6500]" />
-                <h3 className="font-bold text-white text-base">Tabela de Medidas (cm)</h3>
+                {isKeychainProduct ? (
+                  <KeyRound size={20} className="text-[#FF6500]" />
+                ) : (
+                  <Ruler size={18} className="text-[#FF6500]" />
+                )}
+                <h3 className="font-bold text-white text-base">
+                  {isKeychainProduct ? 'Tabela de chaveiros' : 'Tabela de Medidas (cm)'}
+                </h3>
               </div>
               <button
                 onClick={() => setShowSizeGuide(false)}
@@ -805,7 +866,60 @@ export function ProductClientView({ product }: { product: any }) {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            {isKeychainProduct && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left text-zinc-300">
+                  <thead className="bg-[#1C1C1C] text-zinc-400 font-bold uppercase">
+                    <tr>
+                      <th className="p-2.5">Tipo</th>
+                      <th className="p-2.5">Estoque</th>
+                      <th className="p-2.5 text-center">Quantidade</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {product.variants.map((variant: any) => {
+                      const type = variant.size || variant.name;
+                      const stock = variant.inventory?.quantityAvailable ?? 20;
+                      const selectedQuantity = keychainQuantities[type] || 0;
+                      return (
+                        <tr key={variant.id || type}>
+                          <td className="p-2.5 font-bold text-white">{type}</td>
+                          <td className="p-2.5">{stock}</td>
+                          <td className="p-2.5">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setKeychainQuantities((current) => ({
+                                  ...current,
+                                  [type]: Math.max(0, (current[type] || 0) - 1),
+                                }))}
+                                className="w-7 h-7 rounded border border-white/10 text-zinc-300 hover:text-white"
+                              >
+                                -
+                              </button>
+                              <span className="w-5 text-center font-bold text-white">{selectedQuantity}</span>
+                              <button
+                                type="button"
+                                onClick={() => setKeychainQuantities((current) => ({
+                                  ...current,
+                                  [type]: Math.min(stock, (current[type] || 0) + 1),
+                                }))}
+                                className="w-7 h-7 rounded border border-white/10 text-zinc-300 hover:text-white disabled:opacity-40"
+                                disabled={selectedQuantity >= stock}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {!isKeychainProduct && <div className="overflow-x-auto">
               <table className="w-full text-xs text-left text-zinc-300">
                 <thead className="bg-[#1C1C1C] text-zinc-400 font-bold uppercase">
                   <tr>
@@ -823,19 +937,25 @@ export function ProductClientView({ product }: { product: any }) {
                   <tr><td className="p-2.5 font-bold text-white">GG</td><td className="p-2.5">112 - 120</td><td className="p-2.5">76</td><td className="p-2.5">24</td></tr>
                 </tbody>
               </table>
-            </div>
+            </div>}
 
-            <p className="text-[11px] text-zinc-500 italic">
+            {!isKeychainProduct && <p className="text-[11px] text-zinc-500 italic">
               * Medidas aproximadas em centímetros. Em caso de dúvida entre dois tamanhos, sugerimos escolher o maior para modelagem streetwear.
-            </p>
+            </p>}
 
             <Button
-              onClick={() => setShowSizeGuide(false)}
+              onClick={() => {
+                if (isKeychainProduct) {
+                  const total = Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0);
+                  setQuantity(total);
+                }
+                setShowSizeGuide(false);
+              }}
               fullWidth
               size="sm"
               className="bg-[#FF6500] text-white font-bold"
             >
-              Entendido
+              {isKeychainProduct ? 'Confirmar' : 'Entendido'}
             </Button>
           </div>
         </div>

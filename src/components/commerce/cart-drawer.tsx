@@ -88,7 +88,7 @@ export function CartDrawer() {
               </div>
             ) : (
               items.map((item) => {
-                const itemPrice = item.promotionalPrice || item.price;
+                const itemPrice = item.promotionalPrice ?? item.price;
                 const itemImage = resolveProductImage(item.imageUrl, item.name);
                 return (
                   <div key={item.variantId} className="py-3.5 flex gap-3.5 items-center group">

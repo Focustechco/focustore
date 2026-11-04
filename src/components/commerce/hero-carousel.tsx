@@ -236,7 +236,6 @@ export function HeroCarousel({
                 ? "object-[center_45%]"
                 : "object-[center_35%]"
             } sm:hidden`}
-            priority
           />
           <Image
             key={`${slide.imageUrl}-desktop`}
@@ -252,7 +251,6 @@ export function HeroCarousel({
                   ? 'object-[center_50%]'
                   : 'object-[center_45%] sm:object-right md:object-center'
             } group-hover:scale-103 transition-transform duration-700 ease-out sm:block`}
-            priority
           />
           {/* Gradientes: no mobile protege o topo e a base; no desktop gradiente clássico da esquerda para direita */}
           <div className="absolute inset-0 bg-gradient-to-t from-[#080808] via-[#080808]/75 via-45% to-transparent sm:bg-gradient-to-r sm:from-[#080808] sm:via-[#080808]/85 sm:via-45% sm:to-transparent z-10" />

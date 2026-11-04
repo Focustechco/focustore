@@ -112,7 +112,7 @@ export default function CartPage() {
         {/* Tabela de Itens (8 Cols) */}
         <div className="lg:col-span-8 divide-y divide-white/5 bg-surface/40 p-6 rounded-2xl border border-white/5">
           {items.map((item) => {
-            const itemPrice = item.promotionalPrice || item.price;
+            const itemPrice = item.promotionalPrice ?? item.price;
             return (
               <div key={item.variantId} className="py-5 flex gap-5 items-center">
                 <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-[#121212] rounded-xl overflow-hidden flex-shrink-0 border border-white/5">

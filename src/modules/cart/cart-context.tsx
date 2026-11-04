@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { restoredCart } from './cart-validation';
 
 export interface CartItem {
   variantId: string;
@@ -59,7 +60,7 @@ export function resolveProductImage(imageUrl?: string | null, name?: string): st
   for (const [key, path] of Object.entries(REAL_PRODUCT_IMAGES)) {
     if (lower.includes(key)) return path;
   }
-  return imageUrl || '/images/products/camiseta-focus.jpg';
+  return imageUrl || '/images/products/placeholder.svg';
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -71,8 +72,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem('focus_cart');
       if (saved) {
-        const parsed: CartItem[] = JSON.parse(saved);
-        const updated = parsed.map((item) => ({
+        const parsed: unknown = JSON.parse(saved);
+        const updated = restoredCart(parsed).map((item) => ({
           ...item,
           imageUrl: resolveProductImage(item.imageUrl, item.name),
         }));
@@ -136,7 +137,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
   const subtotal = items.reduce(
-    (acc, item) => acc + (item.promotionalPrice || item.price) * item.quantity,
+    (acc, item) => acc + (item.promotionalPrice ?? item.price) * item.quantity,
     0
   );
 

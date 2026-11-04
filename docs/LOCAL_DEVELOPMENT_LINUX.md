@@ -84,10 +84,10 @@ cd backend
 # http://127.0.0.1:8000/docs
 ```
 
-O script `scripts/dev-fullstack.ts` já escolhe `bin/python` no Linux e
-`Scripts/python.exe` no Windows. Atualmente ele depende de um módulo removido
-(`catalog-policy`); prefira iniciar os serviços separadamente enquanto isso não
-for resolvido. Não foi adicionado um script que esconda essa falha.
+O script `scripts/dev-fullstack.ts` escolhe `bin/python` no Linux e
+`Scripts/python.exe` no Windows. A política `catalog-policy` está presente.
+O script exige uma configuração própria para o PostgreSQL do backend; não
+reaproveite a URL do Prisma e não executa migrations automaticamente.
 
 ## Arquivos de ambiente e credenciais
 
@@ -208,29 +208,26 @@ ida/volta em SQLite temporário; não modificam os bancos existentes.
 | Verificação | Resultado |
 | --- | --- |
 | Instalação npm pelo lockfile com Node 22 | FUNCIONANDO |
-| Geração Prisma Client 6.19.3 | FUNCIONANDO |
+| Geração Prisma Client 6.19.3 | BLOQUEADA: `query_engine-windows.dll.node` estava em uso pelo Next dev local; não foi encerrado processo alheio |
 | SELECT 1 via Prisma no SQLite existente | FUNCIONANDO |
 | Integridade/FKs dos dois SQLite | FUNCIONANDO |
-| Importações Python e pip check | FUNCIONANDO |
-| Pytest | 66 aprovados, 5 pulados, 2 avisos |
+| TypeScript | `npm run typecheck` passou |
+| Build Next isolado | `npx next build` passou; todas as rotas compilaram |
+| `npm run build` | BLOQUEADO antes do Next build pelo bloqueio do DLL durante `prisma generate` |
+| `npm audit --omit=dev` | 0 vulnerabilidades |
+| Pytest | 114 aprovados, 5 pulados, 1 aviso de depreciação Starlette/httpx |
 | Uvicorn real + HTTP /health | HTTP 200, SQLite em memória, sem PostgreSQL |
-| Next dev: GET / e GET /api/auth/session | FUNCIONANDO: HTTP 200 sem login/escrita |
-| Sondagem GET /admin | HTTP 404; não comprova ausência de painel em outra rota |
-| TypeScript | ERRO IDENTIFICADO: 9 diagnósticos por módulos ausentes |
-| npm test | Falhou: 16 resultados falhos; hook sem PostgreSQL de teste e módulo guest-order ausente |
-| npm run test:fullstack | Falhou na importação de catalog-policy |
-| Build com rede liberada | Falhou: módulo security/origin ausente |
+| Smoke test de produção: `/`, `/api/auth/session`, `/colecoes` | HTTP 200 |
+| Imagens visíveis na home | Sem imagens quebradas no navegador |
+| `npm test` e `npm run test:fullstack` | BLOQUEADOS sem `FOCUS_TEST_DATABASE_URL` PostgreSQL descartável; o provider Prisma atual continua SQLite |
 | PostgreSQL real / integridade Alembic em PostgreSQL | CONFIGURAÇÃO PENDENTE |
-| OAuth Google/Apple real | CONFIGURAÇÃO PENDENTE e módulo ausente |
-| Carrinho, pedidos, administração e login real com escrita | NÃO TESTADO ponta a ponta |
+| OAuth Google/Apple real | CONFIGURAÇÃO PENDENTE |
+| Integração de pagamento real e upload persistente em produção | NÃO CONFIGURADOS/VALIDADOS |
 
-O primeiro build também falhou ao buscar Google Fonts no sandbox; a repetição
-com rede liberada superou essa falha e confirmou o módulo ausente. Os testes
-backend travaram dentro do sandbox; fora dele terminaram em 1,55 s. O tsx não
-pôde criar socket IPC no sandbox; a repetição fora dele confirmou os erros reais.
-Isso não exige alterar o código da aplicação para contornar o sandbox.
-Os avisos backend são depreciações de httpx/TestClient e HTTP 422; não houve
-troca de dependências para ocultá-los.
+O build do Next mostra um aviso de overhead de módulo no `tailwind.config.ts`.
+O smoke test não simulou compras nem escreveu em dados reais. Um teste isolado
+com SQLite validou preço promocional, limite de cupom, idempotência de pagamento,
+estoque e histórico de status; ele não substitui a suíte PostgreSQL.
 
 Comandos de testes a partir da raiz:
 
@@ -244,19 +241,17 @@ npm run build
 backend/.venv/bin/python -m pip check
 ```
 
-A URL SQLite em memória acima só fornece configuração de bootstrap à coleta
-Pytest; as fixtures criam bancos temporários por teste. Não use isso como
-substituto do PostgreSQL de desenvolvimento. Os cinco testes pulados exigem
+`DATABASE_URL=sqlite:///:memory:` só configura o bootstrap da coleta Pytest; as
+fixtures criam bancos temporários por teste. Os cinco testes pulados exigem
 `TEST_DATABASE_URL` para PostgreSQL local descartável terminado em `_test`.
-O frontend exige `FOCUS_TEST_DATABASE_URL` com banco descartável `_test`, mas
-mesmo com essa variável ainda dependerá de corrigir a divergência de provider.
-Nunca forneça URLs reais de desenvolvimento/produção aos testes destrutivos.
+O frontend exige `FOCUS_TEST_DATABASE_URL` com banco descartável `_test`; a
+variável não foi fornecida e o provider do Prisma segue SQLite. Nunca forneça
+URLs reais de desenvolvimento/produção aos testes destrutivos.
 
-## Código ausente e correções de baixo risco
+## Correções realizadas nesta auditoria
 
-O histórico local mostra a remoção dos auxiliares pela reversão `9eac25a` do
-commit `678ac11`. Não é uma diferença de maiúsculas/minúsculas do Linux.
-Faltam os seguintes arquivos importados por código/testes:
+Os auxiliares que estavam ausentes e impediam typecheck/build foram
+implementados:
 
 - `src/lib/security/origin.ts`: checagem de origem em login social.
 - `src/lib/security/upload.ts`: auxiliares de validação de upload.
@@ -266,13 +261,10 @@ Faltam os seguintes arquivos importados por código/testes:
 - `src/modules/cart/cart-validation.ts`: validação de carrinho.
 - `scripts/seed-safety.cjs`: proteção dos scripts de seed.
 
-Recuperar os arquivos exige revisar também os consumidores e o motivo da
-reversão; não foi feito checkout, cherry-pick nem restauração em massa. Não
-foram criados stubs, removidos testes ou relaxado TypeScript para obter aprovação.
-
-Corrigido pontualmente `z.email()` para `z.string().email()` no login social,
-compatível com Zod 3 declarado. O erro correspondente desapareceu no typecheck;
-o fluxo OAuth completo permanece sem validação.
+Também foram corrigidos validação de produto/carrinho/upload, autorização de
+pedidos de visitantes, idempotência e titularidade do pagamento simulado,
+status de pedidos administrativos, filtragem de catálogo e handles SQLite nos
+testes Windows. O pagamento simulado está desativado em produção.
 
 Outras alterações: removida chave lint duplicada/obsoleta do package.json
 (mantido lint como typecheck), `.nvmrc`, exemplos de ambiente coerentes com SQLite
@@ -308,12 +300,8 @@ Google Fonts exige rede durante build; não foi substituída a fonte/design.
 bootstrap de teste documentado. Porta ocupada: escolha outra com `--port`.
 Módulo ausente: reinstalar npm não recupera arquivos TypeScript do projeto.
 
-Prioridades pendentes: revisar recuperação dos auxiliares removidos; escolher o
-estado de banco do frontend sem perder SQLite; preparar PostgreSQL backend
-separado e fornecer credenciais apenas no arquivo local; revisar/aprovar
-migrations; repetir typecheck/build/testes; configurar e validar OAuth;
-validar login, catálogo, carrinho, pedidos e administração em banco isolado.
-O ambiente foi preparado, mas o projeto completo ainda não está recuperado.
-
-Verificação final: `git diff --check` passou; os dois bancos SQLite e o
-package-lock.json permaneceram sem alterações em relação ao HEAD.
+Prioridades pendentes: decidir a migração de SQLite para PostgreSQL sem perder
+dados; preparar PostgreSQL isolado para as suítes frontend; liberar/reexecutar
+`prisma generate` sem encerrar processos do usuário; configurar e validar OAuth,
+gateway de pagamento real e armazenamento de imagens persistente para produção.
+Não foram usados dados reais ou URLs de produção em testes.

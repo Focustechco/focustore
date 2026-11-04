@@ -1,8 +1,8 @@
 import React from 'react';
 import { cn } from '@/lib/utils/formatters';
 
-export function DiscountBadge({ price, promotionalPrice, className }: { price: number; promotionalPrice: number; className?: string }) {
-  if (!promotionalPrice || promotionalPrice >= price) return null;
+export function DiscountBadge({ price, promotionalPrice, className }: { price: number; promotionalPrice?: number | null; className?: string }) {
+  if (promotionalPrice === undefined || promotionalPrice === null || promotionalPrice >= price) return null;
   const percentage = Math.round(((price - promotionalPrice) / price) * 100);
 
   return (

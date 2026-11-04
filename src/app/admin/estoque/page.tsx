@@ -431,7 +431,7 @@ export default function AdminInventoryPage() {
                   const isOutOfStock = available <= 0;
                   const isLow = available > 0 && available <= threshold;
                   const coverImage =
-                    item.product.images?.[0]?.url || '/images/products/placeholder.jpg';
+                    item.product.images?.[0]?.url || '/images/products/placeholder.svg';
 
                   return (
                     <tr key={item.id} className="hover:bg-white/[0.03] transition-colors group">

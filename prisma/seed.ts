@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import PRODUCT_DESCRIPTIONS from "../scripts/product-descriptions.json";
+import { assertDemoSeed } from "../scripts/seed-safety.cjs";
 
 const prisma = new PrismaClient();
 const DEV_COLLECTION_COLORS = [
@@ -11,6 +12,9 @@ const DEV_COLLECTION_SIZES = ["PP", "P", "M", "G", "GG"];
 const DEV_COLLECTION_STOCK = [25, 35, 50, 40, 20];
 
 async function main() {
+  assertDemoSeed();
+  const adminPassword = await bcrypt.hash(requiredSeedPassword("FOCUS_SEED_ADMIN_PASSWORD"), 12);
+  const customerPassword = await bcrypt.hash(requiredSeedPassword("FOCUS_SEED_CUSTOMER_PASSWORD"), 12);
   console.log("--- Atualizando banco de dados com dados fieis ao mockup ---");
 
   await prisma.auditLog.deleteMany();
@@ -41,9 +45,6 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.banner.deleteMany();
   await prisma.setting.deleteMany();
-
-  const adminPassword = await bcrypt.hash("admin123", 10);
-  const customerPassword = await bcrypt.hash("cliente123", 10);
 
   const admin = await prisma.user.create({
     data: {
@@ -396,6 +397,14 @@ Vista seu código. Expresse sua linguagem.`,
         },
       },
     });
+  }
+
+  function requiredSeedPassword(name: string): string {
+    const value = process.env[name];
+    if (!value || value.length < 12 || value.length > 72) {
+      throw new Error(`${name} deve ser definido com uma senha entre 12 e 72 caracteres antes de semear a demonstração.`);
+    }
+    return value;
   }
 
   // 1. Camisa Focus (R$ 89,90)

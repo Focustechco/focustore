@@ -82,18 +82,6 @@ async function HomePageContent() {
     .map((slug) => products.find((p) => p.slug === slug))
     .filter(Boolean) as typeof products;
 
-  // Produtos da linha Workspace & Desk Setup
-  const workspaceOrder = [
-    'copo-termico-focus',
-    'suporte-headphone-focus',
-    'mousepad-focus',
-    'suporte-celular-focus',
-  ];
-
-  const workspaceProducts = workspaceOrder
-    .map((slug) => products.find((p) => p.slug === slug))
-    .filter(Boolean) as typeof products;
-
   // Fallback para os 3 banners de destaque caso nenhum esteja cadastrado
   const defaultFeaturedBanners = [
     {
@@ -221,32 +209,6 @@ async function HomePageContent() {
           products={streetwearProducts}
           collectionHref="/categoria/vestuario"
           collectionLabel="Ver Coleção Completa"
-        />
-      </section>
-
-      {/* =========================================================
-          6.1 SEÇÃO WORKSPACE & TECH ACCESSORIES
-          ========================================================= */}
-      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="flex items-end justify-between border-b border-white/10 pb-4">
-          <div>
-            <p className="text-xs font-bold text-[#FF6500] uppercase tracking-widest mb-1">Engenharia & Setup</p>
-            <h2 className="text-2xl font-black text-white tracking-tight uppercase">
-              Workspace & Tech Essentials
-            </h2>
-          </div>
-          <Link
-            href="/categoria/tecnologia"
-            className="hidden sm:flex text-xs font-bold text-zinc-400 hover:text-white uppercase tracking-wider items-center gap-1.5 transition-colors"
-          >
-            Ver Linha Tech <ArrowRight size={14} />
-          </Link>
-        </div>
-
-        <MobileProductsCarousel
-          products={workspaceProducts}
-          collectionHref="/categoria/tecnologia"
-          collectionLabel="Ver Linha Tech"
         />
       </section>
 

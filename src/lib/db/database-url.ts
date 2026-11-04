@@ -14,6 +14,7 @@ export function databaseUrl(env: Readonly<Record<string, string | undefined>>): 
   if (parsed.protocol === 'file:') {
     return configured;
   }
+
   if (parsed.protocol !== 'postgresql:' && parsed.protocol !== 'postgres:') {
     throw new Error('DATABASE_URL deve usar PostgreSQL (postgresql:// ou postgres://) ou SQLite local (file:).');
   }

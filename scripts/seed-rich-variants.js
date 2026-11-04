@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { assertDemoSeed } = require('./seed-safety.cjs');
 const prisma = new PrismaClient();
 
 const APPAREL_COLORS = [
@@ -9,6 +10,7 @@ const APPAREL_COLORS = [
 const APPAREL_SIZES = ['PP', 'P', 'M', 'G', 'GG'];
 
 async function seedRichVariants() {
+  assertDemoSeed();
   console.log('Seeding reduced variants (Preto e Branco / PP, P, M, G, GG)...');
 
   const apparelProducts = await prisma.product.findMany({

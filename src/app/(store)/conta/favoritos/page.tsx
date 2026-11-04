@@ -21,7 +21,7 @@ export default function FavoritosPage() {
       name: product.name,
       variantName: defaultVariant?.name || 'Padrão',
       price: defaultVariant?.price || product.basePrice,
-      promotionalPrice: defaultVariant?.promotionalPrice || product.promotionalPrice,
+      promotionalPrice: defaultVariant?.promotionalPrice ?? product.promotionalPrice,
       imageUrl: product.imageUrl,
       sku: defaultVariant?.sku || 'FS-FAV',
       quantity: 1,
@@ -96,8 +96,10 @@ export default function FavoritosPage() {
         /* Grid de Produtos Favoritados */
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {favorites.map((product) => {
-            const price = product.promotionalPrice || product.basePrice;
-            const hasDiscount = product.promotionalPrice && product.promotionalPrice < product.basePrice;
+            const price = product.promotionalPrice ?? product.basePrice;
+            const hasDiscount = product.promotionalPrice !== null &&
+              product.promotionalPrice !== undefined &&
+              product.promotionalPrice < product.basePrice;
 
             return (
               <div

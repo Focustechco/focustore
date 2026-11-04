@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { ChevronRight, Sparkles, Flame, ShieldCheck, ArrowRight, Truck } from 'lucide-react';
+import { ChevronRight, Sparkles, ShieldCheck, ArrowRight, Truck } from 'lucide-react';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { ProductCard } from '@/components/commerce/product-card';
 
@@ -83,10 +83,12 @@ export default async function CollectionPage({ params }: Props) {
         )}
 
         <div className="relative z-10 max-w-3xl space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6500]/15 border border-[#FF6500]/30 text-[#FF6500] text-xs font-bold uppercase tracking-wider">
-            {isDevCollection ? <Flame size={14} /> : <Sparkles size={14} />}
-            <span>{isDevCollection ? 'DEV COLLECTION • Laranja Focus' : 'Linha Exclusiva Focus'}</span>
-          </div>
+          {!isDevCollection && (
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF6500]/15 border border-[#FF6500]/30 text-[#FF6500] text-xs font-bold uppercase tracking-wider">
+              <Sparkles size={14} />
+              <span>Linha Exclusiva Focus</span>
+            </div>
+          )}
 
           <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">
             Coleção {collectionName}

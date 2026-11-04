@@ -255,7 +255,7 @@ export function ProductForm({
         colorHex: '#0D0D0D',
         size: 'M',
         price: Number(basePrice) || 0,
-        promotionalPrice: promotionalPrice ? Number(promotionalPrice) : null,
+        promotionalPrice: promotionalPrice !== '' ? Number(promotionalPrice) : null,
         stock: 50,
         isActive: true,
       },
@@ -308,7 +308,9 @@ export function ProductForm({
         variants: variants.map((v) => ({
           ...v,
           price: Number(v.price || basePrice),
-          promotionalPrice: v.promotionalPrice ? Number(v.promotionalPrice) : null,
+          promotionalPrice: v.promotionalPrice !== null && v.promotionalPrice !== undefined
+            ? Number(v.promotionalPrice)
+            : null,
           stock: Number(v.stock || 0),
         })),
       };

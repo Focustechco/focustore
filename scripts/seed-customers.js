@@ -1,7 +1,9 @@
 const { PrismaClient } = require('@prisma/client');
+const { assertDemoSeed } = require('./seed-safety.cjs');
 const prisma = new PrismaClient();
 
 async function seedCustomers() {
+  assertDemoSeed();
   console.log('Seeding customer accounts with orders...');
 
   // Customer 1: Lucas Techwear

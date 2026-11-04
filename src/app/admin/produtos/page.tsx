@@ -203,7 +203,7 @@ export default function AdminProductsPage() {
               </thead>
               <tbody className="divide-y divide-white/5 text-white">
                 {filteredProducts.map((p) => {
-                  const coverImage = p.images?.[0]?.url || '/images/products/placeholder.jpg';
+                  const coverImage = p.images?.[0]?.url || '/images/products/placeholder.svg';
                   const totalStock = p.variants?.reduce(
                     (acc: number, v: any) => acc + (v.inventory?.quantityAvailable || 0),
                     0
@@ -253,7 +253,7 @@ export default function AdminProductsPage() {
                           <span className="font-bold text-[#FF6500] block">
                             {formatPrice(p.basePrice)}
                           </span>
-                          {p.promotionalPrice && (
+                          {p.promotionalPrice !== null && (
                             <span className="text-[10px] text-emerald-400 font-mono block">
                               Promo: {formatPrice(p.promotionalPrice)}
                             </span>

@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db/prisma';
 import { CouponService } from '../promotions/coupon.service';
 import { ShippingService } from '../shipping/shipping.service';
 import { InventoryService } from '../inventory/inventory.service';
+import { CheckoutError } from './checkout-errors';
+import { HIDDEN_PRODUCT_SLUGS } from '../catalog/catalog-policy';
 
 export interface CheckoutInput {
   userId?: string;
@@ -44,7 +46,7 @@ export interface CheckoutInput {
 export class CheckoutService {
   static async processCheckout(input: CheckoutInput) {
     if (!input || !Array.isArray(input.items) || input.items.length === 0) {
-      throw new Error('O carrinho está vazio.');
+      throw new CheckoutError('O carrinho está vazio.');
     }
 
     if (
@@ -56,7 +58,7 @@ export class CheckoutService {
           item.quantity <= 0
       )
     ) {
-      throw new Error('Cada produto deve ter uma variante válida e quantidade inteira positiva.');
+      throw new CheckoutError('Cada produto deve ter uma variante válida e quantidade inteira positiva.');
     }
 
     if (
@@ -66,7 +68,7 @@ export class CheckoutService {
       typeof input.shippingOption.carrier !== 'string' ||
       typeof input.shippingOption.serviceName !== 'string'
     ) {
-      throw new Error('Endereço ou opção de frete inválida.');
+      throw new CheckoutError('Endereço ou opção de frete inválida.');
     }
 
     if (input.idempotencyKey) {
@@ -75,6 +77,13 @@ export class CheckoutService {
         include: { items: true, payments: true },
       });
       if (existingOrder) {
+        const sameOwner = input.userId
+          ? existingOrder.userId === input.userId
+          : existingOrder.userId === null &&
+            existingOrder.guestEmail?.toLowerCase() === input.customer?.email?.trim().toLowerCase();
+        if (!sameOwner) {
+          throw new CheckoutError('Esta chave de pedido já foi utilizada por outro cliente.', 409);
+        }
         return {
           order: existingOrder,
           payment: existingOrder.payments[0] || null,
@@ -87,12 +96,19 @@ export class CheckoutService {
       // 1. Obter e validar variantes reais do banco
       const variantIds = input.items.map((i) => i.variantId);
       const dbVariants = await tx.productVariant.findMany({
-        where: { id: { in: variantIds }, isActive: true },
+        where: {
+          id: { in: variantIds },
+          isActive: true,
+          product: {
+            status: 'ACTIVE',
+            slug: { notIn: HIDDEN_PRODUCT_SLUGS },
+          },
+        },
         include: { product: true, inventory: true },
       });
 
       if (dbVariants.length !== input.items.length) {
-        throw new Error('Alguns produtos do carrinho não estão mais disponíveis.');
+        throw new CheckoutError('Alguns produtos do carrinho não estão mais disponíveis.');
       }
 
       // 2. Calcular subtotal com base nos preços reais do banco
@@ -101,15 +117,18 @@ export class CheckoutService {
 
       for (const itemInput of input.items) {
         const variant = dbVariants.find((v) => v.id === itemInput.variantId);
-        if (!variant) throw new Error('Variante não encontrada.');
+        if (!variant) throw new CheckoutError('Variante não encontrada.');
 
         if (!variant.inventory || variant.inventory.quantityAvailable < itemInput.quantity) {
-          throw new Error(
+          throw new CheckoutError(
             `Estoque insuficiente para ${variant.name}. Disponível: ${variant.inventory?.quantityAvailable || 0}`
           );
         }
 
-        const realPrice = variant.promotionalPrice || variant.price;
+        const promotionalPrice = variant.promotionalPrice ?? variant.product.promotionalPrice;
+        const realPrice = promotionalPrice !== null && promotionalPrice < variant.price
+          ? promotionalPrice
+          : variant.price;
         const itemTotal = realPrice * itemInput.quantity;
         calculatedSubtotal += itemTotal;
 
@@ -136,7 +155,7 @@ export class CheckoutService {
           option.carrier === input.shippingOption.carrier
       );
       if (!selectedOption) {
-        throw new Error('A opção de frete selecionada não está disponível para este endereço.');
+        throw new CheckoutError('A opção de frete selecionada não está disponível para este endereço.');
       }
       const shippingCost = selectedOption.price;
 
@@ -148,17 +167,35 @@ export class CheckoutService {
         const couponResult = await CouponService.validateCoupon(
           input.couponCode,
           calculatedSubtotal,
-          shippingCost
+          shippingCost,
+          tx,
         );
-        if (couponResult.valid && couponResult.coupon) {
-          discountAmount = couponResult.coupon.discountAmount;
-          appliedCouponId = couponResult.coupon.id;
-
-          await tx.coupon.update({
-            where: { id: couponResult.coupon.id },
-            data: { usageCount: { increment: 1 } },
-          });
+        if (!couponResult.valid || !couponResult.coupon) {
+          throw new CheckoutError(couponResult.error || 'Cupom inválido.');
         }
+
+        discountAmount = couponResult.coupon.discountAmount;
+        appliedCouponId = couponResult.coupon.id;
+
+        const coupon = await tx.coupon.findUnique({
+          where: { id: couponResult.coupon.id },
+          select: { usageLimit: true },
+        });
+        const usage = await tx.coupon.updateMany({
+          where: {
+            id: couponResult.coupon.id,
+            isActive: true,
+            ...(coupon?.usageLimit === null || coupon?.usageLimit === undefined
+              ? {}
+              : { usageCount: { lt: coupon.usageLimit } }),
+          },
+          data: { usageCount: { increment: 1 } },
+        });
+
+        if (usage.count !== 1) {
+          throw new CheckoutError('Este cupom atingiu o limite de utilizações.', 409);
+        }
+
       }
 
       // 5. Total final garantido

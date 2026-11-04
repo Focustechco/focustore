@@ -1,4 +1,5 @@
 const { PrismaClient } = require("@prisma/client");
+const { assertDemoSeed } = require("./seed-safety.cjs");
 const PRODUCT_DESCRIPTIONS = require("./product-descriptions.json");
 const PRODUCT_WARRANTY = require("../src/modules/catalog/product-warranty.json");
 const prisma = new PrismaClient();
@@ -43,6 +44,7 @@ function createDevCollectionVariants(
 }
 
 async function seedAllProducts() {
+  assertDemoSeed();
   console.log("Seeding full catalog of Focus Store products...");
 
   // Ensure categories exist
@@ -155,27 +157,16 @@ async function seedAllProducts() {
     });
   }
 
-  let colfocuslinguagens = await prisma.collection.findUnique({
-    where: { slug: "focus-collection" },
+  let colDevCollection = await prisma.collection.findUnique({
+    where: { slug: "dev-collection" },
   });
-  if (!colfocuslinguagens) {
-    colfocuslinguagens = await prisma.collection.create({
+  if (!colDevCollection) {
+    colDevCollection = await prisma.collection.create({
       data: {
         name: "DEV COLLECTION",
-        slug: "focus-collection",
+        slug: "dev-collection",
         headline: "Uma coleção para quem transforma ideias em código",
-        description:
-          "Uma coleção exclusiva inspirada nas principais linguagens de programação, unindo tecnologia, estilo e personalidade",
-      },
-    });
-  } else {
-    colfocuslinguagens = await prisma.collection.update({
-      where: { id: colfocuslinguagens.id },
-      data: {
-        name: "DEV COLLECTION",
-        headline: "Uma coleção para quem transforma ideias em código",
-        description:
-          "Uma coleção exclusiva inspirada nas principais linguagens de programação, unindo tecnologia, estilo e personalidade",
+        description: "Camisas inspiradas nas principais linguagens de programação.",
       },
     });
   }
@@ -278,7 +269,7 @@ Vista seu código. Expresse sua linguagem.`,
         },
       ],
       categories: [catVestuario.id, catColecoes.id],
-      collections: [colfocuslinguagens.id],
+      collections: [colDevCollection.id],
       isFeatured: true,
       variants: createDevCollectionVariants("Camisa Python", "FS-AMS-TSHIRT"),
     },
@@ -323,7 +314,7 @@ Vista seu código. Expresse sua linguagem.`,
         },
       ],
       categories: [catVestuario.id, catColecoes.id],
-      collections: [colfocuslinguagens.id],
+      collections: [colDevCollection.id],
       isFeatured: true,
       variants: createDevCollectionVariants("Camisa Java", "FS-AMS-POLO", [
         20, 30, 45, 35, 20,
@@ -370,7 +361,7 @@ Vista seu código. Expresse sua linguagem.`,
         },
       ],
       categories: [catVestuario.id, catColecoes.id],
-      collections: [colfocuslinguagens.id],
+      collections: [colDevCollection.id],
       isFeatured: true,
       variants: createDevCollectionVariants("Camisa JavaScript", "FS-AMS-CAP"),
     },
@@ -415,7 +406,7 @@ Vista seu código. Expresse sua linguagem.`,
         },
       ],
       categories: [catVestuario.id, catColecoes.id],
-      collections: [colfocuslinguagens.id],
+      collections: [colDevCollection.id],
       isFeatured: true,
       variants: createDevCollectionVariants("Camisa TypeScript", "FS-DEV-TS"),
     },

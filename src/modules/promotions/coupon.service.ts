@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
 
 export interface CouponValidationResult {
@@ -14,8 +15,24 @@ export interface CouponValidationResult {
 }
 
 export class CouponService {
-  static async validateCoupon(code: string, subtotal: number, shippingCost: number): Promise<CouponValidationResult> {
-    const coupon = await prisma.coupon.findUnique({
+  static async validateCoupon(
+    code: string,
+    subtotal: number,
+    shippingCost: number,
+    database: Pick<Prisma.TransactionClient, 'coupon'> = prisma,
+  ): Promise<CouponValidationResult> {
+    if (
+      typeof code !== 'string' ||
+      !code.trim() ||
+      !Number.isFinite(subtotal) ||
+      subtotal < 0 ||
+      !Number.isFinite(shippingCost) ||
+      shippingCost < 0
+    ) {
+      return { valid: false, error: 'Dados do cupom ou do pedido inválidos.' };
+    }
+
+    const coupon = await database.coupon.findUnique({
       where: { code: code.toUpperCase().trim() },
     });
 
@@ -31,7 +48,11 @@ export class CouponService {
       return { valid: false, error: 'Este cupom está expirado.' };
     }
 
-    if (coupon.usageLimit && coupon.usageCount >= coupon.usageLimit) {
+    if (coupon.startsAt && new Date() < coupon.startsAt) {
+      return { valid: false, error: 'Este cupom ainda não está disponível.' };
+    }
+
+    if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
       return { valid: false, error: 'Este cupom atingiu o limite de utilizações.' };
     }
 
@@ -42,12 +63,24 @@ export class CouponService {
       };
     }
 
+    if (
+      !Number.isFinite(coupon.discountValue) ||
+      coupon.discountValue < 0 ||
+      (coupon.minOrderAmount !== null &&
+        (!Number.isFinite(coupon.minOrderAmount) || coupon.minOrderAmount < 0)) ||
+      (coupon.discountType === 'PERCENTAGE' && coupon.discountValue > 100) ||
+      (coupon.maxDiscount !== null && (!Number.isFinite(coupon.maxDiscount) || coupon.maxDiscount < 0)) ||
+      !['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING'].includes(coupon.discountType)
+    ) {
+      return { valid: false, error: 'A configuração deste cupom é inválida.' };
+    }
+
     let discountAmount = 0;
     let freeShipping = false;
 
     if (coupon.discountType === 'PERCENTAGE') {
       discountAmount = (subtotal * coupon.discountValue) / 100;
-      if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
+      if (coupon.maxDiscount !== null && discountAmount > coupon.maxDiscount) {
         discountAmount = coupon.maxDiscount;
       }
     } else if (coupon.discountType === 'FIXED_AMOUNT') {

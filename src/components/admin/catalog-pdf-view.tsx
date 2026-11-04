@@ -319,7 +319,7 @@ export function CatalogPdfView({ products }: { products: any[] }) {
             }`}
           >
             {filteredProducts.map((product) => {
-              const coverImage = product.images?.[0]?.url || '/images/products/placeholder.jpg';
+              const coverImage = product.images?.[0]?.url || '/images/products/placeholder.svg';
               const categoryName = product.categories?.[0]?.category?.name || 'Geral';
               const collectionName = product.collections?.[0]?.collection?.name;
 
@@ -427,9 +427,9 @@ export function CatalogPdfView({ products }: { products: any[] }) {
                       </span>
                       <div className="flex items-baseline gap-1">
                         <span className="text-sm font-black font-mono text-[#FF6500]">
-                          {formatPrice(product.promotionalPrice || product.basePrice)}
+                          {formatPrice(product.promotionalPrice ?? product.basePrice)}
                         </span>
-                        {product.promotionalPrice && (
+                        {product.promotionalPrice !== null && (
                           <span className="text-[10px] line-through text-zinc-400 font-mono">
                             {formatPrice(product.basePrice)}
                           </span>
@@ -475,7 +475,7 @@ export function CatalogPdfView({ products }: { products: any[] }) {
                 }`}
               >
                 {filteredProducts.map((product) => {
-                  const coverImage = product.images?.[0]?.url || '/images/products/placeholder.jpg';
+                  const coverImage = product.images?.[0]?.url || '/images/products/placeholder.svg';
                   const categoryName = product.categories?.[0]?.category?.name || 'Geral';
                   const collectionName = product.collections?.[0]?.collection?.name;
 
@@ -536,9 +536,9 @@ export function CatalogPdfView({ products }: { products: any[] }) {
                       {/* Preço Unitário */}
                       <td className="p-3 text-right">
                         <span className="font-mono font-black text-sm text-[#FF6500] block">
-                          {formatPrice(product.promotionalPrice || product.basePrice)}
+                          {formatPrice(product.promotionalPrice ?? product.basePrice)}
                         </span>
-                        {product.promotionalPrice && (
+                        {product.promotionalPrice !== null && (
                           <span className="text-[10px] line-through text-zinc-400 font-mono block">
                             {formatPrice(product.basePrice)}
                           </span>

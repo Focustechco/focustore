@@ -110,7 +110,11 @@ export function Header() {
   function handleAuthenticated(user: CustomerSession) {
     setCustomer(user);
     setIsLoginOpen(false);
-    router.push('/conta');
+    router.push(
+      user.role === 'ADMIN' || user.role === 'MANAGER'
+        ? '/admin/dashboard'
+        : '/conta',
+    );
   }
 
   async function handleLogout() {

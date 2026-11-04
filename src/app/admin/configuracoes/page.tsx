@@ -1,39 +1,105 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Settings,
   Store,
   CreditCard,
-  Truck,
-  Shield,
-  Bell,
   Save,
   Check,
-  Globe,
-  Mail,
   Phone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+interface SettingsFormData {
+  storeName: string;
+  tagline: string;
+  supportEmail: string;
+  supportPhone: string;
+  instagramHandle: string;
+  freeShippingThreshold: string;
+  pixDiscountPercent: string;
+  maxInstallments: string;
+}
+
+const DEFAULT_SETTINGS: SettingsFormData = {
+  storeName: 'FOCUS STORE®',
+  tagline: 'TECHWEAR & LIFESTYLE',
+  supportEmail: 'contato@focus.store',
+  supportPhone: '+55 (11) 99999-9999',
+  instagramHandle: '@focus.store',
+  freeShippingThreshold: '299.00',
+  pixDiscountPercent: '10',
+  maxInstallments: '12',
+};
+
 export default function AdminSettingsPage() {
   const [saved, setSaved] = useState(false);
-  const [formData, setFormData] = useState({
-    storeName: 'FOCUS STORE®',
-    tagline: 'TECHWEAR & LIFESTYLE',
-    supportEmail: 'contato@focus.store',
-    supportPhone: '+55 (11) 99999-9999',
-    instagramHandle: '@focus.store',
-    currency: 'BRL (R$)',
-    freeShippingThreshold: '299.00',
-    pixDiscountPercent: '10',
-    maxInstallments: '12',
-  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<SettingsFormData>(DEFAULT_SETTINGS);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await fetch('/api/admin/settings');
+        const data = (await response.json()) as {
+          settings?: Partial<SettingsFormData>;
+          error?: string;
+        };
+        if (!response.ok || !data.settings) {
+          throw new Error(data.error || 'Não foi possível carregar as configurações.');
+        }
+        setFormData({ ...DEFAULT_SETTINGS, ...data.settings });
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : 'Não foi possível carregar as configurações.',
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadSettings();
+  }, []);
+
+  const updateField = (field: keyof SettingsFormData, value: string) => {
+    setFormData((current) => ({ ...current, [field]: value }));
+    setSaved(false);
+  };
+
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setError(null);
+    setSaved(false);
+    setSaving(true);
+
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = (await response.json()) as {
+        settings?: SettingsFormData;
+        error?: string;
+      };
+      if (!response.ok || !data.settings) {
+        throw new Error(data.error || 'Não foi possível salvar as configurações.');
+      }
+      setFormData(data.settings);
+      setSaved(true);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : 'Não foi possível salvar as configurações.',
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -56,6 +122,15 @@ export default function AdminSettingsPage() {
         )}
       </div>
 
+      {error && (
+        <p
+          role="alert"
+          className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+        >
+          {error}
+        </p>
+      )}
+
       <form onSubmit={handleSave} className="space-y-6 text-xs">
         {/* Identidade da Marca */}
         <div className="bg-[#0E0E0E] rounded-2xl border border-white/10 p-5 sm:p-6 space-y-4">
@@ -71,8 +146,11 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="text"
+                required
                 value={formData.storeName}
-                onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
+                maxLength={80}
+                onChange={(e) => updateField('storeName', e.target.value)}
+                disabled={loading || saving}
                 className="w-full bg-[#141414] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
             </div>
@@ -83,8 +161,10 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="text"
+                maxLength={120}
                 value={formData.tagline}
-                onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
+                onChange={(e) => updateField('tagline', e.target.value)}
+                disabled={loading || saving}
                 className="w-full bg-[#141414] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
             </div>
@@ -105,8 +185,10 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="email"
+                required
                 value={formData.supportEmail}
-                onChange={(e) => setFormData({ ...formData, supportEmail: e.target.value })}
+                onChange={(e) => updateField('supportEmail', e.target.value)}
+                disabled={loading || saving}
                 className="w-full bg-[#141414] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
             </div>
@@ -117,8 +199,11 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="text"
+                required
+                maxLength={40}
                 value={formData.supportPhone}
-                onChange={(e) => setFormData({ ...formData, supportPhone: e.target.value })}
+                onChange={(e) => updateField('supportPhone', e.target.value)}
+                disabled={loading || saving}
                 className="w-full bg-[#141414] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
             </div>
@@ -129,8 +214,10 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="text"
+                maxLength={60}
                 value={formData.instagramHandle}
-                onChange={(e) => setFormData({ ...formData, instagramHandle: e.target.value })}
+                onChange={(e) => updateField('instagramHandle', e.target.value)}
+                disabled={loading || saving}
                 className="w-full bg-[#141414] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
             </div>
@@ -151,8 +238,13 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="number"
+                min={0}
+                max={100}
+                step={1}
+                required
                 value={formData.pixDiscountPercent}
-                onChange={(e) => setFormData({ ...formData, pixDiscountPercent: e.target.value })}
+                onChange={(e) => updateField('pixDiscountPercent', e.target.value)}
+                disabled={loading || saving}
                 className="w-full bg-[#141414] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
             </div>
@@ -163,8 +255,13 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="number"
+                min={0}
+                max={100000}
+                step="0.01"
+                required
                 value={formData.freeShippingThreshold}
-                onChange={(e) => setFormData({ ...formData, freeShippingThreshold: e.target.value })}
+                onChange={(e) => updateField('freeShippingThreshold', e.target.value)}
+                disabled={loading || saving}
                 className="w-full bg-[#141414] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
             </div>
@@ -175,8 +272,13 @@ export default function AdminSettingsPage() {
               </label>
               <input
                 type="number"
+                min={1}
+                max={24}
+                step={1}
+                required
                 value={formData.maxInstallments}
-                onChange={(e) => setFormData({ ...formData, maxInstallments: e.target.value })}
+                onChange={(e) => updateField('maxInstallments', e.target.value)}
+                disabled={loading || saving}
                 className="w-full bg-[#141414] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none"
               />
             </div>
@@ -187,9 +289,10 @@ export default function AdminSettingsPage() {
         <div className="flex items-center justify-end pt-2">
           <Button
             type="submit"
+            disabled={loading || saving}
             className="gap-2 bg-[#FF6500] hover:bg-[#FF7A1A] text-white font-bold uppercase tracking-wider px-6 py-2.5 rounded-xl shadow-lg shadow-[#FF6500]/20"
           >
-            <Save size={16} /> Salvar Configurações
+            <Save size={16} /> {saving ? 'Salvando...' : loading ? 'Carregando...' : 'Salvar Configurações'}
           </Button>
         </div>
       </form>

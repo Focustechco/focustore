@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import PRODUCT_DESCRIPTIONS from "../scripts/product-descriptions.json";
 
 const prisma = new PrismaClient();
 const DEV_COLLECTION_COLORS = [
@@ -184,9 +185,8 @@ async function main() {
       name: "Camisa Focus Academy",
       slug: "camisa-focus-academy",
       sku: "FS-ACADEMY-TEE-001",
-      description:
-        "Camisa oficial Focus Academy com modelagem streetwear e identidade exclusiva da coleção.",
-      shortDescription: "Camisa oficial Focus Academy.",
+      description: PRODUCT_DESCRIPTIONS["camisa-focus-academy"].description,
+      shortDescription: PRODUCT_DESCRIPTIONS["camisa-focus-academy"].shortDescription,
       basePrice: 89.9,
       isFeatured: true,
       status: "ACTIVE",
@@ -324,8 +324,12 @@ Vista seu código. Expresse sua linguagem.`,
         name: item.name,
         slug: item.slug,
         sku: item.sku,
-        description: item.description,
-        shortDescription: `Camisa ${item.language} da DEV COLLECTION.`,
+        description:
+          PRODUCT_DESCRIPTIONS[item.slug as keyof typeof PRODUCT_DESCRIPTIONS]?.description ??
+          item.description,
+        shortDescription:
+          PRODUCT_DESCRIPTIONS[item.slug as keyof typeof PRODUCT_DESCRIPTIONS]?.shortDescription ??
+          `Camisa ${item.language} da DEV COLLECTION.`,
         basePrice: 89.9,
         isFeatured: true,
         status: "ACTIVE",
@@ -400,10 +404,8 @@ Vista seu código. Expresse sua linguagem.`,
       name: "Camisa Focus",
       slug: "camisa-focus-lab",
       sku: "FS-TSHIRT-001",
-      description:
-        "100% Algodão Egípcio penteado, toque macio com caimento streetwear e logo Focus em destaque.",
-      shortDescription:
-        "100% Algodão Egípcio, toque ultra macio e corte moderno.",
+      description: PRODUCT_DESCRIPTIONS["camisa-focus-lab"].description,
+      shortDescription: PRODUCT_DESCRIPTIONS["camisa-focus-lab"].shortDescription,
       basePrice: 89.9,
       isFeatured: true,
       status: "ACTIVE",
@@ -475,10 +477,8 @@ Vista seu código. Expresse sua linguagem.`,
       name: "Polo Focus Tech",
       slug: "moletom-focus-lab",
       sku: "FS-POLO-001",
-      description:
-        "Camisa polo premium em piquet de alta densidade com logo Focus termocolante.",
-      shortDescription:
-        "Piquet de alta densidade com caimento impecável e detalhes em Focus Orange.",
+      description: PRODUCT_DESCRIPTIONS["moletom-focus-lab"].description,
+      shortDescription: PRODUCT_DESCRIPTIONS["moletom-focus-lab"].shortDescription,
       basePrice: 179.9,
       isFeatured: true,
       status: "ACTIVE",
@@ -539,10 +539,8 @@ Vista seu código. Expresse sua linguagem.`,
       name: "Boné Focus Lab",
       slug: "bone-focus-lab",
       sku: "FS-CAP-001",
-      description:
-        "Dad hat estruturado em sarja premium com fecho de metal e logo Focus bordado.",
-      shortDescription:
-        "Sarja premium estruturada com fecho de metal e bordado tonal.",
+      description: PRODUCT_DESCRIPTIONS["bone-focus-lab"].description,
+      shortDescription: PRODUCT_DESCRIPTIONS["bone-focus-lab"].shortDescription,
       basePrice: 79.9,
       isFeatured: true,
       status: "ACTIVE",
@@ -552,7 +550,12 @@ Vista seu código. Expresse sua linguagem.`,
           {
             url: "/images/products/bone-focus.jpg",
             isPrimary: true,
-            altText: "Boné Focus Lab",
+            altText: "Boné Focus Lab - Preto",
+          },
+          {
+            url: "/images/products/bone-focus-white-v2.jpg",
+            isPrimary: false,
+            altText: "Boné Focus Lab - Branco",
           },
         ],
       },
@@ -570,10 +573,10 @@ Vista seu código. Expresse sua linguagem.`,
             },
           },
           {
-            name: "Boné Focus Lab - Laranja / Único",
-            sku: "FS-CAP-ORG-U",
-            color: "Laranja Focus",
-            colorHex: "#FF6500",
+            name: "Boné Focus Lab - Branco / Único",
+            sku: "FS-CAP-WHT-U",
+            color: "Branco",
+            colorHex: "#FFFFFF",
             size: "Único",
             price: 79.9,
             inventory: {
@@ -591,10 +594,8 @@ Vista seu código. Expresse sua linguagem.`,
       name: "Garrafa Térmica Focus",
       slug: "garrafa-termica-focus",
       sku: "FS-BOTTLE-001",
-      description:
-        "Inox 18/8 com isolamento térmico a vácuo 24h gelado / 12h quente. 750ml.",
-      shortDescription:
-        "Inox 18/8 com isolamento térmico 24h gelado / 12h quente. 750ml.",
+      description: PRODUCT_DESCRIPTIONS["garrafa-termica-focus"].description,
+      shortDescription: PRODUCT_DESCRIPTIONS["garrafa-termica-focus"].shortDescription,
       basePrice: 129.9,
       isFeatured: true,
       status: "ACTIVE",
@@ -632,10 +633,9 @@ Vista seu código. Expresse sua linguagem.`,
       name: "Chaveiro Focus",
       slug: "chaveiro-focus",
       sku: "FS-KEYCHAIN-001",
-      description:
-        "Liga de zinco anodizado e pingente hexagonal laranja e preto com logo Focus.",
-      shortDescription: "Liga de zinco anodizado e fita tática laranja Focus.",
-      basePrice: 14.9,
+      description: PRODUCT_DESCRIPTIONS["chaveiro-focus"].description,
+      shortDescription: PRODUCT_DESCRIPTIONS["chaveiro-focus"].shortDescription,
+      basePrice: 29.9,
       isFeatured: true,
       status: "ACTIVE",
       categories: { create: [{ categoryId: catAcessorios.id }] },
@@ -692,10 +692,8 @@ Vista seu código. Expresse sua linguagem.`,
       name: "Caneca Focus Lab",
       slug: "caneca-focus-lab",
       sku: "FS-MUG-001",
-      description:
-        "Cerâmica premium fosca vitrificada com interior laranja Focus. 350ml.",
-      shortDescription:
-        "Cerâmica premium fosca com interior laranja Focus. 350ml.",
+      description: PRODUCT_DESCRIPTIONS["caneca-focus-lab"].description,
+      shortDescription: PRODUCT_DESCRIPTIONS["caneca-focus-lab"].shortDescription,
       basePrice: 49.9,
       isFeatured: true,
       status: "ACTIVE",

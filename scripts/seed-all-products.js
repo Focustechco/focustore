@@ -1,4 +1,5 @@
 const { PrismaClient } = require("@prisma/client");
+const PRODUCT_DESCRIPTIONS = require("./product-descriptions.json");
 const prisma = new PrismaClient();
 
 const APPAREL_COLORS_ALL = [
@@ -560,7 +561,7 @@ Vista seu código. Expresse sua linguagem.`,
           altText: "Boné Focus Lab - Preto",
         },
         {
-          url: "/images/products/bone-focus-white.jpg",
+          url: "/images/products/bone-focus-white-v2.jpg",
           isPrimary: false,
           altText: "Boné Focus Lab - Branco",
         },
@@ -942,8 +943,11 @@ Vista seu código. Expresse sua linguagem.`,
           name: item.name,
           slug: item.slug,
           sku: item.sku,
-          description: item.description,
-          shortDescription: item.shortDescription,
+          description:
+            PRODUCT_DESCRIPTIONS[item.slug]?.description || item.description,
+          shortDescription:
+            PRODUCT_DESCRIPTIONS[item.slug]?.shortDescription ||
+            item.shortDescription,
           basePrice: item.basePrice,
           promotionalPrice: item.promotionalPrice,
           isFeatured: item.isFeatured,
@@ -956,8 +960,11 @@ Vista seu código. Expresse sua linguagem.`,
           name: item.name,
           slug: item.slug,
           sku: item.sku,
-          description: item.description,
-          shortDescription: item.shortDescription,
+          description:
+            PRODUCT_DESCRIPTIONS[item.slug]?.description || item.description,
+          shortDescription:
+            PRODUCT_DESCRIPTIONS[item.slug]?.shortDescription ||
+            item.shortDescription,
           basePrice: item.basePrice,
           promotionalPrice: item.promotionalPrice,
           isFeatured: item.isFeatured,

@@ -1,11 +1,18 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { AdminSidebar } from '@/components/layout/admin-sidebar';
+import { requireAdmin } from '@/lib/auth/admin';
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const authorization = await requireAdmin();
+  if (!authorization.authorized) {
+    redirect('/admin-acesso');
+  }
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#080808] text-white print:bg-white print:text-black print:min-h-0 print:block print:p-0">
       <div className="print:hidden">

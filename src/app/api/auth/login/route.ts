@@ -9,6 +9,7 @@ const loginSchema = z.object({
   identifier: z.string().trim().min(1, 'Informe seu e-mail ou CPF.').max(254),
   password: z.string().min(1, 'Informe sua senha.').max(72),
   remember: z.boolean().optional().default(false),
+  adminOnly: z.boolean().optional().default(false),
 });
 
 function formatCpf(digits: string) {
@@ -31,14 +32,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const { identifier, password, remember } = parsed.data;
+  const { identifier, password, remember, adminOnly } = parsed.data;
   const normalizedIdentifier = identifier.toLowerCase();
 
   try {
     const user = normalizedIdentifier.includes('@')
       ? await prisma.user.findUnique({
           where: { email: normalizedIdentifier },
-          select: { id: true, name: true, email: true, passwordHash: true },
+          select: { id: true, name: true, email: true, role: true, passwordHash: true },
         })
       : await prisma.user.findFirst({
           where: {
@@ -46,13 +47,20 @@ export async function POST(request: Request) {
               in: [identifier.replace(/\D/g, ''), formatCpf(identifier.replace(/\D/g, ''))],
             },
           },
-          select: { id: true, name: true, email: true, passwordHash: true },
+          select: { id: true, name: true, email: true, role: true, passwordHash: true },
         });
 
     if (!user?.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
       return NextResponse.json(
         { error: 'E-mail/CPF ou senha inválidos.' },
         { status: 401 },
+      );
+    }
+
+    if (adminOnly && user.role !== 'ADMIN' && user.role !== 'MANAGER') {
+      return NextResponse.json(
+        { error: 'Esta conta não tem acesso ao Painel Administrativo.' },
+        { status: 403 },
       );
     }
 
@@ -67,7 +75,7 @@ export async function POST(request: Request) {
     });
 
     const response = NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
     response.cookies.set(AUTH_COOKIE_NAME, sessionToken, {
       httpOnly: true,

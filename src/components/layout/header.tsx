@@ -3,7 +3,22 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Search, Heart, User, Menu, X, LogOut, ShoppingBag, ChevronRight } from 'lucide-react';
+import {
+  Search,
+  Heart,
+  User,
+  Menu,
+  X,
+  LogOut,
+  ShoppingBag,
+  ChevronRight,
+  LayoutGrid,
+  Shirt,
+  Grid2X2,
+  Layers3,
+  Tag,
+  Settings,
+} from 'lucide-react';
 import { useCart } from '@/modules/cart/cart-context';
 import { useFavorites } from '@/modules/favorites/favorites-context';
 import { FocusLogo } from '@/components/ui/focus-logo';
@@ -15,6 +30,31 @@ const NAV_ITEMS = [
   { label: 'Acessórios', href: '/categoria/acessorios' },
   { label: 'Coleções', href: '/colecoes' },
   { label: 'Ofertas', href: '/categoria/ofertas' },
+];
+
+const NAV_GROUPS = [
+  {
+    groupName: 'NAVEGAÇÃO',
+    items: [
+      { label: 'Todos', href: '/categoria/todos', icon: LayoutGrid },
+      { label: 'Vestuário', href: '/categoria/vestuario', icon: Shirt },
+      { label: 'Acessórios', href: '/categoria/acessorios', icon: Grid2X2 },
+    ],
+  },
+  {
+    groupName: 'EXPLORE',
+    items: [
+      { label: 'Coleções', href: '/colecoes', icon: Layers3 },
+      { label: 'Ofertas', href: '/categoria/ofertas', icon: Tag },
+    ],
+  },
+  {
+    groupName: 'CONTA',
+    items: [
+      { label: 'Minha Conta', href: '/conta', icon: User },
+      { label: 'Painel Administrativo', href: '/admin/dashboard', icon: Settings },
+    ],
+  },
 ];
 
 export function Header() {
@@ -99,6 +139,10 @@ export function Header() {
       document.body.style.overflow = previousOverflow;
     };
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -281,71 +325,94 @@ export function Header() {
       </div>
 
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex h-[100dvh] flex-col overflow-y-auto bg-[#080808] px-5 pb-5 xl:hidden">
-          <div className="flex h-[76px] flex-shrink-0 items-center justify-between border-b border-white/10">
-            <FocusLogo size="xl" mobileSize="md" />
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              aria-label="Fechar menu"
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition-colors hover:border-[#FF5500]/50 hover:text-[#FF5500]"
-            >
-              <X size={22} />
-            </button>
-          </div>
+        <div className="fixed inset-0 z-50 flex xl:hidden">
+          <button
+            type="button"
+            aria-label="Fechar menu"
+            onClick={() => setMobileMenuOpen(false)}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+          />
 
-          <nav aria-label="Categorias" className="mt-5 flex flex-col">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`group flex items-center justify-between border-b border-white/10 py-4 transition-colors ${
-                  item.label === 'Ofertas'
-                    ? 'text-white hover:text-[#FF5500]'
-                    : pathname === item.href
-                    ? 'text-[#FF5500]'
-                    : 'text-white hover:text-[#FF5500]'
-                }`}
-              >
-                <span className="flex items-center gap-3">
-                  <span className="text-[15px] font-black uppercase tracking-[0.08em]">{item.label}</span>
-                </span>
-                <ChevronRight size={18} className="text-zinc-600 transition-transform group-hover:translate-x-1 group-hover:text-[#FF5500]" />
-              </Link>
-            ))}
-          </nav>
-
-          <div className="grid grid-cols-2 gap-3 pt-5 text-xs font-bold uppercase">
-            {customer ? (
-              <Link
-                href="/conta"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#181818] px-3 text-center text-white"
-              >
-                <User size={16} className="text-[#FF6500]" />
-                Minha Conta
-              </Link>
-            ) : (
+          <aside className="relative z-10 flex h-[100dvh] w-[min(288px,85vw)] flex-col border-r border-white/15 bg-[#0A0A0A] shadow-2xl animate-in slide-in-from-left duration-200">
+            <div className="flex items-center justify-between border-b border-white/10 bg-gradient-to-b from-[#141414] to-transparent px-4 py-3.5">
+              <FocusLogo size="xl" mobileSize="md" />
               <button
                 type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  setIsLoginOpen(true);
-                }}
-                className="flex min-h-12 items-center justify-center gap-2 rounded-lg border border-white/10 bg-[#181818] px-3 text-white"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Fechar menu"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-zinc-400 transition-colors hover:bg-white/10 hover:text-white"
               >
-                <User size={16} className="text-[#FF6500]" /> Entrar / Conta
+                <X size={18} />
               </button>
+            </div>
+
+            <nav aria-label="Menu principal" className="flex-1 space-y-4 overflow-y-auto px-3 py-4 scrollbar-thin scrollbar-thumb-white/10">
+              {NAV_GROUPS.map((group) => (
+                <div key={group.groupName} className="space-y-1">
+                  <span className="block truncate px-3 text-[10px] font-mono font-bold uppercase tracking-widest text-zinc-500">
+                    {group.groupName}
+                  </span>
+
+                  <div className="space-y-1">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+                      const isAccountItem = item.href === '/conta';
+
+                      if (isAccountItem && !customer) {
+                        return (
+                          <button
+                            key={item.href}
+                            type="button"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setIsLoginOpen(true);
+                            }}
+                            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold tracking-wide text-zinc-400 transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
+                          >
+                            <Icon size={18} className="flex-shrink-0 text-zinc-400" />
+                            <span>Entrar / Conta</span>
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-xs font-semibold tracking-wide transition-all duration-200 ${
+                            isActive
+                              ? 'bg-[#FF6500] font-bold text-white shadow-lg shadow-[#FF6500]/25'
+                              : 'text-zinc-400 hover:bg-white/[0.04] hover:text-white'
+                          }`}
+                        >
+                          <span className="flex items-center gap-3">
+                            <Icon size={18} className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-zinc-400'}`} />
+                            <span className="truncate">{item.label}</span>
+                          </span>
+                          {isActive && <ChevronRight size={14} className="flex-shrink-0 text-white/80" />}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </nav>
+
+            {customer && (
+              <div className="border-t border-white/10 bg-[#0C0C0C] p-3">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold tracking-wide text-red-400 transition-colors hover:bg-red-500/10"
+                >
+                  <LogOut size={18} />
+                  Sair da conta
+                </button>
+              </div>
             )}
-            <Link
-              href="/admin/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex min-h-12 items-center justify-center rounded-lg border border-[#FF5500]/30 bg-[#FF5500]/10 px-3 text-center font-bold text-[#FF5500]"
-            >
-              Painel Administrativo
-            </Link>
-          </div>
+          </aside>
         </div>
       )}
       <LoginModal

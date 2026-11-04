@@ -626,7 +626,7 @@ Vista seu código. Expresse sua linguagem.`,
     },
   });
 
-  // 5. Chaveiro Focus (R$ 29,90)
+  // 5. Chaveiro Focus (R$ 14,90)
   await prisma.product.create({
     data: {
       name: "Chaveiro Focus",
@@ -635,7 +635,7 @@ Vista seu código. Expresse sua linguagem.`,
       description:
         "Liga de zinco anodizado e pingente hexagonal laranja e preto com logo Focus.",
       shortDescription: "Liga de zinco anodizado e fita tática laranja Focus.",
-      basePrice: 29.9,
+      basePrice: 14.9,
       isFeatured: true,
       status: "ACTIVE",
       categories: { create: [{ categoryId: catAcessorios.id }] },
@@ -644,7 +644,27 @@ Vista seu código. Expresse sua linguagem.`,
           {
             url: "/images/products/chaveiro-focus.jpg",
             isPrimary: true,
-            altText: "Chaveiros Focus",
+            altText: "Kit completo de chaveiros Focus",
+          },
+          {
+            url: "/images/products/chaveiro-react.png",
+            altText: "Chaveiro React",
+          },
+          {
+            url: "/images/products/chaveiro-javascript.png",
+            altText: "Chaveiro JavaScript",
+          },
+          {
+            url: "/images/products/chaveiro-typescript.png",
+            altText: "Chaveiro TypeScript",
+          },
+          {
+            url: "/images/products/chaveiro-terminal.png",
+            altText: "Chaveiro Terminal",
+          },
+          {
+            url: "/images/products/chaveiro-html-tags.png",
+            altText: "Chaveiro HTML Tags",
           },
         ],
       },
@@ -656,7 +676,7 @@ Vista seu código. Expresse sua linguagem.`,
             color: "Laranja Focus",
             colorHex: "#FF6500",
             size: "Único",
-            price: 29.9,
+            price: 14.9,
             inventory: {
               create: { quantityAvailable: 100, quantityReserved: 0 },
             },

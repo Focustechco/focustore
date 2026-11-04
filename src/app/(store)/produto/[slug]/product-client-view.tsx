@@ -36,6 +36,47 @@ import { formatInstallments, formatPrice } from '@/lib/utils/formatters';
 
 const SIZE_ORDER = ['PP', 'P', 'M', 'G', 'GG', 'Único', '350ml', '750ml'];
 
+function parseProductDescription(description: string) {
+  const sections = {
+    description: [] as string[],
+    details: [] as string[],
+    care: [] as string[],
+    returns: [] as string[],
+  };
+  let currentSection: keyof typeof sections | null = null;
+
+  for (const line of description.split(/\r?\n/)) {
+    const heading = line.trim();
+    if (heading.startsWith('### 1. Descrição & Tecnologia')) {
+      currentSection = 'description';
+    } else if (heading.startsWith('### 2. Especificações Técnicas')) {
+      currentSection = 'details';
+    } else if (heading.startsWith('### 3. Cuidados & Lavagem')) {
+      currentSection = 'care';
+    } else if (heading.startsWith('### 4. Garantia & Trocas')) {
+      currentSection = 'returns';
+    } else if (currentSection && heading) {
+      sections[currentSection].push(
+        currentSection === 'details' ? heading.replace(/^-\s*/, '') : heading,
+      );
+    }
+  }
+
+  return {
+    description: sections.description.join('\n'),
+    details:
+      sections.details.length > 0
+        ? sections.details
+        : ['Informações técnicas não disponibilizadas no cadastro.'],
+    care:
+      sections.care.join('\n') ||
+      'Instruções específicas de conservação não disponibilizadas no cadastro.',
+    returns:
+      sections.returns.join('\n') ||
+      'Aplicam-se a política de trocas da loja e os direitos previstos no Código de Defesa do Consumidor.',
+  };
+}
+
 export function ProductClientView({ product }: { product: any }) {
   const router = useRouter();
   const { addItem } = useCart();
@@ -46,9 +87,34 @@ export function ProductClientView({ product }: { product: any }) {
   const [added, setAdded] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const isFocusCap = product.slug === 'bone-focus-lab';
   const isDevCollectionShirt = product.slug?.startsWith('camisa-dev-collection-');
+  const capImages = [
+    {
+      id: 'bone-focus-black',
+      url: '/images/products/bone-focus.jpg',
+      altText: 'Boné Focus Lab - Preto',
+    },
+    {
+      id: 'bone-focus-white',
+      url: '/images/products/bone-focus-white-v2.jpg',
+      altText: 'Boné Focus Lab - Branco',
+    },
+  ];
 
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
+  const descriptionSections = useMemo(
+    () => parseProductDescription(product.description || ''),
+    [product.description],
+  );
+
+  const getProductImageUrl = (url?: string | null) => {
+    if (isFocusCap && url?.endsWith('/bone-focus-white.jpg')) {
+      return '/images/products/bone-focus-white-v2.jpg';
+    }
+
+    return url || '/images/products/camiseta-focus.jpg';
+  };
 
   // Simulação de frete
   const [cep, setCep] = useState('');
@@ -58,6 +124,13 @@ export function ProductClientView({ product }: { product: any }) {
 
   // Extrair Cores Únicas
   const availableColors = useMemo(() => {
+    if (isFocusCap) {
+      return [
+        { name: 'Preto', hex: '#0D0D0D' },
+        { name: 'Branco', hex: '#FFFFFF' },
+      ];
+    }
+
     const colorMap = new Map<string, { name: string; hex: string }>();
     (product.variants || []).forEach((v: any) => {
       if (v.color && !colorMap.has(v.color)) {
@@ -73,7 +146,7 @@ export function ProductClientView({ product }: { product: any }) {
     }
 
     return Array.from(colorMap.values());
-  }, [product.variants]);
+  }, [isFocusCap, product.variants]);
 
   // Extrair Tamanhos Únicos Ordenados
   const availableSizes = useMemo(() => {
@@ -103,7 +176,9 @@ export function ProductClientView({ product }: { product: any }) {
   const [selectedSize, setSelectedSize] = useState<string>(
     availableSizes[0] || 'M'
   );
-  const galleryImages = isDevCollectionShirt
+  const galleryImages = isFocusCap
+    ? capImages.map((image, index) => ({ image, index }))
+    : isDevCollectionShirt
     ? product.images
         .map((image: any, index: number) => ({ image, index }))
         .filter(({ image }: { image: any }) => {
@@ -119,9 +194,25 @@ export function ProductClientView({ product }: { product: any }) {
                   !label.includes('white'));
         })
     : product.images.map((image: any, index: number) => ({ image, index }));
+  const selectedProductImage = isFocusCap
+    ? capImages[selectedImage]
+    : product.images[selectedImage] || product.images[0];
 
   // Variação selecionada com base na Cor + Tamanho
   const selectedVariant = useMemo(() => {
+    if (isFocusCap) {
+      const selectedColorName = selectedColor.toLowerCase();
+      const isWhite = selectedColorName.includes('branco') || selectedColorName.includes('white');
+      const matchingVariant = product.variants.find((variant: any) => {
+        const color = (variant.color || '').toLowerCase();
+        return isWhite
+          ? color.includes('branco') || color.includes('white')
+          : color.includes('preto') || color.includes('black');
+      });
+
+      return matchingVariant || (isWhite ? product.variants[1] : product.variants[0]);
+    }
+
     const exactMatch = product.variants.find(
       (v: any) =>
         (v.color || 'Padrão').toLowerCase() === selectedColor.toLowerCase() &&
@@ -135,7 +226,7 @@ export function ProductClientView({ product }: { product: any }) {
     if (colorMatch) return colorMatch;
 
     return product.variants[0];
-  }, [product.variants, selectedColor, selectedSize]);
+  }, [isFocusCap, product.variants, selectedColor, selectedSize]);
 
   // Preço e Estoque
   const currentPrice = selectedVariant?.price || product.basePrice;
@@ -145,6 +236,11 @@ export function ProductClientView({ product }: { product: any }) {
 
   const handleColorChange = (colorName: string) => {
     setSelectedColor(colorName);
+
+    if (isFocusCap) {
+      setSelectedImage(colorName.toLowerCase().includes('branco') ? 1 : 0);
+      return;
+    }
 
     // Dynamic Image Switch: Find image matching selected color
     const colorLower = colorName.toLowerCase();
@@ -186,7 +282,7 @@ export function ProductClientView({ product }: { product: any }) {
 
   const handleImageSelect = (idx: number) => {
     setSelectedImage(idx);
-    const img = product.images?.[idx];
+    const img = isFocusCap ? capImages[idx] : product.images?.[idx];
     if (img) {
       const altOrUrl = `${img.altText || ''} ${img.url || ''}`.toLowerCase();
       if (altOrUrl.includes('laranja') || altOrUrl.includes('orange')) {
@@ -225,10 +321,14 @@ export function ProductClientView({ product }: { product: any }) {
       variantId: selectedVariant.id,
       productId: product.id,
       name: product.name,
-      variantName: selectedVariant.name,
+      variantName: isFocusCap
+        ? `Boné Focus Lab - ${selectedColor} / Único`
+        : selectedVariant.name,
       price: selectedVariant.price,
       promotionalPrice: selectedVariant.promotionalPrice,
-      imageUrl: product.images[selectedImage]?.url || product.images[0]?.url,
+      imageUrl: getProductImageUrl(
+        selectedProductImage?.url,
+      ),
       sku: selectedVariant.sku,
       quantity,
       size: selectedSize,
@@ -288,7 +388,7 @@ export function ProductClientView({ product }: { product: any }) {
                   }`}
                 >
                   <Image
-                    src={img.url}
+                    src={getProductImageUrl(img.url)}
                     alt={img.altText || product.name}
                     fill
                     sizes="80px"
@@ -303,12 +403,12 @@ export function ProductClientView({ product }: { product: any }) {
           {/* Imagem Principal Grande */}
           <div className="relative flex-1 aspect-square rounded-2xl overflow-hidden bg-[#121212] border border-white/10 group">
             <Image
-              src={product.images[selectedImage]?.url || product.images[0]?.url || '/images/products/camiseta-focus.jpg'}
+              src={getProductImageUrl(selectedProductImage?.url)}
               alt={product.name}
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 55vw"
-              quality={(product.images[selectedImage]?.url || product.images[0]?.url || '').includes('/images/camisas/') ? 90 : undefined}
+              quality={selectedProductImage?.url?.includes('/images/camisas/') ? 90 : undefined}
               className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
             />
             {currentPromoPrice && (
@@ -551,7 +651,7 @@ export function ProductClientView({ product }: { product: any }) {
                     brand: product.brand,
                     basePrice: product.basePrice,
                     promotionalPrice: product.promotionalPrice,
-                    imageUrl: product.images?.[0]?.url,
+                    imageUrl: getProductImageUrl(product.images?.[0]?.url),
                     categories: product.categories,
                     variants: product.variants,
                     images: product.images,
@@ -653,188 +753,38 @@ export function ProductClientView({ product }: { product: any }) {
           </button>
         </div>
 
-        {/* 1. ABA DESCRIÇÃO & TECNOLOGIA (CLEAN & MINIMALISTA) */}
         {activeTab === 'description' && (
-          <div className="space-y-6 max-w-3xl text-sm leading-relaxed">
-            {product.description.startsWith('Dev Collection — ') ? (
-              <div className="space-y-3">
-                <h3 className="text-lg sm:text-xl font-bold text-[#FF6500]">
-                  {product.description.split('\n', 1)[0]}
-                </h3>
-                <p className="text-zinc-300 text-sm sm:text-base whitespace-pre-line">
-                  {product.description.split('\n').slice(1).join('\n').trimStart()}
-                </p>
-              </div>
-            ) : (
-              <p className="text-zinc-300 text-sm sm:text-base whitespace-pre-line">
-                {product.description}
-              </p>
-            )}
-
-            {(product.slug?.includes('camisa') ||
-              product.slug?.includes('moletom') ||
-              product.slug?.includes('polo') ||
-              product.isApparel) ? (
-              <div className="space-y-5 pt-2">
-                <div className="space-y-4 text-zinc-400 text-sm">
-                  <div>
-                    <h4 className="font-bold text-white text-sm mb-1">
-                      Tecnologia Anti-Odor & Antimicrobiana
-                    </h4>
-                    <p>
-                      Tratamento biotecnológico com nanopartículas que inibem em até 99,8% a proliferação de bactérias causadoras de odores. Mantém a peça fresca e com sensação de recém-lavada durante todo o dia de trabalho ou viagens longas.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-white text-sm mb-1">
-                      Tecido Anti-Amasso (Wrinkle-Free Tech)
-                    </h4>
-                    <p>
-                      Fibras inteligentes com memória de forma e alta recuperação elástica. Não amarrota ao sentar na cadeira de trabalho nem dentro da mochila. Os vincos suavizam naturalmente com o próprio calor do corpo ao vestir, dispensando o uso de ferro.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-white text-sm mb-1">
-                      Termorregulação & Respirabilidade Ativa
-                    </h4>
-                    <p>
-                      Estrutura de micro-trama aerada que acelera a evaporação da umidade e proporciona circulação contínua de ar, equilibrando a temperatura tanto no calor quanto em ambientes climatizados de escritório.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-white text-sm mb-1">
-                      Ergonomia & Modelagem Funcional
-                    </h4>
-                    <p>
-                      Costura plana reforçada ombro a ombro com pesponto duplo, gola em ribana canelada 2x1 anti-esgarçamento e etiqueta interna termocolante Flat-Seam sem atrito ou incômodo no pescoço.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    onClick={() => setShowSizeGuide(true)}
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#FF6500] hover:underline cursor-pointer"
-                  >
-                    <Ruler size={13} />
-                    <span>Consultar Tabela de Medidas (cm)</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4 pt-2 text-zinc-400 text-sm">
-                <div>
-                  <h4 className="font-bold text-white text-sm mb-1">
-                    Construção em Materiais Nobres
-                  </h4>
-                  <p>
-                    Materiais de nível industrial usinados com precisão, projetados para máxima durabilidade, estética clean e resistência ao uso diário contínuo.
-                  </p>
-                </div>
-                <div>
-                  <h4 className="font-bold text-white text-sm mb-1">
-                    Design Ergonômico & Produtividade
-                  </h4>
-                  <p>
-                    Projetado para aprimorar sua rotina de trabalho, organização do setup e conforto visual durante o dia a dia de código e criação.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
+          <section className="max-w-3xl space-y-3 text-sm leading-relaxed">
+            <h3 className="text-lg font-bold text-white">Descrição & Tecnologia</h3>
+            <p className="whitespace-pre-line text-zinc-300">
+              {descriptionSections.description || product.description}
+            </p>
+          </section>
         )}
 
-        {/* 2. ABA ESPECIFICAÇÕES TÉCNICAS (CLEAN) */}
         {activeTab === 'details' && (
-          <div className="max-w-3xl text-sm">
-            <div className="divide-y divide-white/10 text-xs">
-              {(product.slug?.includes('camisa') ||
-                product.slug?.includes('moletom') ||
-                product.slug?.includes('polo') ||
-                product.isApparel) ? (
-                <>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Tecnologia do Tecido</span>
-                    <span className="text-white text-right font-medium">Focus TechFiber™ (Anti-Odor + Wrinkle-Free)</span>
-                  </div>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Composição</span>
-                    <span className="text-white text-right font-medium">
-                      {product.slug?.includes('moletom')
-                        ? '100% Algodão Nobre Heavyweight (380g/m²) peluciado'
-                        : product.slug?.includes('polo')
-                        ? '97% Algodão Piquet + 3% Elastano Inteligente'
-                        : '100% Algodão Egípcio Penteado Peletizado'}
-                    </span>
-                  </div>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Gramatura</span>
-                    <span className="text-white text-right font-medium">
-                      {product.slug?.includes('moletom') ? '380 g/m² (Heavyweight Fleece)' : '260 g/m² (Encorpada Premium)'}
-                    </span>
-                  </div>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Tratamento</span>
-                    <span className="text-white text-right font-medium">Silver-Ion Antibacterial + Peach Skin Anti-Pilling</span>
-                  </div>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Modelagem</span>
-                    <span className="text-white text-right font-medium">Streetwear Regular Fit Estruturado</span>
-                  </div>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Gola & Costura</span>
-                    <span className="text-white text-right font-medium">Ribana 2x1 com pesponto duplo e reforço ombro a ombro</span>
-                  </div>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Etiqueta</span>
-                    <span className="text-white text-right font-medium">Termocolante Flat-Seam interna (Sem atrito)</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">SKU</span>
-                    <span className="text-white text-right font-mono">{product.sku}</span>
-                  </div>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Material Principal</span>
-                    <span className="text-white text-right font-medium">{product.shortDescription || 'Liga Metálica / Alumínio Industrial'}</span>
-                  </div>
-                  <div className="py-2.5 flex justify-between gap-4">
-                    <span className="text-zinc-400 font-medium">Peso com Embalagem</span>
-                    <span className="text-white text-right font-medium">{product.weightGrams || 350}g</span>
-                  </div>
-                </>
-              )}
-              <div className="py-2.5 flex justify-between gap-4">
-                <span className="text-zinc-400 font-medium">Origem & Desenvolvimento</span>
-                <span className="text-white text-right font-medium">Engenharia Focus Store® — Fabricado no Brasil</span>
-              </div>
-            </div>
-          </div>
+          <section className="max-w-3xl space-y-3 text-sm">
+            <h3 className="text-lg font-bold text-white">Especificações Técnicas</h3>
+            <ul className="list-disc space-y-2 pl-5 text-zinc-300">
+              {descriptionSections.details.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          </section>
         )}
 
-        {/* 3. ABA CUIDADOS & LAVAGEM (CLEAN) */}
         {activeTab === 'care' && (
-          <div className="max-w-3xl space-y-3 text-sm text-zinc-400">
-            <p><strong className="text-white font-medium">Lavagem:</strong> Lavar na máquina em ciclo suave ou normal com água fria (máximo 30°C).</p>
-            <p><strong className="text-white font-medium">Sabão e Alvejante:</strong> Usar sabão neutro. Não usar alvejantes clorados para preservar as nanopartículas anti-odor e a intensidade da cor.</p>
-            <p><strong className="text-white font-medium">Secagem:</strong> Secar no varal à sombra. O tecido respirável possui secagem ultrarrápida natural.</p>
-            <p><strong className="text-white font-medium">Passadoria:</strong> Praticamente dispensa o ferro graças à tecnologia Wrinkle-Free. Se desejar, passar em temperatura média pelo avesso.</p>
-          </div>
+          <section className="max-w-3xl space-y-3 text-sm leading-relaxed">
+            <h3 className="text-lg font-bold text-white">Cuidados & Lavagem</h3>
+            <p className="whitespace-pre-line text-zinc-300">{descriptionSections.care}</p>
+          </section>
         )}
 
-        {/* 4. ABA GARANTIA & TROCAS (CLEAN) */}
         {activeTab === 'returns' && (
-          <div className="max-w-3xl space-y-3 text-sm text-zinc-400">
-            <p><strong className="text-white font-medium">1ª Troca Grátis:</strong> Até 30 dias corridos após o recebimento para troca de tamanho ou cor sem custo de frete na primeira solicitação.</p>
-            <p><strong className="text-white font-medium">Direito de Arrependimento:</strong> Até 7 dias corridos após a entrega para devolução com reembolso integral do valor pago, conforme o Código de Defesa do Consumidor.</p>
-            <p><strong className="text-white font-medium">Garantia contra Defeitos:</strong> 90 dias de cobertura integral para qualquer eventual defeito de costura ou material.</p>
-            <p><strong className="text-white font-medium">Atendimento:</strong> Suporte ágil via WhatsApp ou e-mail com resposta em até 2 horas úteis.</p>
-          </div>
+          <section className="max-w-3xl space-y-3 text-sm leading-relaxed">
+            <h3 className="text-lg font-bold text-white">Garantia & Trocas</h3>
+            <p className="whitespace-pre-line text-zinc-300">{descriptionSections.returns}</p>
+          </section>
         )}
       </div>
 

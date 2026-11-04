@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   Warehouse,
@@ -69,27 +69,38 @@ export default function AdminInventoryPage() {
   const [adjustType, setAdjustType] = useState<'IN' | 'OUT' | 'ADJUSTMENT'>('IN');
   const [adjustReason, setAdjustReason] = useState('Reposição de Lote');
   const [adjusting, setAdjusting] = useState(false);
+  const [quickAdjusting, setQuickAdjusting] = useState<Set<string>>(new Set());
+  const quickAdjustingRef = useRef(new Set<string>());
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const fetchInventory = async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/admin/inventory');
-      const data = await res.json();
-      if (data.success) {
-        setItems(data.variants);
-
-        // Extract unique categories
-        const catMap = new Map();
-        data.variants.forEach((v: InventoryItem) => {
-          v.product.categories?.forEach((pc) => {
-            if (pc.category) catMap.set(pc.category.id, pc.category);
-          });
-        });
-        setCategories(Array.from(catMap.values()));
+      const data = (await res.json()) as {
+        success?: boolean;
+        variants?: InventoryItem[];
+        error?: string;
+      };
+      if (!res.ok || !data.success || !data.variants) {
+        throw new Error(data.error || 'Não foi possível carregar o estoque.');
       }
-    } catch (err) {
-      console.error('Erro ao buscar estoque:', err);
+
+      setItems(data.variants);
+
+      const catMap = new Map<string, { id: string; name: string }>();
+      data.variants.forEach((variant) => {
+        variant.product.categories?.forEach(({ category }) => {
+          if (category) catMap.set(category.id, category);
+        });
+      });
+      setCategories(Array.from(catMap.values()));
+      setMessage(null);
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Erro ao carregar estoque.',
+      });
     } finally {
       setLoading(false);
     }
@@ -101,25 +112,12 @@ export default function AdminInventoryPage() {
 
   // Quick adjust inline (+1 or -1)
   const handleQuickAdjust = async (variantId: string, delta: number) => {
-    try {
-      // Optimistic update
-      setItems((prev) =>
-        prev.map((item) => {
-          if (item.id === variantId) {
-            const current = item.inventory?.quantityAvailable || 0;
-            const newQty = Math.max(0, current + delta);
-            return {
-              ...item,
-              inventory: item.inventory
-                ? { ...item.inventory, quantityAvailable: newQty }
-                : { id: '', quantityAvailable: newQty, quantityReserved: 0, lowStockThreshold: 5, movements: [] },
-            };
-          }
-          return item;
-        })
-      );
+    if (quickAdjustingRef.current.has(variantId)) return;
+    quickAdjustingRef.current.add(variantId);
+    setQuickAdjusting((current) => new Set(current).add(variantId));
 
-      await fetch(`/api/admin/inventory/${variantId}`, {
+    try {
+      const response = await fetch(`/api/admin/inventory/${variantId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -128,8 +126,27 @@ export default function AdminInventoryPage() {
           reason: delta > 0 ? 'Ajuste rápido (+1)' : 'Ajuste rápido (-1)',
         }),
       });
-    } catch (err) {
-      fetchInventory();
+      const data = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Não foi possível ajustar o estoque.');
+      }
+
+      await fetchInventory();
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Erro ao ajustar estoque.',
+      });
+    } finally {
+      quickAdjustingRef.current.delete(variantId);
+      setQuickAdjusting((current) => {
+        const next = new Set(current);
+        next.delete(variantId);
+        return next;
+      });
     }
   };
 
@@ -471,7 +488,7 @@ export default function AdminInventoryPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleQuickAdjust(item.id, -1)}
-                            disabled={available <= 0}
+                            disabled={available <= 0 || quickAdjusting.has(item.id)}
                             className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 disabled:opacity-30 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
                             title="Diminuir 1 unidade"
                           >
@@ -490,6 +507,7 @@ export default function AdminInventoryPage() {
                           </span>
                           <button
                             onClick={() => handleQuickAdjust(item.id, 1)}
+                            disabled={quickAdjusting.has(item.id)}
                             className="w-6 h-6 rounded-md bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors"
                             title="Aumentar 1 unidade"
                           >

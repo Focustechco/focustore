@@ -8,6 +8,7 @@ export type CustomerSession = {
   id: string;
   name: string | null;
   email: string;
+  role?: string;
 };
 
 type LoginModalProps = {

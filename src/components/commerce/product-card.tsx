@@ -47,10 +47,15 @@ export function ProductCard({ product }: ProductCardProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const [added, setAdded] = useState(false);
 
+  const isFocusCap = product.slug === 'bone-focus-lab';
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
   const selectedImage = product.images[currentImageIndex] || product.images[0];
-  const primaryImage = selectedImage?.url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80';
+  const primaryImage = isFocusCap
+    ? currentImageIndex === 0
+      ? '/images/products/bone-focus.jpg'
+      : '/images/products/bone-focus-white-v2.jpg'
+    : selectedImage?.url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80';
   const frontImage = product.images.find((image) =>
     image.altText?.toLowerCase().includes('frente')
   );
@@ -83,6 +88,13 @@ export function ProductCard({ product }: ProductCardProps) {
 
   // Extrair cores únicas do produto
   const colorList = React.useMemo(() => {
+    if (product.slug === 'bone-focus-lab') {
+      return [
+        { name: 'Preto', hex: '#0D0D0D', imgIndex: 0 },
+        { name: 'Branco', hex: '#FFFFFF', imgIndex: 1 },
+      ];
+    }
+
     const list: { name: string; hex: string; imgIndex: number }[] = [];
     const seen = new Set<string>();
 
@@ -114,25 +126,36 @@ export function ProductCard({ product }: ProductCardProps) {
     });
 
     return list;
-  }, [product.variants, product.images]);
+  }, [product.slug, product.variants, product.images]);
+
+  const selectedVariant = isFocusCap
+    ? product.variants.find((variant) => {
+        const color = variant.color?.toLowerCase() || '';
+        return currentImageIndex === 1
+          ? color.includes('branco') || color.includes('white')
+          : color.includes('preto') || color.includes('black');
+      }) || (currentImageIndex === 1 ? product.variants[1] : product.variants[0])
+    : product.variants[0];
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!defaultVariant) return;
+    if (!selectedVariant) return;
 
     addItem({
-      variantId: defaultVariant.id,
+      variantId: selectedVariant.id,
       productId: product.id,
       name: product.name,
-      variantName: defaultVariant.name,
-      price: defaultVariant.price,
-      promotionalPrice: defaultVariant.promotionalPrice,
+      variantName: isFocusCap
+        ? `Boné Focus Lab - ${currentImageIndex === 1 ? 'Branco' : 'Preto'} / Único`
+        : selectedVariant.name,
+      price: selectedVariant.price,
+      promotionalPrice: selectedVariant.promotionalPrice,
       imageUrl: primaryImage,
-      sku: defaultVariant.sku,
+      sku: selectedVariant.sku,
       quantity: 1,
-      size: defaultVariant.size,
-      color: defaultVariant.color,
+      size: selectedVariant.size,
+      color: isFocusCap ? (currentImageIndex === 1 ? 'Branco' : 'Preto') : selectedVariant.color,
     });
 
     setAdded(true);

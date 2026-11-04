@@ -36,6 +36,7 @@
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.3",
     "prisma": "^6.4.1",
+    "supabase": "^3.0.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"

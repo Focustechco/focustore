@@ -1,5 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const PRODUCT_DESCRIPTIONS = require("./product-descriptions.json");
+const PRODUCT_WARRANTY = require("../src/modules/catalog/product-warranty.json");
 const prisma = new PrismaClient();
 
 const APPAREL_COLORS_ALL = [
@@ -14,6 +15,14 @@ const APPAREL_COLORS_BW = [
 const APPAREL_SIZES = ["PP", "P", "M", "G", "GG"];
 const DEV_COLLECTION_COLORS = APPAREL_COLORS_BW;
 const DEV_COLLECTION_STOCK = [25, 35, 50, 40, 20];
+const WARRANTY_HEADING = "### 4. Garantia & Trocas";
+
+function withProductWarranty(description) {
+  const descriptionWithoutWarranty = description
+    .replace(/^### 4\.\s*Garantia & Trocas\s*$[\s\S]*$/m, "")
+    .trimEnd();
+  return `${descriptionWithoutWarranty}\n\n${WARRANTY_HEADING}\n${PRODUCT_WARRANTY.text}`;
+}
 
 function createDevCollectionVariants(
   name,
@@ -944,7 +953,9 @@ Vista seu código. Expresse sua linguagem.`,
           slug: item.slug,
           sku: item.sku,
           description:
-            PRODUCT_DESCRIPTIONS[item.slug]?.description || item.description,
+            withProductWarranty(
+              PRODUCT_DESCRIPTIONS[item.slug]?.description || item.description,
+            ),
           shortDescription:
             PRODUCT_DESCRIPTIONS[item.slug]?.shortDescription ||
             item.shortDescription,
@@ -961,7 +972,9 @@ Vista seu código. Expresse sua linguagem.`,
           slug: item.slug,
           sku: item.sku,
           description:
-            PRODUCT_DESCRIPTIONS[item.slug]?.description || item.description,
+            withProductWarranty(
+              PRODUCT_DESCRIPTIONS[item.slug]?.description || item.description,
+            ),
           shortDescription:
             PRODUCT_DESCRIPTIONS[item.slug]?.shortDescription ||
             item.shortDescription,

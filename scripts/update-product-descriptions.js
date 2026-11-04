@@ -2,6 +2,7 @@ require("dotenv/config");
 
 const { PrismaClient } = require("@prisma/client");
 const PRODUCT_DESCRIPTIONS = require("./product-descriptions.json");
+const PRODUCT_WARRANTY = require("../src/modules/catalog/product-warranty.json");
 
 const prisma = new PrismaClient();
 const DEV_COLLECTION_DETAILS = {
@@ -53,10 +54,18 @@ Seque à sombra, em local ventilado, sobre cabide ou superfície lisa. Não util
 A primeira troca por tamanho é gratuita em até 30 dias após o recebimento, conforme a FAQ da loja, com a peça nova, sem uso e com etiquetas originais. O arrependimento pode ser solicitado em até 7 dias corridos após o recebimento. Defeitos seguem os prazos da garantia legal aplicável e devem ser enviados para avaliação. Consulte a página Trocas e Devoluções para atendimento.`;
 }
 
+function withProductWarranty(description) {
+  const descriptionWithoutWarranty = description
+    .replace(/^### 4\.\s*Garantia & Trocas\s*$[\s\S]*$/m, "")
+    .trimEnd();
+  return `${descriptionWithoutWarranty}\n\n### 4. Garantia & Trocas\n${PRODUCT_WARRANTY.text}`;
+}
+
 async function updateProductDescriptions() {
   const allProducts = await prisma.product.findMany({
     select: {
       slug: true,
+      description: true,
       collections: {
         select: { collection: { select: { slug: true } } },
       },
@@ -72,19 +81,38 @@ async function updateProductDescriptions() {
     );
   }
 
+<<<<<<< HEAD
   const products = allProducts.filter(
     (product) => PRODUCT_DESCRIPTIONS[product.slug],
   );
+=======
+  const configuredSlugs = new Set(allProducts.map((product) => product.slug));
+  const products = allProducts.filter((product) => PRODUCT_DESCRIPTIONS[product.slug]);
+>>>>>>> 3901662ef67626b9c93f13d8836f5a3731178504
   await prisma.$transaction(
     products.map((product) =>
       prisma.product.update({
         where: { slug: product.slug },
         data: {
+<<<<<<< HEAD
           description: withCompleteDevCollectionSections(
             product.slug,
             PRODUCT_DESCRIPTIONS[product.slug],
           ),
           shortDescription: PRODUCT_DESCRIPTIONS[product.slug].shortDescription,
+=======
+          description: withProductWarranty(
+            isDevCollectionProduct(product)
+              ? product.description
+              : PRODUCT_DESCRIPTIONS[product.slug].description,
+          ),
+          ...(isDevCollectionProduct(product)
+            ? {}
+            : {
+                shortDescription:
+                  PRODUCT_DESCRIPTIONS[product.slug].shortDescription,
+              }),
+>>>>>>> 3901662ef67626b9c93f13d8836f5a3731178504
         },
       }),
     ),
@@ -95,7 +123,11 @@ async function updateProductDescriptions() {
     (slug) => !databaseSlugs.has(slug),
   );
   console.log(
+<<<<<<< HEAD
     `Updated descriptions for ${products.length} catalog products, including the Dev Collection.`,
+=======
+    `Updated warranty text for ${products.length} catalog products; Dev Collection descriptions were otherwise preserved.`,
+>>>>>>> 3901662ef67626b9c93f13d8836f5a3731178504
   );
   if (missingSlugs.length > 0) {
     console.log(`Skipped products not present in this database: ${missingSlugs.join(", ")}`);

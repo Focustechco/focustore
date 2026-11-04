@@ -77,7 +77,6 @@ export function ProductCard({ product }: ProductCardProps) {
     (isWhiteSelected ? whiteFrontImage : blackFrontImage || frontImage);
   const canPreviewFront = Boolean(hoverImage);
   const defaultVariant = product.variants[0];
-  const categoryName = product.categories?.[0]?.category.name || 'Vestuário';
   const price = defaultVariant?.price || product.basePrice;
   const reviewsCount = REVIEW_COUNTS[product.slug] || 150;
 
@@ -204,13 +203,6 @@ export function ProductCard({ product }: ProductCardProps) {
       {/* 2. BASE DO CARD: INFORMAÇÕES, AVALIAÇÃO, PREÇO & BOTÃO CARRINHO LARANJA */}
       <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1 gap-2.5 bg-[#0F0F0F] border-t border-white/5">
         <div className="space-y-1.5 flex flex-col">
-          {/* Tag de Categoria com altura padronizada */}
-          <div className="h-5 flex items-center">
-            <span className="inline-block px-2 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-medium text-zinc-400 tracking-wider truncate max-w-full">
-              {categoryName}
-            </span>
-          </div>
-
           {/* Nome do Produto com altura padronizada para 2 linhas exatas */}
           <div className="h-9 sm:h-10 flex items-start">
             <Link

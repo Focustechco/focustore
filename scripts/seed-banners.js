@@ -1,9 +1,7 @@
-require("./seed-safety.cjs").assertDemoSeed();
-const { PrismaClient } = require("@prisma/client");
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const DEFAULT_BANNERS = [
+const HERO_BANNERS = [
   {
     title: "IDEIAS TAMBÉM\nSE USAM.",
     subtitle:
@@ -37,6 +35,98 @@ const DEFAULT_BANNERS = [
     placement: "home_hero",
     isActive: true,
   },
+];
+
+const FEATURED_BANNERS = [
+  {
+    title: "KITS E\nPRESENTES",
+    subtitle: "Para quem pensa diferente.",
+    ctaText: "Ver kits",
+    ctaLink: "/categoria/kits-e-presentes",
+    imageUrl: "/images/banners/kits-presentes-banner.png",
+    position: 0,
+    placement: "home_featured",
+    isActive: true,
+  },
+  {
+    title: "PRODUTOS\nEXCLUSIVOS",
+    subtitle: "Design que inspira.",
+    ctaText: "Explorar",
+    ctaLink: "/colecao/focus-lab",
+    imageUrl: "/images/banners/produtos-exclusivos-banner.png",
+    position: 1,
+    placement: "home_featured",
+    isActive: true,
+  },
+  {
+    title: "FAÇA PARTE\nDO MOVIMENTO",
+    subtitle: "Mais que uma loja, um movimento.",
+    ctaText: "Saiba mais",
+    ctaLink: "/colecao/focus-academy",
+    imageUrl: "/images/banners/faca-parte-movimento.png",
+    position: 2,
+    placement: "home_featured",
+    isActive: true,
+  },
+];
+
+const REAL_LIFE_BANNERS = [
+  {
+    title: "@team.focus",
+    subtitle: "Camisa Focus Classic Black",
+    ctaText: "Ver no Instagram",
+    ctaLink: "https://instagram.com/focus.store",
+    imageUrl: "/images/community/real-team-duo.jpg",
+    position: 0,
+    placement: "home_real_life",
+    isActive: true,
+  },
+  {
+    title: "@focus.techcrew",
+    subtitle: "Camisa Focus Oficial & Drop Summit",
+    ctaText: "Ver no Instagram",
+    ctaLink: "https://instagram.com/focus.store",
+    imageUrl: "/images/community/real-team-booth.jpg",
+    position: 1,
+    placement: "home_real_life",
+    isActive: true,
+  },
+  {
+    title: "@raul.tech",
+    subtitle: "Camisa Focus Oficial Tech Summit",
+    ctaText: "Ver no Instagram",
+    ctaLink: "https://instagram.com/focus.store",
+    imageUrl: "/images/community/real-event-attendee.jpg",
+    position: 2,
+    placement: "home_real_life",
+    isActive: true,
+  },
+  {
+    title: "@felipe.creator",
+    subtitle: "Camisa Focus Classic Black",
+    ctaText: "Ver no Instagram",
+    ctaLink: "https://instagram.com/focus.store",
+    imageUrl: "/images/community/real-event-tripod.jpg",
+    position: 3,
+    placement: "home_real_life",
+    isActive: true,
+  },
+  {
+    title: "@joao.dev",
+    subtitle: "Camisa Focus & Caderno Focus",
+    ctaText: "Ver no Instagram",
+    ctaLink: "https://instagram.com/focus.store",
+    imageUrl: "/images/community/real-office-desk.jpg",
+    position: 4,
+    placement: "home_real_life",
+    isActive: true,
+  },
+];
+
+const DEFAULT_BANNERS = [
+  ...HERO_BANNERS,
+  ...FEATURED_BANNERS,
+  ...REAL_LIFE_BANNERS,
 ];
 
 async function seedBanners() {

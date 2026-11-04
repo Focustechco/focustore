@@ -105,7 +105,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error creating coupon:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao criar cupom.' },
+      { success: false, error: 'Erro ao criar cupom.' },
       { status: 500 }
     );
   }

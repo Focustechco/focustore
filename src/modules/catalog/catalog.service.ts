@@ -1,6 +1,12 @@
 import { prisma } from '@/lib/db/prisma';
-
-const HIDDEN_PRODUCT_SLUGS = ['camisa-dev-collection-csharp'];
+import { HIDDEN_PRODUCT_SLUGS } from './catalog-policy';
+import {
+  fetchCatalogCategories,
+  fetchCatalogProduct,
+  fetchCatalogProducts,
+  isFastApiCatalogEnabled,
+} from '@/lib/api/focus-api';
+import { toStoreCategory, toStoreProduct } from './catalog-api.adapter';
 
 export class CatalogService {
   static async getCollections() {
@@ -65,6 +71,13 @@ export class CatalogService {
   }
 
   static async getCategories() {
+    if (isFastApiCatalogEnabled) {
+      return (await fetchCatalogCategories()).map((category) => ({
+        ...toStoreCategory(category),
+        _count: { products: 0 },
+      }));
+    }
+
     try {
       return await prisma.category.findMany({
         where: { isActive: true },
@@ -88,6 +101,16 @@ export class CatalogService {
   }
 
   static async getCategoryBySlug(slug: string) {
+    if (isFastApiCatalogEnabled) {
+      const category = (await fetchCatalogCategories()).find((item) => item.slug === slug);
+      if (!category) return null;
+      const products = (await fetchCatalogProducts())
+        .filter((product) => product.categories.some((item) => item.slug === slug))
+        .filter((product) => !HIDDEN_PRODUCT_SLUGS.includes(product.slug))
+        .map((product) => ({ product: toStoreProduct(product) }));
+      return { ...toStoreCategory(category), products };
+    }
+
     try {
       return await prisma.category.findUnique({
         where: { slug },
@@ -148,6 +171,32 @@ export class CatalogService {
     minPrice?: number;
     maxPrice?: number;
   }) {
+    if (isFastApiCatalogEnabled) {
+      const { categorySlug, search, minPrice, maxPrice, sortBy } = params || {};
+      let products = (await fetchCatalogProducts())
+        .filter((product) => !HIDDEN_PRODUCT_SLUGS.includes(product.slug))
+        .map(toStoreProduct);
+
+      if (categorySlug && categorySlug !== 'todos') {
+        products = products.filter((product) =>
+          product.categories.some(({ category }) => category.slug === categorySlug)
+        );
+      }
+      if (search) {
+        const term = search.toLowerCase();
+        products = products.filter((product) =>
+          [product.name, product.description, product.brand].some((value) =>
+            value.toLowerCase().includes(term)
+          )
+        );
+      }
+      if (minPrice !== undefined) products = products.filter((product) => product.basePrice >= minPrice);
+      if (maxPrice !== undefined) products = products.filter((product) => product.basePrice <= maxPrice);
+      if (sortBy === 'price_asc') products.sort((a, b) => a.basePrice - b.basePrice);
+      if (sortBy === 'price_desc') products.sort((a, b) => b.basePrice - a.basePrice);
+      return products;
+    }
+
     try {
       const { categorySlug, search, sortBy, minPrice, maxPrice } = params || {};
 
@@ -198,11 +247,18 @@ export class CatalogService {
       });
     } catch (error) {
       console.error('Error fetching all products:', error);
-      return [];
+      throw error;
     }
   }
 
   static async getProductBySlug(slug: string) {
+    if (isFastApiCatalogEnabled) {
+      const product = await fetchCatalogProduct(slug);
+      return product && !HIDDEN_PRODUCT_SLUGS.includes(product.slug)
+        ? toStoreProduct(product)
+        : null;
+    }
+
     try {
       const product = await prisma.product.findUnique({
         where: { slug },
@@ -246,6 +302,7 @@ export class CatalogService {
             include: { inventory: true },
             orderBy: { position: 'asc' },
           },
+          categories: { include: { category: true } },
         },
         take: 4,
       });

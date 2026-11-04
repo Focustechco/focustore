@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
+import { isFiniteNumberLike, isNonEmptyString } from '@/lib/security/input';
 
 export async function GET(
   request: Request,
@@ -73,6 +74,22 @@ export async function PUT(
       images,
       variants,
     } = body;
+
+    if ((name !== undefined && !isNonEmptyString(name, 150)) ||
+      (slug !== undefined && !isNonEmptyString(slug, 180)) ||
+      (sku !== undefined && !isNonEmptyString(sku, 120)) ||
+      (basePrice !== undefined && (!isFiniteNumberLike(basePrice) || Number(basePrice) <= 0)) ||
+      (promotionalPrice !== undefined && promotionalPrice !== null &&
+        (!isFiniteNumberLike(promotionalPrice) || Number(promotionalPrice) < 0)) ||
+      (variants !== undefined && !Array.isArray(variants)) ||
+      (images !== undefined && !Array.isArray(images)) ||
+      (categoryIds !== undefined && !Array.isArray(categoryIds)) ||
+      (collectionIds !== undefined && !Array.isArray(collectionIds))) {
+      return NextResponse.json(
+        { success: false, error: 'Dados de produto inválidos.' },
+        { status: 400 }
+      );
+    }
 
     const existingProduct = await prisma.product.findUnique({
       where: { id },
@@ -248,10 +265,10 @@ export async function PUT(
     });
 
     return NextResponse.json({ success: true, product: fullProduct });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating product:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar produto.' },
+      { success: false, error: 'Erro ao atualizar produto.' },
       { status: 500 }
     );
   }
@@ -278,7 +295,30 @@ export async function DELETE(
       );
     }
 
-    // Clean up dependent tables
+    const hasOrderHistory = await prisma.orderItem.count({
+      where: { variant: { productId: id } },
+    });
+
+    if (hasOrderHistory > 0) {
+      const archived = await prisma.product.update({
+        where: { id },
+        data: { status: 'ARCHIVED' },
+      });
+
+      revalidatePath('/');
+      revalidatePath('/colecoes');
+      revalidatePath('/categoria/[slug]', 'page');
+      revalidatePath(`/produto/${existing.slug}`);
+
+      return NextResponse.json({
+        success: true,
+        archived: true,
+        product: archived,
+        message: 'Produto arquivado para preservar o histórico de pedidos.',
+      });
+    }
+
+    // A product without order history can be removed with its non-historical data.
     await prisma.productImage.deleteMany({ where: { productId: id } });
     await prisma.productCategory.deleteMany({ where: { productId: id } });
     await prisma.collectionProduct.deleteMany({ where: { productId: id } });
@@ -287,7 +327,6 @@ export async function DELETE(
     for (const v of existing.variants) {
       await prisma.inventory.deleteMany({ where: { variantId: v.id } });
       await prisma.cartItem.deleteMany({ where: { variantId: v.id } });
-      await prisma.orderItem.deleteMany({ where: { variantId: v.id } });
       await prisma.wishlistItem.deleteMany({ where: { variantId: v.id } });
     }
 
@@ -303,10 +342,10 @@ export async function DELETE(
       success: true,
       message: 'Produto excluído com sucesso.',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error deleting product:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao excluir produto.' },
+      { success: false, error: 'Erro ao excluir produto.' },
       { status: 500 }
     );
   }

@@ -75,6 +75,14 @@ export class CheckoutService {
         include: { items: true, payments: true },
       });
       if (existingOrder) {
+        const sameCustomer = input.userId
+          ? existingOrder.userId === input.userId
+          : !existingOrder.userId && existingOrder.guestEmail === input.customer.email;
+
+        if (!sameCustomer) {
+          throw new Error('A chave de idempotência já está associada a outro pedido.');
+        }
+
         return {
           order: existingOrder,
           payment: existingOrder.payments[0] || null,
@@ -109,7 +117,7 @@ export class CheckoutService {
           );
         }
 
-        const realPrice = variant.promotionalPrice || variant.price;
+        const realPrice = variant.promotionalPrice ?? variant.price;
         const itemTotal = realPrice * itemInput.quantity;
         calculatedSubtotal += itemTotal;
 

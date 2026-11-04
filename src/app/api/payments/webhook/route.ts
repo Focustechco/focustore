@@ -22,7 +22,8 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 400 });
+  } catch (err: unknown) {
+    console.error('Payment webhook error:', err);
+    return NextResponse.json({ error: 'Falha ao processar webhook.' }, { status: 400 });
   }
 }

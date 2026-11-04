@@ -102,7 +102,7 @@ export async function PUT(
   } catch (error: any) {
     console.error('Error updating customer:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar cliente.' },
+      { success: false, error: 'Erro ao atualizar cliente.' },
       { status: 500 }
     );
   }

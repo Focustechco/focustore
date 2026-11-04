@@ -1,11 +1,18 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { AdminSidebar } from '@/components/layout/admin-sidebar';
+import { getAuthenticatedUser } from '@/lib/auth/session';
 
-export default function AdminLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getAuthenticatedUser();
+  if (!user || !['ADMIN', 'MANAGER'].includes(user.role)) {
+    redirect('/login?returnTo=/admin');
+  }
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-[#080808] text-white print:bg-white print:text-black print:min-h-0 print:block print:p-0">
       <div className="print:hidden">

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
+import { isFiniteNumberLike, isNonEmptyString, isNonNegativeIntegerLike } from '@/lib/security/input';
 
 export async function GET(request: Request) {
   try {
@@ -80,7 +81,24 @@ export async function POST(request: Request) {
       variants = [],
     } = body;
 
-    if (!name || !sku || basePrice === undefined) {
+    const validVariants = Array.isArray(variants) && variants.every((variant) => (
+      variant &&
+      isFiniteNumberLike(variant.price ?? basePrice) &&
+      (variant.stock === undefined || isNonNegativeIntegerLike(variant.stock)) &&
+      (variant.quantityAvailable === undefined || isNonNegativeIntegerLike(variant.quantityAvailable))
+    ));
+    const validImages = Array.isArray(images) && images.every((image) => (
+      typeof image === 'string' ? isNonEmptyString(image, 2048) :
+        image && isNonEmptyString(image.url, 2048)
+    ));
+
+    if (!isNonEmptyString(name, 150) || !isNonEmptyString(sku, 120) ||
+      !isFiniteNumberLike(basePrice) || Number(basePrice) <= 0 ||
+      (promotionalPrice !== undefined && promotionalPrice !== null &&
+        (!isFiniteNumberLike(promotionalPrice) || Number(promotionalPrice) < 0)) ||
+      !Array.isArray(categoryIds) || !categoryIds.every((id: unknown) => isNonEmptyString(id, 100)) ||
+      !Array.isArray(collectionIds) || !collectionIds.every((id: unknown) => isNonEmptyString(id, 100)) ||
+      !validImages || !validVariants) {
       return NextResponse.json(
         { success: false, error: 'Nome, SKU e Preço Base são obrigatórios.' },
         { status: 400 }
@@ -113,7 +131,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const product = await prisma.product.create({
+    const product = await prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
       data: {
         name,
         slug: finalSlug,
@@ -150,14 +169,14 @@ export async function POST(request: Request) {
           })),
         },
       },
-    });
+      });
 
     // Create variants if provided
     if (Array.isArray(variants) && variants.length > 0) {
       for (let i = 0; i < variants.length; i++) {
         const v = variants[i];
         const variantSku = v.sku || `${sku}-${v.color || 'STD'}-${v.size || i + 1}`;
-        const createdVariant = await prisma.productVariant.create({
+        const createdVariant = await tx.productVariant.create({
           data: {
             productId: product.id,
             sku: variantSku,
@@ -175,10 +194,10 @@ export async function POST(request: Request) {
         });
 
         // Create inventory
-        await prisma.inventory.create({
+        await tx.inventory.create({
           data: {
             variantId: createdVariant.id,
-            quantityAvailable: Number(v.stock ?? v.quantityAvailable ?? 50),
+            quantityAvailable: Number(v.stock ?? v.quantityAvailable ?? 0),
             quantityReserved: 0,
             lowStockThreshold: 5,
           },
@@ -186,7 +205,7 @@ export async function POST(request: Request) {
       }
     } else {
       // Default standard variant
-      const defaultVariant = await prisma.productVariant.create({
+      const defaultVariant = await tx.productVariant.create({
         data: {
           productId: product.id,
           sku: `${sku}-STD`,
@@ -199,15 +218,18 @@ export async function POST(request: Request) {
         },
       });
 
-      await prisma.inventory.create({
+      await tx.inventory.create({
         data: {
           variantId: defaultVariant.id,
-          quantityAvailable: 50,
+          quantityAvailable: 0,
           quantityReserved: 0,
           lowStockThreshold: 5,
         },
       });
-    }
+      }
+
+      return product;
+    });
 
     // Revalidate store paths
     revalidatePath('/');
@@ -226,11 +248,12 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ success: true, product: createdFullProduct }, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating product:', error);
+    const status = error && typeof error === 'object' && 'code' in error && error.code === 'P2002' ? 409 : 500;
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao cadastrar produto.' },
-      { status: 500 }
+      { success: false, error: status === 409 ? 'SKU ou slug já existe.' : 'Erro ao cadastrar produto.' },
+      { status }
     );
   }
 }

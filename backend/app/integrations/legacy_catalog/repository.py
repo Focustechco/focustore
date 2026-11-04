@@ -75,3 +75,11 @@ class LegacyCatalogRepository:
             ''', (limit, offset)).fetchall()
             return CatalogPage(items=[map_category(row) for row in rows],
                                total=total, offset=offset, limit=limit)
+
+    def category(self, slug: str) -> CatalogCategory | None:
+        with self.connection() as connection:
+            row = connection.execute(f'''
+                SELECT {CATEGORY_COLUMNS} FROM categories
+                WHERE slug = ? AND is_active = 1
+            ''', (slug,)).fetchone()
+            return map_category(row) if row else None

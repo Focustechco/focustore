@@ -70,7 +70,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error creating banner:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao criar banner.' },
+      { success: false, error: 'Erro ao criar banner.' },
       { status: 500 }
     );
   }

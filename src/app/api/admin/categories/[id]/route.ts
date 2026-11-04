@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
+import { isNonEmptyString } from '@/lib/security/input';
 
 export async function GET(
   request: Request,
@@ -65,6 +66,15 @@ export async function PUT(
       isActive,
     } = body;
 
+    if ((name !== undefined && !isNonEmptyString(name, 120)) ||
+      (slug !== undefined && !isNonEmptyString(slug, 140)) ||
+      (position !== undefined && (!Number.isSafeInteger(Number(position)) || Number(position) < 0))) {
+      return NextResponse.json(
+        { success: false, error: 'Dados de categoria inválidos.' },
+        { status: 400 }
+      );
+    }
+
     const existing = await prisma.category.findUnique({
       where: { id },
     });
@@ -117,7 +127,7 @@ export async function PUT(
   } catch (error: any) {
     console.error('Error updating category:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar categoria.' },
+      { success: false, error: 'Erro ao atualizar categoria.' },
       { status: 500 }
     );
   }
@@ -158,7 +168,7 @@ export async function DELETE(
   } catch (error: any) {
     console.error('Error deleting category:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao excluir categoria.' },
+      { success: false, error: 'Erro ao excluir categoria.' },
       { status: 500 }
     );
   }

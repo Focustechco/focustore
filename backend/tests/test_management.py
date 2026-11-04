@@ -76,8 +76,12 @@ def test_roles_expiry_revocation_origin_and_source(client, identity_source):
                            json={'name': 'x', 'slug': 'csrf'}).status_code == 403
     assert client.post('/categories', headers={'sec-fetch-site': 'cross-site'},
                        json={'name': 'x', 'slug': 'csrf'}).status_code == 403
-    with sqlite3.connect(path) as db:
-        db.execute("DELETE FROM sessions WHERE session_token = 'admin-token'")
+    db = sqlite3.connect(path)
+    try:
+        with db:
+            db.execute("DELETE FROM sessions WHERE session_token = 'admin-token'")
+    finally:
+        db.close()
     assert client.post('/categories', json={'name': 'x', 'slug': 'revoked'}).status_code == 401
     path.unlink()
     assert client.get('/api/v1/users/me').status_code == 503

@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
@@ -9,7 +9,23 @@ type AdminAuthorization =
 
 export async function requireAdmin() {
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+
+  const origin = requestHeaders.get('origin');
+  const forwardedProtocol = requestHeaders.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const host = requestHeaders.get('host');
+  const expectedOrigins = new Set<string>();
+  if (host) expectedOrigins.add(`${forwardedProtocol || 'http'}://${host}`);
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    expectedOrigins.add(process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, ''));
+  }
+  if (requestHeaders.get('sec-fetch-site') === 'cross-site' || (origin && !expectedOrigins.has(origin))) {
+    return {
+      authorized: false,
+      response: NextResponse.json({ error: 'Origem da requisição não autorizada.' }, { status: 403 }),
+    } satisfies AdminAuthorization;
+  }
 
   if (!sessionToken) {
     return {

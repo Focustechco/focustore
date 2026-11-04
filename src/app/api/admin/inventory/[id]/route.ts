@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
+import { isNonNegativeIntegerLike } from '@/lib/security/input';
 
 export async function PUT(
   request: Request,
@@ -19,6 +20,17 @@ export async function PUT(
       reason = 'Ajuste manual via Painel Administrativo',
       lowStockThreshold,
     } = body;
+
+    if ((quantityAvailable !== undefined && !isNonNegativeIntegerLike(quantityAvailable)) ||
+      (quantityChange !== undefined && (!Number.isSafeInteger(Number(quantityChange)) || !Number.isFinite(Number(quantityChange)))) ||
+      (lowStockThreshold !== undefined && !isNonNegativeIntegerLike(lowStockThreshold)) ||
+      !['IN', 'OUT', 'ADJUSTMENT', 'RETURN'].includes(movementType) ||
+      typeof reason !== 'string' || reason.length > 500) {
+      return NextResponse.json(
+        { success: false, error: 'Dados de estoque inválidos.' },
+        { status: 400 }
+      );
+    }
 
     // Find inventory by variantId or inventory id
     let inventory = await prisma.inventory.findFirst({
@@ -91,10 +103,10 @@ export async function PUT(
       previousQuantity: previousQty,
       newQuantity: newQty,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error updating inventory:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar estoque.' },
+      { success: false, error: 'Erro ao atualizar estoque.' },
       { status: 500 }
     );
   }

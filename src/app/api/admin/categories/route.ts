@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
+import { isNonEmptyString } from '@/lib/security/input';
 
 export async function GET(request: Request) {
   try {
@@ -54,7 +55,8 @@ export async function POST(request: Request) {
       isActive = true,
     } = body;
 
-    if (!name || !name.trim()) {
+    if (!isNonEmptyString(name, 120) || (slug !== undefined && !isNonEmptyString(slug, 140)) ||
+      !Number.isSafeInteger(Number(position)) || Number(position) < 0) {
       return NextResponse.json(
         { success: false, error: 'O nome da categoria é obrigatório.' },
         { status: 400 }
@@ -104,7 +106,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('Error creating category:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao criar categoria.' },
+      { success: false, error: 'Erro ao criar categoria.' },
       { status: 500 }
     );
   }

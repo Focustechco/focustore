@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -13,6 +14,9 @@ class Settings(BaseSettings):
     legacy_catalog_sqlite_path: Path | None = None
 
     frontend_origin: str | None = None
+    catalog_source: Literal['legacy_sqlite', 'postgresql'] = Field(
+        default='legacy_sqlite', validation_alias='CATALOG_SOURCE'
+    )
 
     @field_validator('frontend_origin')
     @classmethod

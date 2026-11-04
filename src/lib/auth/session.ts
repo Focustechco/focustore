@@ -7,6 +7,7 @@ export type AuthenticatedUser = {
   id: string;
   name: string | null;
   email: string;
+  role: string;
 };
 
 export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> {
@@ -24,6 +25,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
           id: true,
           name: true,
           email: true,
+          role: true,
         },
       },
     },

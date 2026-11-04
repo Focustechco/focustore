@@ -46,7 +46,13 @@ export function ProductClientView({ product }: { product: any }) {
   const [added, setAdded] = useState(false);
   const [copiedCoupon, setCopiedCoupon] = useState(false);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
-  const isDevCollectionShirt = product.slug?.startsWith('camisa-dev-collection-');
+  const devCollectionShirtSlugs = [
+    'tshirt-focus-collection',
+    'polo-focus-collection',
+    'bone-focus-collection',
+    'camisa-dev-collection-typescript',
+  ];
+  const isDevCollectionShirt = devCollectionShirtSlugs.includes(product.slug);
 
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
 

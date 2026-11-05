@@ -175,14 +175,14 @@ export default async function CollectionsPage() {
       </section>
 
       {/* =========================================================
-          PRODUTOS DA COLEÇÃO FOCUS TECH (TECHWEAR ESSENTIALS)
+          PRODUTOS DA COLEÇÃO FOCUS TECH
           ========================================================= */}
       <section className="space-y-6 pt-6 border-t border-white/10">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-zinc-400" />
-              Coleção Focus Tech • Techwear Essentials
+              <span className="w-2 h-2 rounded-full bg-[#FF6500]" />
+              Coleção Focus Tech • Sua conexão com a tecnologia
             </h2>
             <p className="text-xs text-zinc-400 mt-1">
               A essência do design minimalista, preto e branco com máxima

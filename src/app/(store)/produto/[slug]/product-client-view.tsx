@@ -12,7 +12,6 @@ import {
   Check,
   KeyRound,
   ChevronRight,
-  Star,
   Ruler,
   Info,
   X,
@@ -83,10 +82,6 @@ export function ProductClientView({ product }: { product: any }) {
   const router = useRouter();
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const reviewsCount = product.reviews?.length ?? 0;
-  const averageRating = reviewsCount > 0
-    ? product.reviews.reduce((total: number, review: { rating: number }) => total + review.rating, 0) / reviewsCount
-    : null;
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -493,18 +488,10 @@ export function ProductClientView({ product }: { product: any }) {
             </h1>
           </div>
 
-          {/* Promoção e avaliações cadastradas */}
+          {/* Promoção */}
           <div className="flex flex-wrap items-center gap-2.5">
             {hasPromotion && (
               <DiscountBadge price={currentPrice} promotionalPrice={currentPromoPrice} />
-            )}
-            {averageRating !== null ? (
-              <div className="flex items-center gap-1.5 text-xs text-zinc-300 font-semibold pl-1">
-                <Star size={13} className="fill-amber-400 text-amber-400" />
-                <span>{averageRating.toFixed(1)} ({reviewsCount} {reviewsCount === 1 ? 'avaliação' : 'avaliações'})</span>
-              </div>
-            ) : (
-              <span className="text-xs text-zinc-400 font-semibold pl-1">Sem avaliações</span>
             )}
           </div>
 

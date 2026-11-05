@@ -81,38 +81,19 @@ async function updateProductDescriptions() {
     );
   }
 
-<<<<<<< HEAD
   const products = allProducts.filter(
     (product) => PRODUCT_DESCRIPTIONS[product.slug],
   );
-=======
-  const configuredSlugs = new Set(allProducts.map((product) => product.slug));
-  const products = allProducts.filter((product) => PRODUCT_DESCRIPTIONS[product.slug]);
->>>>>>> 3901662ef67626b9c93f13d8836f5a3731178504
   await prisma.$transaction(
     products.map((product) =>
       prisma.product.update({
         where: { slug: product.slug },
         data: {
-<<<<<<< HEAD
           description: withCompleteDevCollectionSections(
             product.slug,
             PRODUCT_DESCRIPTIONS[product.slug],
           ),
           shortDescription: PRODUCT_DESCRIPTIONS[product.slug].shortDescription,
-=======
-          description: withProductWarranty(
-            isDevCollectionProduct(product)
-              ? product.description
-              : PRODUCT_DESCRIPTIONS[product.slug].description,
-          ),
-          ...(isDevCollectionProduct(product)
-            ? {}
-            : {
-                shortDescription:
-                  PRODUCT_DESCRIPTIONS[product.slug].shortDescription,
-              }),
->>>>>>> 3901662ef67626b9c93f13d8836f5a3731178504
         },
       }),
     ),
@@ -123,11 +104,7 @@ async function updateProductDescriptions() {
     (slug) => !databaseSlugs.has(slug),
   );
   console.log(
-<<<<<<< HEAD
     `Updated descriptions for ${products.length} catalog products, including the Dev Collection.`,
-=======
-    `Updated warranty text for ${products.length} catalog products; Dev Collection descriptions were otherwise preserved.`,
->>>>>>> 3901662ef67626b9c93f13d8836f5a3731178504
   );
   if (missingSlugs.length > 0) {
     console.log(`Skipped products not present in this database: ${missingSlugs.join(", ")}`);

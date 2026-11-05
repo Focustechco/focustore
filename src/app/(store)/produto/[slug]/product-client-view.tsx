@@ -342,19 +342,14 @@ export function ProductClientView({ product }: { product: any }) {
         .map(([type, amount]) => `${type} (${amount})`)
         .join(', ');
       const totalQuantity = Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0);
-      const keychainPromotionalPrice = selectedVariant.promotionalPrice ?? product.promotionalPrice;
 
       addItem({
         variantId: selectedVariant.id,
         productId: product.id,
         name: product.name,
         variantName: `Selecionados: ${selectedTypes}`,
-        price: selectedVariant.price,
-        promotionalPrice: keychainPromotionalPrice !== null &&
-          keychainPromotionalPrice !== undefined &&
-          keychainPromotionalPrice < selectedVariant.price
-          ? keychainPromotionalPrice
-          : null,
+        price: effectivePrice,
+        promotionalPrice: null,
         imageUrl: product.images[selectedImage]?.url || product.images[0]?.url,
         sku: selectedVariant.sku,
         quantity: totalQuantity,

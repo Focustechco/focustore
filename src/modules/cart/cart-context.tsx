@@ -63,6 +63,13 @@ export function resolveProductImage(imageUrl?: string | null, name?: string): st
   return imageUrl || '/images/products/placeholder.svg';
 }
 
+function normalizeCartItem(item: CartItem): CartItem {
+  return {
+    ...item,
+    imageUrl: resolveProductImage(item.imageUrl, item.name),
+  };
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -72,11 +79,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem('focus_cart');
       if (saved) {
-        const parsed: unknown = JSON.parse(saved);
-        const updated = restoredCart(parsed).map((item) => ({
-          ...item,
-          imageUrl: resolveProductImage(item.imageUrl, item.name),
-        }));
+        const parsed: CartItem[] = JSON.parse(saved);
+        const updated = parsed.map(normalizeCartItem);
         setItems(updated);
       }
     } catch (e) {
@@ -96,16 +100,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, mounted]);
 
   const addItem = (rawItem: CartItem) => {
-    const newItem: CartItem = {
-      ...rawItem,
-      imageUrl: resolveProductImage(rawItem.imageUrl, rawItem.name),
-    };
+    const newItem = normalizeCartItem(rawItem);
     setItems((prev) => {
       const existing = prev.find((i) => i.variantId === newItem.variantId);
       if (existing) {
         return prev.map((i) =>
           i.variantId === newItem.variantId
-            ? { ...i, quantity: i.quantity + newItem.quantity }
+            ? {
+                ...newItem,
+                quantity: i.quantity + newItem.quantity,
+              }
             : i
         );
       }

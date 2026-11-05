@@ -26,7 +26,7 @@ const DEFAULT_SLIDES = [
     subtitle:
       "Linha exclusiva desenvolvida para quem vive tecnologia, criatividade e inovação. Tecidos de alta gramatura e corte moderno.",
     primaryButtonText: "Ver coleção",
-    primaryButtonHref: "git ",
+    primaryButtonHref: "/colecao/focus-academy",
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
     imageUrl: ACADEMY_HERO_IMAGE,
@@ -55,7 +55,7 @@ const DEFAULT_SLIDES = [
     subtitle:
       "Camisas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.",
     primaryButtonText: "Ver Coleção",
-    primaryButtonHref: "/categoria/vestuario",
+    primaryButtonHref: "/colecao/focus-lab",
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
     imageUrl: "/images/hero/hero-movimento-streetwear.png",

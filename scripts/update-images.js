@@ -8,17 +8,12 @@ async function updateImages() {
     {
       slug: "camisa-focus-lab",
       name: "Camisa Focus",
-      url: "/images/camisas/01_Python_original.png",
+      url: "/images/products/camiseta-focus.jpg",
     },
     {
       slug: "moletom-focus-lab",
       name: "Polo Focus Tech",
-      url: "/images/camisas/05_JavaScript_original.jpg",
-    },
-    {
-      slug: "camisa-focus-academy",
-      name: "Camisa Focus Academy",
-      url: "/images/camisas/03_TypeScript_alta_resolucao.jpeg",
+      url: "/images/products/polo-focus.jpg",
     },
     {
       slug: "garrafa-termica-focus",

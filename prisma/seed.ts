@@ -423,7 +423,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/camisas/01_Python_original.png",
+            url: "/images/products/camiseta-focus.jpg",
             isPrimary: true,
             altText: "Camisa Focus",
           },
@@ -496,7 +496,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/camisas/05_JavaScript_original.jpg",
+            url: "/images/products/polo-focus.jpg",
             isPrimary: true,
             altText: "Polo Focus Tech",
           },

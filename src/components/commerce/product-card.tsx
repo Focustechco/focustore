@@ -39,12 +39,6 @@ export function ProductCard({ product }: ProductCardProps) {
   const [added, setAdded] = useState(false);
 
   const isFocusCap = product.slug === 'bone-focus-lab';
-  const clothingImageMap: Record<string, string> = {
-    'camisa-focus-lab': '/images/camisas/01_Python_original.png',
-    'camisa-focus-academy': '/images/camisas/03_TypeScript_alta_resolucao.jpeg',
-    'moletom-focus-lab': '/images/camisas/05_JavaScript_original.jpg',
-    'moletom-focus-hoodie': '/images/camisas/02_Java_alta_resolucao.jpeg',
-  };
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
   const selectedImage = product.images[currentImageIndex] || product.images[0];
@@ -52,7 +46,7 @@ export function ProductCard({ product }: ProductCardProps) {
     ? currentImageIndex === 0
       ? '/images/products/bone-focus.jpg'
       : '/images/products/bone-focus-white-v2.jpg'
-    : clothingImageMap[product.slug] || selectedImage?.url || '/images/products/placeholder.svg';
+    : selectedImage?.url || '/images/products/placeholder.svg';
   const frontImage = product.images.find((image) =>
     image.altText?.toLowerCase().includes('frente')
   );

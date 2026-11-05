@@ -133,19 +133,8 @@ export function ProductClientView({ product }: { product: any }) {
   );
 
   const getProductImageUrl = (url?: string | null) => {
-    const apparelImageMap: Record<string, string> = {
-      'camisa-focus-lab': '/images/camisas/01_Python_original.png',
-      'camisa-focus-academy': '/images/camisas/03_TypeScript_alta_resolucao.jpeg',
-      'moletom-focus-lab': '/images/camisas/05_JavaScript_original.jpg',
-      'moletom-focus-hoodie': '/images/camisas/02_Java_alta_resolucao.jpeg',
-    };
-
     if (isFocusCap && url?.endsWith('/bone-focus-white.jpg')) {
       return '/images/products/bone-focus-white-v2.jpg';
-    }
-
-    if (product.slug && apparelImageMap[product.slug]) {
-      return apparelImageMap[product.slug];
     }
 
     return url || '/images/products/camiseta-focus.jpg';

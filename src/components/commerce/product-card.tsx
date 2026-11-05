@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, ShoppingCart, Check, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Check } from 'lucide-react';
 import { formatPrice } from '@/lib/utils/formatters';
 import { useCart } from '@/modules/cart/cart-context';
 import { useFavorites } from '@/modules/favorites/favorites-context';
@@ -28,19 +28,10 @@ interface ProductCardProps {
       colorHex?: string | null;
     }[];
     categories?: { category: { name: string; slug: string } }[];
+    _count?: { reviews: number };
   };
   variant?: 'light' | 'dark';
 }
-
-// Map review counts and variant dots for mockup fidelity
-const REVIEW_COUNTS: Record<string, number> = {
-  'caneca-focus-lab': 128,
-  'chaveiro-focus': 93,
-  'garrafa-termica-focus': 256,
-  'bone-focus-lab': 192,
-  'moletom-focus-lab': 410,
-  'camisa-focus-lab': 332,
-};
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
@@ -55,7 +46,7 @@ export function ProductCard({ product }: ProductCardProps) {
     ? currentImageIndex === 0
       ? '/images/products/bone-focus.jpg'
       : '/images/products/bone-focus-white-v2.jpg'
-    : selectedImage?.url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80';
+    : selectedImage?.url || '/images/products/placeholder.svg';
   const frontImage = product.images.find((image) =>
     image.altText?.toLowerCase().includes('frente')
   );
@@ -82,8 +73,12 @@ export function ProductCard({ product }: ProductCardProps) {
     (isWhiteSelected ? whiteFrontImage : blackFrontImage || frontImage);
   const canPreviewFront = Boolean(hoverImage);
   const defaultVariant = product.variants[0];
-  const price = defaultVariant?.price || product.basePrice;
-  const reviewsCount = REVIEW_COUNTS[product.slug] || 150;
+  const price = defaultVariant?.price ?? product.basePrice;
+  const promotionalPrice = defaultVariant?.promotionalPrice ?? product.promotionalPrice;
+  const effectivePrice = promotionalPrice !== null && promotionalPrice !== undefined && promotionalPrice < price
+    ? promotionalPrice
+    : price;
+  const reviewsCount = product._count?.reviews ?? 0;
 
   // Extrair cores únicas do produto
   const colorList = React.useMemo(() => {
@@ -143,6 +138,7 @@ export function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     if (!selectedVariant) return;
+    const selectedPromotionalPrice = selectedVariant.promotionalPrice ?? product.promotionalPrice;
 
     addItem({
       variantId: selectedVariant.id,
@@ -152,7 +148,11 @@ export function ProductCard({ product }: ProductCardProps) {
         ? `Boné Focus Lab - ${currentImageIndex === 1 ? 'Branco' : 'Preto'} / Único`
         : selectedVariant.name,
       price: selectedVariant.price,
-      promotionalPrice: selectedVariant.promotionalPrice,
+      promotionalPrice: selectedPromotionalPrice !== null &&
+        selectedPromotionalPrice !== undefined &&
+        selectedPromotionalPrice < selectedVariant.price
+        ? selectedPromotionalPrice
+        : null,
       imageUrl: primaryImage,
       sku: selectedVariant.sku,
       quantity: 1,
@@ -240,16 +240,11 @@ export function ProductCard({ product }: ProductCardProps) {
             </Link>
           </div>
 
-          {/* Estrelas de Avaliação + Total de Avaliações */}
+          {/* Total de avaliações verificadas */}
           <div className="flex items-center gap-1 text-[11px] text-zinc-400 h-4">
-            <div className="flex items-center text-[#FF6500]">
-              <Star size={12} className="fill-[#FF6500]" />
-              <Star size={12} className="fill-[#FF6500]" />
-              <Star size={12} className="fill-[#FF6500]" />
-              <Star size={12} className="fill-[#FF6500]" />
-              <Star size={12} className="fill-[#FF6500]" />
-            </div>
-            <span className="text-[10px] text-zinc-500 ml-0.5">({reviewsCount})</span>
+            <span className="text-[10px] text-zinc-500">
+              {reviewsCount === 1 ? '1 avaliação' : `${reviewsCount} avaliações`}
+            </span>
           </div>
         </div>
 
@@ -257,7 +252,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="flex items-end justify-between pt-2 border-t border-white/5 mt-auto">
           <div>
             <span className="text-sm sm:text-base font-black text-white tracking-tight block leading-none">
-              {formatPrice(price)}
+              {formatPrice(effectivePrice)}
             </span>
 
             {/* Bolinhas de Variações/Cores interativas */}
@@ -283,10 +278,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   />
                 ))
               ) : (
-                <>
-                  <span className="w-2.5 h-2.5 rounded-full bg-white border border-white/20 inline-block" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-zinc-600 border border-white/10 inline-block" />
-                </>
+                <span className="sr-only">Sem opções de cor cadastradas</span>
               )}
             </div>
           </div>

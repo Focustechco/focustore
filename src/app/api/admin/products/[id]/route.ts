@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 import { revalidatePath } from 'next/cache';
+import { Prisma } from '@prisma/client';
+import { validateProductInput } from '@/modules/catalog/product-validation';
+
+class InvalidProductVariantError extends Error {}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 export async function GET(
   request: Request,
@@ -50,29 +58,16 @@ export async function PUT(
     if (!authorization.authorized) return authorization.response;
 
     const { id } = await params;
-    const body = await request.json();
-
-    const {
-      name,
-      slug,
-      sku,
-      description,
-      shortDescription,
-      brand,
-      basePrice,
-      promotionalPrice,
-      costPrice,
-      status,
-      isFeatured,
-      weightGrams,
-      heightCm,
-      widthCm,
-      lengthCm,
-      categoryIds,
-      collectionIds,
-      images,
-      variants,
-    } = body;
+    let rawBody: unknown;
+    try {
+      rawBody = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'Requisição inválida.' }, { status: 400 });
+    }
+    if (!isRecord(rawBody)) {
+      return NextResponse.json({ success: false, error: 'Dados do produto inválidos.' }, { status: 400 });
+    }
+    const body = rawBody;
 
     const existingProduct = await prisma.product.findUnique({
       where: { id },
@@ -85,144 +80,147 @@ export async function PUT(
       );
     }
 
-    const dataToUpdate: any = {};
-    if (name !== undefined) dataToUpdate.name = name;
-    if (slug !== undefined) dataToUpdate.slug = slug;
-    if (sku !== undefined) dataToUpdate.sku = sku;
-    if (description !== undefined) dataToUpdate.description = description;
-    if (shortDescription !== undefined) dataToUpdate.shortDescription = shortDescription;
-    if (brand !== undefined) dataToUpdate.brand = brand;
-    if (basePrice !== undefined) dataToUpdate.basePrice = Number(basePrice);
-    if (promotionalPrice !== undefined)
-      dataToUpdate.promotionalPrice = promotionalPrice ? Number(promotionalPrice) : null;
-    if (costPrice !== undefined)
-      dataToUpdate.costPrice = costPrice ? Number(costPrice) : null;
-    if (status !== undefined) dataToUpdate.status = status;
-    if (isFeatured !== undefined) dataToUpdate.isFeatured = Boolean(isFeatured);
-    if (weightGrams !== undefined) dataToUpdate.weightGrams = Number(weightGrams);
-    if (heightCm !== undefined) dataToUpdate.heightCm = Number(heightCm);
-    if (widthCm !== undefined) dataToUpdate.widthCm = Number(widthCm);
-    if (lengthCm !== undefined) dataToUpdate.lengthCm = Number(lengthCm);
-
-    // 1. Update product base info
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: dataToUpdate,
-    });
-
-    // 2. Sync Categories if provided
-    if (Array.isArray(categoryIds)) {
-      await prisma.productCategory.deleteMany({ where: { productId: id } });
-      if (categoryIds.length > 0) {
-        await prisma.productCategory.createMany({
-          data: categoryIds.map((catId: string) => ({
-            productId: id,
-            categoryId: catId,
-          })),
-        });
-      }
+    let input: ReturnType<typeof validateProductInput>;
+    try {
+      input = validateProductInput({ ...existingProduct, ...body });
+    } catch (error) {
+      return NextResponse.json(
+        { success: false, error: error instanceof Error ? error.message : 'Dados do produto inválidos.' },
+        { status: 400 },
+      );
     }
 
-    // 3. Sync Collections if provided
-    if (Array.isArray(collectionIds)) {
-      await prisma.collectionProduct.deleteMany({ where: { productId: id } });
-      if (collectionIds.length > 0) {
-        await prisma.collectionProduct.createMany({
-          data: collectionIds.map((colId: string, idx: number) => ({
-            productId: id,
-            collectionId: colId,
-            position: idx,
-          })),
-        });
-      }
-    }
+    const dataToUpdate: Prisma.ProductUpdateInput = {};
+    if (body.name !== undefined) dataToUpdate.name = input.name;
+    if (body.slug !== undefined) dataToUpdate.slug = input.slug || '';
+    if (body.sku !== undefined) dataToUpdate.sku = input.sku;
+    if (body.description !== undefined) dataToUpdate.description = input.description || '';
+    if (body.shortDescription !== undefined) dataToUpdate.shortDescription = input.shortDescription;
+    if (body.brand !== undefined) dataToUpdate.brand = input.brand || 'Focus';
+    if (body.basePrice !== undefined) dataToUpdate.basePrice = input.basePrice;
+    if (body.promotionalPrice !== undefined) dataToUpdate.promotionalPrice = input.promotionalPrice;
+    if (body.costPrice !== undefined) dataToUpdate.costPrice = input.costPrice;
+    if (body.status !== undefined) dataToUpdate.status = input.status || 'ACTIVE';
+    if (body.isFeatured !== undefined) dataToUpdate.isFeatured = input.isFeatured ?? false;
+    if (body.weightGrams !== undefined) dataToUpdate.weightGrams = input.weightGrams ?? 0;
+    if (body.heightCm !== undefined) dataToUpdate.heightCm = input.heightCm ?? 0;
+    if (body.widthCm !== undefined) dataToUpdate.widthCm = input.widthCm ?? 0;
+    if (body.lengthCm !== undefined) dataToUpdate.lengthCm = input.lengthCm ?? 0;
 
-    // 4. Sync Images if provided
-    if (Array.isArray(images)) {
-      await prisma.productImage.deleteMany({ where: { productId: id } });
-      if (images.length > 0) {
-        await prisma.productImage.createMany({
-          data: images.map((img: any, idx: number) => ({
-            productId: id,
-            url: typeof img === 'string' ? img : img.url,
-            altText: typeof img === 'object' ? img.altText : (name || existingProduct.name),
-            position: idx,
-            isPrimary: idx === 0,
-          })),
-        });
-      }
-    }
+    await prisma.$transaction(async (transaction) => {
+      await transaction.product.update({
+        where: { id },
+        data: dataToUpdate,
+      });
 
-    // 5. Sync / Update Variants & Inventory if provided
-    if (Array.isArray(variants)) {
-      for (let i = 0; i < variants.length; i++) {
-        const v = variants[i];
-        if (v.id) {
-          // Update existing variant
-          await prisma.productVariant.update({
-            where: { id: v.id },
-            data: {
-              name: v.name,
-              sku: v.sku,
-              color: v.color || null,
-              colorHex: v.colorHex || null,
-              size: v.size || null,
-              price: Number(v.price ?? basePrice ?? existingProduct.basePrice),
-              promotionalPrice: v.promotionalPrice ? Number(v.promotionalPrice) : null,
-              imageUrl: v.imageUrl || null,
-              isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
-              position: i,
-            },
-          });
-
-          // Update inventory stock
-          if (v.stock !== undefined || v.quantityAvailable !== undefined) {
-            const stockQty = Number(v.stock ?? v.quantityAvailable);
-            const inv = await prisma.inventory.findUnique({ where: { variantId: v.id } });
-            if (inv) {
-              await prisma.inventory.update({
-                where: { id: inv.id },
-                data: { quantityAvailable: stockQty },
-              });
-            } else {
-              await prisma.inventory.create({
-                data: {
-                  variantId: v.id,
-                  quantityAvailable: stockQty,
-                  quantityReserved: 0,
-                },
-              });
-            }
-          }
-        } else {
-          // Create new variant
-          const variantSku = v.sku || `${existingProduct.sku}-${v.color || 'VAR'}-${v.size || i + 1}`;
-          const newVar = await prisma.productVariant.create({
-            data: {
-              productId: id,
-              sku: variantSku,
-              name: v.name || `${updatedProduct.name} - ${v.color || ''} ${v.size || ''}`.trim(),
-              color: v.color || null,
-              colorHex: v.colorHex || null,
-              size: v.size || null,
-              price: Number(v.price ?? basePrice ?? existingProduct.basePrice),
-              promotionalPrice: v.promotionalPrice ? Number(v.promotionalPrice) : null,
-              imageUrl: v.imageUrl || null,
-              position: i,
-              isActive: v.isActive !== undefined ? Boolean(v.isActive) : true,
-            },
-          });
-
-          await prisma.inventory.create({
-            data: {
-              variantId: newVar.id,
-              quantityAvailable: Number(v.stock ?? v.quantityAvailable ?? 50),
-              quantityReserved: 0,
-            },
+      if (input.categoryIds !== undefined) {
+        await transaction.productCategory.deleteMany({ where: { productId: id } });
+        if (input.categoryIds.length > 0) {
+          await transaction.productCategory.createMany({
+            data: input.categoryIds.map((categoryId) => ({ productId: id, categoryId })),
           });
         }
       }
-    }
+
+      if (input.collectionIds !== undefined) {
+        await transaction.collectionProduct.deleteMany({ where: { productId: id } });
+        if (input.collectionIds.length > 0) {
+          await transaction.collectionProduct.createMany({
+            data: input.collectionIds.map((collectionId, position) => ({
+              productId: id,
+              collectionId,
+              position,
+            })),
+          });
+        }
+      }
+
+      if (input.images !== undefined) {
+        await transaction.productImage.deleteMany({ where: { productId: id } });
+        if (input.images.length > 0) {
+          await transaction.productImage.createMany({
+            data: input.images.map((image, position) => ({
+              productId: id,
+              url: typeof image === 'string' ? image : image.url,
+              altText: typeof image === 'string' ? input.name : image.altText || input.name,
+              position,
+              isPrimary: position === 0,
+            })),
+          });
+        }
+      }
+
+      if (input.variants !== undefined) {
+        const existingVariantIds = input.variants.flatMap((variant) => variant.id ? [variant.id] : []);
+        if (existingVariantIds.length > 0) {
+          const ownedVariants = await transaction.productVariant.findMany({
+            where: { id: { in: existingVariantIds }, productId: id },
+            select: { id: true },
+          });
+          if (ownedVariants.length !== existingVariantIds.length) {
+            throw new InvalidProductVariantError('Uma ou mais variantes não pertencem a este produto.');
+          }
+        }
+
+        for (const [position, variant] of input.variants.entries()) {
+          if (variant.id) {
+            const variantData: Prisma.ProductVariantUpdateInput = { position };
+            if (variant.name !== undefined) variantData.name = variant.name;
+            if (variant.sku !== undefined) variantData.sku = variant.sku;
+            if (variant.color !== undefined) variantData.color = variant.color || null;
+            if (variant.colorHex !== undefined) variantData.colorHex = variant.colorHex || null;
+            if (variant.size !== undefined) variantData.size = variant.size || null;
+            if (variant.model !== undefined) variantData.model = variant.model || null;
+            if (variant.price !== undefined) variantData.price = variant.price;
+            if (variant.promotionalPrice !== undefined) variantData.promotionalPrice = variant.promotionalPrice;
+            if (variant.imageUrl !== undefined) variantData.imageUrl = variant.imageUrl;
+            if (variant.isActive !== undefined) variantData.isActive = variant.isActive;
+            await transaction.productVariant.update({
+              where: { id: variant.id },
+              data: variantData,
+            });
+
+            if (variant.stock !== undefined) {
+              await transaction.inventory.upsert({
+                where: { variantId: variant.id },
+                update: { quantityAvailable: variant.stock },
+                create: {
+                  variantId: variant.id,
+                  quantityAvailable: variant.stock,
+                  quantityReserved: 0,
+                  lowStockThreshold: 5,
+                },
+              });
+            }
+          } else {
+            const variantSku = variant.sku || `${input.sku}-${variant.color || 'VAR'}-${variant.size || position + 1}`;
+            await transaction.productVariant.create({
+              data: {
+                productId: id,
+                sku: variantSku,
+                name: variant.name || `${input.name} - ${variant.color || ''} ${variant.size || ''}`.trim(),
+                color: variant.color || null,
+                colorHex: variant.colorHex || null,
+                size: variant.size || null,
+                model: variant.model || null,
+                price: variant.price ?? input.basePrice,
+                promotionalPrice: variant.promotionalPrice ?? input.promotionalPrice,
+                imageUrl: variant.imageUrl || null,
+                position,
+                isActive: variant.isActive ?? true,
+                inventory: {
+                  create: {
+                    quantityAvailable: variant.stock ?? 0,
+                    quantityReserved: 0,
+                    lowStockThreshold: 5,
+                  },
+                },
+              },
+            });
+          }
+        }
+      }
+    });
 
     // Comprehensive store revalidation
     revalidatePath('/');
@@ -230,8 +228,8 @@ export async function PUT(
     revalidatePath(`/colecao/[slug]`, 'page');
     revalidatePath(`/categoria/[slug]`, 'page');
     revalidatePath(`/produto/${existingProduct.slug}`);
-    if (slug && slug !== existingProduct.slug) {
-      revalidatePath(`/produto/${slug}`);
+    if (input.slug && input.slug !== existingProduct.slug) {
+      revalidatePath(`/produto/${input.slug}`);
     }
 
     const fullProduct = await prisma.product.findUnique({
@@ -248,10 +246,13 @@ export async function PUT(
     });
 
     return NextResponse.json({ success: true, product: fullProduct });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating product:', error);
+    if (error instanceof InvalidProductVariantError) {
+      return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    }
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar produto.' },
+      { success: false, error: 'Erro ao atualizar produto.' },
       { status: 500 }
     );
   }
@@ -268,7 +269,9 @@ export async function DELETE(
     const { id } = await params;
     const existing = await prisma.product.findUnique({
       where: { id },
-      include: { variants: true },
+      include: {
+        variants: { select: { id: true } },
+      },
     });
 
     if (!existing) {
@@ -278,21 +281,38 @@ export async function DELETE(
       );
     }
 
-    // Clean up dependent tables
-    await prisma.productImage.deleteMany({ where: { productId: id } });
-    await prisma.productCategory.deleteMany({ where: { productId: id } });
-    await prisma.collectionProduct.deleteMany({ where: { productId: id } });
-    await prisma.review.deleteMany({ where: { productId: id } });
+    const variantIds = existing.variants.map((variant) => variant.id);
+    const hasOrderHistory = variantIds.length > 0 && (
+      await prisma.orderItem.count({ where: { variantId: { in: variantIds } } })
+    ) > 0;
 
-    for (const v of existing.variants) {
-      await prisma.inventory.deleteMany({ where: { variantId: v.id } });
-      await prisma.cartItem.deleteMany({ where: { variantId: v.id } });
-      await prisma.orderItem.deleteMany({ where: { variantId: v.id } });
-      await prisma.wishlistItem.deleteMany({ where: { variantId: v.id } });
+    if (hasOrderHistory) {
+      await prisma.product.update({
+        where: { id },
+        data: { status: 'ARCHIVED' },
+      });
+    } else {
+      await prisma.$transaction(async (transaction) => {
+        await transaction.productImage.deleteMany({ where: { productId: id } });
+        await transaction.productCategory.deleteMany({ where: { productId: id } });
+        await transaction.collectionProduct.deleteMany({ where: { productId: id } });
+        await transaction.review.deleteMany({ where: { productId: id } });
+        if (variantIds.length > 0) {
+          const inventories = await transaction.inventory.findMany({
+            where: { variantId: { in: variantIds } },
+            select: { id: true },
+          });
+          await transaction.inventoryMovement.deleteMany({
+            where: { inventoryId: { in: inventories.map((inventory) => inventory.id) } },
+          });
+          await transaction.inventory.deleteMany({ where: { variantId: { in: variantIds } } });
+          await transaction.cartItem.deleteMany({ where: { variantId: { in: variantIds } } });
+          await transaction.wishlistItem.deleteMany({ where: { variantId: { in: variantIds } } });
+        }
+        await transaction.productVariant.deleteMany({ where: { productId: id } });
+        await transaction.product.delete({ where: { id } });
+      });
     }
-
-    await prisma.productVariant.deleteMany({ where: { productId: id } });
-    await prisma.product.delete({ where: { id } });
 
     revalidatePath('/');
     revalidatePath('/colecoes');
@@ -301,7 +321,9 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Produto excluído com sucesso.',
+      message: hasOrderHistory
+        ? 'Produto arquivado para preservar o histórico de pedidos.'
+        : 'Produto excluído com sucesso.',
     });
   } catch (error: any) {
     console.error('Error deleting product:', error);

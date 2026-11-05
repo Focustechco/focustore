@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { assertDemoSeed } = require('./seed-safety.cjs');
 const prisma = new PrismaClient();
 
 const HERO_BANNERS = [
@@ -130,6 +131,7 @@ const DEFAULT_BANNERS = [
 ];
 
 async function seedBanners() {
+  assertDemoSeed();
   console.log("Seeding default banners in database...");
   for (const banner of DEFAULT_BANNERS) {
     const existing = await prisma.banner.findFirst({

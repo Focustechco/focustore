@@ -95,6 +95,7 @@ def identity_source(tmp_path, monkeypatch, isolated_settings):
                                (role, role.lower() + '-token', role.lower(), expires))
         connection.execute('INSERT INTO sessions VALUES (?, ?, ?, ?)',
                            ('expired', 'expired-token', 'admin', 1))
+    connection.close()
     monkeypatch.setenv('LEGACY_CATALOG_SQLITE_PATH', str(path))
     get_settings.cache_clear()
     return path
@@ -163,7 +164,7 @@ def legacy(tmp_path, monkeypatch, isolated_settings):
                             '#000000', 'M', None, 199.90, 169.90, '/images/black.jpg', 0, 1))
         connection.execute('INSERT INTO inventory VALUES (?, ?, ?, ?)',
                            ('inventory-1', ids['variant'], 3, 7))
+    connection.close()
     monkeypatch.setenv('LEGACY_CATALOG_SQLITE_PATH', str(path))
     get_settings.cache_clear()
     return path, ids
-

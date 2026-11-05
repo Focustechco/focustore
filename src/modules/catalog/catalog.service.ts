@@ -1,26 +1,39 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
-
-const HIDDEN_PRODUCT_SLUGS = ['camisa-dev-collection-csharp'];
+import { HIDDEN_PRODUCT_SLUGS } from './catalog-policy';
 
 export class CatalogService {
   static async getCollections() {
     try {
       return await prisma.collection.findMany({
+        where: { isActive: true },
         include: {
           products: {
             where: {
-              product: { slug: { notIn: HIDDEN_PRODUCT_SLUGS } },
+              product: {
+                status: 'ACTIVE',
+                slug: { notIn: HIDDEN_PRODUCT_SLUGS },
+              },
             },
+            orderBy: { position: 'asc' },
             include: {
               product: {
                 include: {
+                  _count: { select: { reviews: { where: { isApproved: true } } } },
                   images: { orderBy: { position: 'asc' } },
                   variants: {
+                    where: { isActive: true },
                     include: { inventory: true },
                     orderBy: { position: 'asc' },
                   },
-                  categories: { include: { category: true } },
-                  collections: { include: { collection: true } },
+                  categories: {
+                    where: { category: { isActive: true } },
+                    include: { category: true },
+                  },
+                  collections: {
+                    where: { collection: { isActive: true } },
+                    include: { collection: true },
+                  },
                 },
               },
             },
@@ -29,29 +42,41 @@ export class CatalogService {
       });
     } catch (error) {
       console.error('Error fetching collections:', error);
-      return [];
+      throw error;
     }
   }
 
   static async getCollectionBySlug(slug: string) {
     try {
       return await prisma.collection.findUnique({
-        where: { slug },
+        where: { slug, isActive: true },
         include: {
           products: {
             where: {
-              product: { slug: { notIn: HIDDEN_PRODUCT_SLUGS } },
+              product: {
+                status: 'ACTIVE',
+                slug: { notIn: HIDDEN_PRODUCT_SLUGS },
+              },
             },
+            orderBy: { position: 'asc' },
             include: {
               product: {
                 include: {
+                  _count: { select: { reviews: { where: { isApproved: true } } } },
                   images: { orderBy: { position: 'asc' } },
                   variants: {
+                    where: { isActive: true },
                     include: { inventory: true },
                     orderBy: { position: 'asc' },
                   },
-                  categories: { include: { category: true } },
-                  collections: { include: { collection: true } },
+                  categories: {
+                    where: { category: { isActive: true } },
+                    include: { category: true },
+                  },
+                  collections: {
+                    where: { collection: { isActive: true } },
+                    include: { collection: true },
+                  },
                 },
               },
             },
@@ -60,7 +85,7 @@ export class CatalogService {
       });
     } catch (error) {
       console.error(`Error fetching collection ${slug}:`, error);
-      return null;
+      throw error;
     }
   }
 
@@ -74,7 +99,10 @@ export class CatalogService {
             select: {
               products: {
                 where: {
-                  product: { slug: { notIn: HIDDEN_PRODUCT_SLUGS } },
+                  product: {
+                    status: 'ACTIVE',
+                    slug: { notIn: HIDDEN_PRODUCT_SLUGS },
+                  },
                 },
               },
             },
@@ -83,24 +111,29 @@ export class CatalogService {
       });
     } catch (error) {
       console.error('Error fetching categories:', error);
-      return [];
+      throw error;
     }
   }
 
   static async getCategoryBySlug(slug: string) {
     try {
       return await prisma.category.findUnique({
-        where: { slug },
+        where: { slug, isActive: true },
         include: {
           products: {
             where: {
-              product: { slug: { notIn: HIDDEN_PRODUCT_SLUGS } },
+              product: {
+                status: 'ACTIVE',
+                slug: { notIn: HIDDEN_PRODUCT_SLUGS },
+              },
             },
             include: {
               product: {
                 include: {
+                  _count: { select: { reviews: { where: { isApproved: true } } } },
                   images: { orderBy: { position: 'asc' } },
                   variants: {
+                    where: { isActive: true },
                     include: { inventory: true },
                     orderBy: { position: 'asc' },
                   },
@@ -112,7 +145,7 @@ export class CatalogService {
       });
     } catch (error) {
       console.error(`Error fetching category ${slug}:`, error);
-      return null;
+      throw error;
     }
   }
 
@@ -125,19 +158,24 @@ export class CatalogService {
           slug: { notIn: HIDDEN_PRODUCT_SLUGS },
         },
         include: {
+          _count: { select: { reviews: { where: { isApproved: true } } } },
           images: { orderBy: { position: 'asc' } },
           variants: {
+            where: { isActive: true },
             include: { inventory: true },
             orderBy: { position: 'asc' },
           },
-          categories: { include: { category: true } },
+          categories: {
+            where: { category: { isActive: true } },
+            include: { category: true },
+          },
         },
         orderBy: { createdAt: 'desc' },
         take: 8,
       });
     } catch (error) {
       console.error('Error fetching featured products:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -151,7 +189,7 @@ export class CatalogService {
     try {
       const { categorySlug, search, sortBy, minPrice, maxPrice } = params || {};
 
-      const where: any = {
+      const where: Prisma.ProductWhereInput = {
         status: 'ACTIVE',
         slug: { notIn: HIDDEN_PRODUCT_SLUGS },
       };
@@ -159,7 +197,7 @@ export class CatalogService {
       if (categorySlug && categorySlug !== 'todos') {
         where.categories = {
           some: {
-            category: { slug: categorySlug },
+            category: { slug: categorySlug, isActive: true },
           },
         };
       }
@@ -178,7 +216,7 @@ export class CatalogService {
         if (maxPrice !== undefined) where.basePrice.lte = maxPrice;
       }
 
-      let orderBy: any = { createdAt: 'desc' };
+      let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };
       if (sortBy === 'price_asc') orderBy = { basePrice: 'asc' };
       if (sortBy === 'price_desc') orderBy = { basePrice: 'desc' };
       if (sortBy === 'newest') orderBy = { createdAt: 'desc' };
@@ -187,8 +225,10 @@ export class CatalogService {
         where,
         orderBy,
         include: {
+          _count: { select: { reviews: { where: { isApproved: true } } } },
           images: { orderBy: { position: 'asc' } },
           variants: {
+            where: { isActive: true },
             include: { inventory: true },
             orderBy: { position: 'asc' },
           },
@@ -198,17 +238,23 @@ export class CatalogService {
       });
     } catch (error) {
       console.error('Error fetching all products:', error);
-      return [];
+      throw error;
     }
   }
 
   static async getProductBySlug(slug: string) {
     try {
       const product = await prisma.product.findUnique({
-        where: { slug },
+        where: {
+          slug,
+          status: 'ACTIVE',
+          AND: [{ slug: { notIn: HIDDEN_PRODUCT_SLUGS } }],
+        },
         include: {
+          _count: { select: { reviews: { where: { isApproved: true } } } },
           images: { orderBy: { position: 'asc' } },
           variants: {
+            where: { isActive: true },
             include: { inventory: true },
             orderBy: { position: 'asc' },
           },
@@ -220,12 +266,10 @@ export class CatalogService {
           },
         },
       });
-      return product && !HIDDEN_PRODUCT_SLUGS.includes(product.slug)
-        ? product
-        : null;
+      return product;
     } catch (error) {
       console.error(`Error fetching product ${slug}:`, error);
-      return null;
+      throw error;
     }
   }
 
@@ -241,17 +285,20 @@ export class CatalogService {
             : {}),
         },
         include: {
+          _count: { select: { reviews: { where: { isApproved: true } } } },
           images: { orderBy: { position: 'asc' } },
           variants: {
+            where: { isActive: true },
             include: { inventory: true },
             orderBy: { position: 'asc' },
           },
+          categories: { include: { category: true } },
         },
         take: 4,
       });
     } catch (error) {
       console.error(`Error fetching related products for ${productId}:`, error);
-      return [];
+      throw error;
     }
   }
 
@@ -266,7 +313,7 @@ export class CatalogService {
       });
     } catch (error) {
       console.error(`Error fetching banners for placement ${placement}:`, error);
-      return [];
+      throw error;
     }
   }
 }

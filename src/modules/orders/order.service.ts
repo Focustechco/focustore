@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db/prisma';
+import type { OrderStatus } from '@/modules/orders/order-status';
 
 export class OrderService {
   static async getOrdersByUserId(userId: string) {
@@ -42,11 +43,18 @@ export class OrderService {
 
   static async updateOrderStatus(
     orderId: string,
-    status: any,
+    status: OrderStatus,
     comment?: string,
     actorId?: string
   ) {
     return prisma.$transaction(async (tx) => {
+      const currentOrder = await tx.order.findUnique({
+        where: { id: orderId },
+        select: { status: true },
+      });
+
+      if (!currentOrder) return null;
+
       const order = await tx.order.update({
         where: { id: orderId },
         data: { status },
@@ -67,7 +75,7 @@ export class OrderService {
           action: 'UPDATE_ORDER_STATUS',
           entity: 'Order',
           entityId: orderId,
-          metadata: JSON.stringify({ oldStatus: order.status, newStatus: status, comment }),
+          metadata: JSON.stringify({ oldStatus: currentOrder.status, newStatus: status, comment }),
         },
       });
 

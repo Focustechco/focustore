@@ -1,20 +1,15 @@
 import React from 'react';
-import Link from 'next/link';
 import { prisma } from '@/lib/db/prisma';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
+import { OrderStatusControl } from '@/components/admin/order-status-control';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminOrdersPage() {
-  let orders: any[] = [];
-  try {
-    orders = await prisma.order.findMany({
-      include: { items: true, payments: true, shipments: true },
-      orderBy: { createdAt: 'desc' },
-    });
-  } catch (err) {
-    console.error('Error fetching admin orders:', err);
-  }
+  const orders = await prisma.order.findMany({
+    include: { items: true, payments: true, shipments: true },
+    orderBy: { createdAt: 'desc' },
+  });
 
   return (
     <div className="p-4 sm:p-8 space-y-6 max-w-7xl mx-auto">
@@ -53,9 +48,7 @@ export default async function AdminOrdersPage() {
                     <td className="p-4 font-bold">{formatPrice(ord.total)}</td>
                     <td className="p-4 text-muted">{ord.payments?.[0]?.method || 'PIX'}</td>
                     <td className="p-4">
-                      <span className="px-2 py-0.5 rounded bg-focus/15 text-focus font-bold uppercase text-[10px]">
-                        {ord.status}
-                      </span>
+                      <OrderStatusControl orderId={ord.id} initialStatus={ord.status} />
                     </td>
                   </tr>
                 ))

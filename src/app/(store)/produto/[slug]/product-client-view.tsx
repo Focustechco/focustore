@@ -83,6 +83,10 @@ export function ProductClientView({ product }: { product: any }) {
   const router = useRouter();
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const reviewsCount = product.reviews?.length ?? 0;
+  const averageRating = reviewsCount > 0
+    ? product.reviews.reduce((total: number, review: { rating: number }) => total + review.rating, 0) / reviewsCount
+    : null;
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -243,9 +247,12 @@ export function ProductClientView({ product }: { product: any }) {
   }, [isFocusCap, product.variants, selectedColor, selectedSize]);
 
   // Preço e Estoque
-  const currentPrice = selectedVariant?.price || product.basePrice;
-  const currentPromoPrice = selectedVariant?.promotionalPrice || product.promotionalPrice;
-  const effectivePrice = currentPromoPrice || currentPrice;
+  const currentPrice = selectedVariant?.price ?? product.basePrice;
+  const currentPromoPrice = selectedVariant?.promotionalPrice ?? product.promotionalPrice;
+  const hasPromotion = currentPromoPrice !== null && currentPromoPrice !== undefined && currentPromoPrice < currentPrice;
+  const effectivePrice = hasPromotion
+    ? currentPromoPrice
+    : currentPrice;
   const availableStock = selectedVariant?.inventory?.quantityAvailable ?? 25;
 
   const handleColorChange = (colorName: string) => {
@@ -340,14 +347,24 @@ export function ProductClientView({ product }: { product: any }) {
         .map(([type, amount]) => `${type} (${amount})`)
         .join(', ');
       const totalQuantity = Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0);
+      const keychainPromotionalPrice = selectedVariant.promotionalPrice ?? product.promotionalPrice;
 
       addItem({
         variantId: selectedVariant.id,
         productId: product.id,
         name: product.name,
         variantName: `Selecionados: ${selectedTypes}`,
+<<<<<<< HEAD
         price: effectivePrice,
         promotionalPrice: null,
+=======
+        price: selectedVariant.price,
+        promotionalPrice: keychainPromotionalPrice !== null &&
+          keychainPromotionalPrice !== undefined &&
+          keychainPromotionalPrice < selectedVariant.price
+          ? keychainPromotionalPrice
+          : null,
+>>>>>>> ae5f5f607ae51cffc36f8a71f2a1524d39539ed9
         imageUrl: product.images[selectedImage]?.url || product.images[0]?.url,
         sku: selectedVariant.sku,
         quantity: totalQuantity,
@@ -358,6 +375,7 @@ export function ProductClientView({ product }: { product: any }) {
       return;
     }
 
+    const selectedPromotionalPrice = selectedVariant.promotionalPrice ?? product.promotionalPrice;
     addItem({
       variantId: selectedVariant.id,
       productId: product.id,
@@ -366,7 +384,11 @@ export function ProductClientView({ product }: { product: any }) {
         ? `Boné Focus Lab - ${selectedColor} / Único`
         : selectedVariant.name,
       price: selectedVariant.price,
-      promotionalPrice: selectedVariant.promotionalPrice,
+      promotionalPrice: selectedPromotionalPrice !== null &&
+        selectedPromotionalPrice !== undefined &&
+        selectedPromotionalPrice < selectedVariant.price
+        ? selectedPromotionalPrice
+        : null,
       imageUrl: getProductImageUrl(
         selectedProductImage?.url,
       ),
@@ -470,24 +492,25 @@ export function ProductClientView({ product }: { product: any }) {
             </h1>
           </div>
 
-          {/* Badges e Avaliações (Estilo Print 1) */}
+          {/* Promoção e avaliações cadastradas */}
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="px-2.5 py-1 rounded-md border border-white/25 text-[11px] font-black text-white uppercase tracking-wider bg-black/50 backdrop-blur-sm">
-              20% OFF
-            </span>
-            <span className="px-2.5 py-1 rounded-md bg-[#0D2A4A] border border-[#1E4E79] text-[11px] font-black text-sky-200 uppercase tracking-wider">
-              COMBINE & GANHE
-            </span>
-            <div className="flex items-center gap-1.5 text-xs text-zinc-300 font-semibold pl-1">
-              <Star size={13} className="fill-amber-400 text-amber-400" />
-              <span>4,9 (25988 reviews)</span>
-            </div>
+            {hasPromotion && (
+              <DiscountBadge price={currentPrice} promotionalPrice={currentPromoPrice} />
+            )}
+            {averageRating !== null ? (
+              <div className="flex items-center gap-1.5 text-xs text-zinc-300 font-semibold pl-1">
+                <Star size={13} className="fill-amber-400 text-amber-400" />
+                <span>{averageRating.toFixed(1)} ({reviewsCount} {reviewsCount === 1 ? 'avaliação' : 'avaliações'})</span>
+              </div>
+            ) : (
+              <span className="text-xs text-zinc-400 font-semibold pl-1">Sem avaliações</span>
+            )}
           </div>
 
           {/* Preço e Cupom (Estilo Print 1) */}
           <div className="space-y-1.5 py-1">
             <div className="flex flex-wrap items-baseline gap-2.5">
-              {currentPromoPrice ? (
+              {hasPromotion ? (
                 <>
                   <span className="text-zinc-500 line-through text-lg font-normal">
                     {formatPrice(currentPrice)}

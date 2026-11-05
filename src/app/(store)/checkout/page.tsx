@@ -14,7 +14,7 @@ import {
   ArrowRight,
   ShoppingBag
 } from 'lucide-react';
-import { useCart } from '@/modules/cart/cart-context';
+import { resolveProductImage, useCart } from '@/modules/cart/cart-context';
 import { formatPrice } from '@/lib/utils/formatters';
 import { Button } from '@/components/ui/button';
 
@@ -434,7 +434,7 @@ export default function CheckoutPage() {
                 <div key={item.variantId} className="pt-3 flex gap-3 items-center">
                   <div className="relative w-14 h-14 bg-[#121212] rounded-lg overflow-hidden flex-shrink-0 border border-white/5">
                     <Image
-                      src={item.imageUrl || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80'}
+                      src={resolveProductImage(item.imageUrl, item.name)}
                       alt={item.name}
                       fill
                       sizes="56px"
@@ -447,7 +447,7 @@ export default function CheckoutPage() {
                     <p className="text-muted text-[11px]">Qtd: {item.quantity}</p>
                   </div>
                   <span className="text-xs font-bold text-white">
-                    {formatPrice((item.promotionalPrice || item.price) * item.quantity)}
+                    {formatPrice((item.promotionalPrice ?? item.price) * item.quantity)}
                   </span>
                 </div>
               ))}

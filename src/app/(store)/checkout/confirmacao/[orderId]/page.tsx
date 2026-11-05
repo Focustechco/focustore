@@ -1,11 +1,14 @@
 import React from 'react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { OrderService } from '@/modules/orders/order.service';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { OrderConfirmationClient } from './order-confirmation-client';
+import { getAuthenticatedUser } from '@/lib/auth/session';
+import { canReadGuestOrder, guestOrderCookieName } from '@/lib/auth/guest-order';
 
 interface Props {
   params: Promise<{ orderId: string }>;
@@ -18,6 +21,13 @@ export default async function OrderConfirmationPage({ params }: Props) {
   if (!order) {
     notFound();
   }
+
+  const user = await getAuthenticatedUser();
+  const guestAccess = (await cookies()).get(guestOrderCookieName(orderId))?.value;
+  const canAccess = order.userId
+    ? user?.id === order.userId
+    : canReadGuestOrder(guestAccess, orderId);
+  if (!canAccess) notFound();
 
   const payment = order.payments[0];
   const isPix = payment?.method === 'PIX';

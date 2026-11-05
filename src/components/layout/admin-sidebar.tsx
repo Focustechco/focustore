@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Package,
+  Boxes,
   Layers,
   ShoppingBag,
   Users,
@@ -45,6 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
     groupName: 'CATÁLOGO & CMS',
     items: [
       { label: 'Produtos', href: '/admin/produtos', icon: Package },
+      { label: 'Coleções', href: '/admin/colecoes', icon: Boxes },
       { label: 'Categorias', href: '/admin/categorias', icon: Layers },
       { label: 'Banners & Fotos', href: '/admin/banners', icon: ImageIcon },
       { label: 'Cupons & Descontos', href: '/admin/cupons', icon: Ticket },

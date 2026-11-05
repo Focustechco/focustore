@@ -190,7 +190,7 @@ export default async function CollectionsPage() {
             </p>
           </div>
           <Link
-            href="/colecao/focus-tech"
+            href="/colecao/focus-lab"
             className="text-xs font-bold text-[#FF6500] hover:underline flex items-center gap-1 uppercase tracking-wider"
           >
             <span>Ver tudo</span>

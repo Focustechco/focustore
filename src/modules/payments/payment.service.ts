@@ -2,6 +2,15 @@ import { prisma } from '@/lib/db/prisma';
 import { InventoryService } from '../inventory/inventory.service';
 import { logger } from '@/lib/utils/logger';
 
+export class PaymentProcessingError extends Error {
+  readonly statusCode = 409;
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'PaymentProcessingError';
+  }
+}
+
 export class PaymentService {
   static async handlePaymentWebhook(payload: {
     eventId: string;
@@ -35,7 +44,13 @@ export class PaymentService {
     });
 
     try {
-      await prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
+        const currentEvent = await tx.webhookEvent.findUnique({
+          where: { id: webhookEvent.id },
+          select: { processed: true },
+        });
+        if (currentEvent?.processed) return 'already_processed';
+
         let payment;
         if (payload.paymentId) {
           payment = await tx.payment.findUnique({
@@ -50,7 +65,36 @@ export class PaymentService {
         }
 
         if (!payment) {
-          throw new Error('Pagamento correspondente n?o encontrado.');
+          throw new PaymentProcessingError('Pagamento correspondente não encontrado.');
+        }
+
+        if (payload.orderId && payload.orderId !== payment.orderId) {
+          throw new PaymentProcessingError('O pagamento não corresponde ao pedido informado.');
+        }
+
+        const paymentStatus = payload.status === 'PAID'
+          ? 'PAID'
+          : payload.status === 'CANCELLED'
+            ? 'CANCELLED'
+            : 'FAILED';
+
+        if (
+          payment.status === paymentStatus ||
+          (payment.status === 'FAILED' && paymentStatus === 'CANCELLED')
+        ) {
+          await tx.webhookEvent.update({
+            where: { id: webhookEvent.id },
+            data: { processed: true, processedAt: new Date() },
+          });
+          return 'already_processed';
+        }
+
+        if (payment.status !== 'PENDING' && payment.status !== 'AUTHORIZED') {
+          throw new PaymentProcessingError('O pagamento já foi finalizado com outro status.');
+        }
+
+        if (payment.order.status !== 'PAYMENT_PENDING' && payment.order.status !== 'PENDING') {
+          throw new PaymentProcessingError('O pedido não está aguardando pagamento.');
         }
 
         if (payload.status === 'PAID') {
@@ -80,7 +124,7 @@ export class PaymentService {
         } else if (payload.status === 'FAILED' || payload.status === 'CANCELLED') {
           await tx.payment.update({
             where: { id: payment.id },
-            data: { status: 'FAILED' },
+            data: { status: paymentStatus },
           });
 
           await tx.order.update({
@@ -107,16 +151,18 @@ export class PaymentService {
             processedAt: new Date(),
           },
         });
+        return 'success';
       });
 
-      return { status: 'success' };
-    } catch (err: any) {
-      logger.error('Falha ao processar webhook', { error: err.message, eventId: payload.eventId });
+      return { status: result };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro inesperado.';
+      logger.error('Falha ao processar webhook', { error: message, eventId: payload.eventId });
       await prisma.webhookEvent.update({
         where: { id: webhookEvent.id },
-        data: { error: err.message },
+        data: { error: message.slice(0, 1000) },
       });
-      throw err;
+      throw error;
     }
   }
 }

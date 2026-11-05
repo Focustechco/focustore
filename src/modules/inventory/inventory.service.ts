@@ -1,8 +1,9 @@
-import { prisma } from '@/lib/db/prisma';
+import type { Prisma } from '@prisma/client';
+import { InventoryError } from './inventory-error';
 
 export class InventoryService {
   static async reserveStock(
-    tx: any,
+    tx: Prisma.TransactionClient,
     items: { variantId: string; quantity: number }[],
     referenceId: string
   ) {
@@ -12,11 +13,11 @@ export class InventoryService {
       });
 
       if (!inventory) {
-        throw new Error(`Estoque não cadastrado para a variante ${item.variantId}`);
+        throw new InventoryError(`Estoque não cadastrado para a variante ${item.variantId}`);
       }
 
       if (inventory.quantityAvailable < item.quantity) {
-        throw new Error(
+        throw new InventoryError(
           `Estoque insuficiente. Disponível: ${inventory.quantityAvailable}, Solicitado: ${item.quantity}`
         );
       }
@@ -41,7 +42,7 @@ export class InventoryService {
     }
   }
 
-  static async commitStock(tx: any, orderId: string) {
+  static async commitStock(tx: Prisma.TransactionClient, orderId: string) {
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: { items: true },
@@ -75,7 +76,7 @@ export class InventoryService {
     }
   }
 
-  static async releaseStock(tx: any, orderId: string) {
+  static async releaseStock(tx: Prisma.TransactionClient, orderId: string) {
     const order = await tx.order.findUnique({
       where: { id: orderId },
       include: { items: true },

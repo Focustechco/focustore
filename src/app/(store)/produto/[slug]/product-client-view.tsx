@@ -204,7 +204,7 @@ export function ProductClientView({ product }: { product: any }) {
           const isWhite = selectedColor.toLowerCase().includes('branco');
 
           return isWhite
-            ? label.includes('branco') || label.includes('white')
+            ? (label.includes('branco') || label.includes('white'))
             : label.includes('preto') ||
                 label.includes('black') ||
                 (label.includes('frente') &&

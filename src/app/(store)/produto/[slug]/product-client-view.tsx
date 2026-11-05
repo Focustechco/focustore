@@ -119,6 +119,17 @@ export function ProductClientView({ product }: { product: any }) {
   const isKeychainProduct =
     product.slug === 'chaveiro-focus' ||
     product.name?.toLowerCase().includes('chaveiro');
+  const apparelSlug = `${product.slug || ''} ${product.name || ''}`.toLowerCase();
+  const isApparelProduct =
+    !isKeychainProduct &&
+    !isFocusCap &&
+    !apparelSlug.includes('boné') &&
+    !apparelSlug.includes('bone') &&
+    (apparelSlug.includes('camisa') ||
+      apparelSlug.includes('camiseta') ||
+      apparelSlug.includes('moletom') ||
+      apparelSlug.includes('blusa') ||
+      apparelSlug.includes('hoodie'));
 
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
   const descriptionSections = useMemo(
@@ -594,14 +605,16 @@ export function ProductClientView({ product }: { product: any }) {
                 <span className="text-xs font-black text-white uppercase tracking-wider">
                   TAMANHO
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setShowSizeGuide(true)}
-                  className="text-[11px] text-zinc-400 hover:text-white underline tracking-wide font-medium flex items-center gap-1 transition-colors"
-                >
-                  <Ruler size={13} />
-                  <span>Tabela de chaveiros</span>
-                </button>
+                {isApparelProduct && (
+                  <button
+                    type="button"
+                    onClick={() => setShowSizeGuide(true)}
+                    className="text-[11px] text-zinc-400 hover:text-white underline tracking-wide font-medium flex items-center gap-1 transition-colors"
+                  >
+                    <Ruler size={13} />
+                    <span>Tabela de Medidas</span>
+                  </button>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2">

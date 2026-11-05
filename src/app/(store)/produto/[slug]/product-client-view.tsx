@@ -99,6 +99,7 @@ export function ProductClientView({ product }: { product: any }) {
   const isDevCollectionShirt =
     product.slug?.startsWith('camisa-dev-collection-') ||
     devCollectionShirtSlugs.includes(product.slug);
+  const isColorSeparatedHoodie = product.slug === 'moletom-focus-hoodie';
   const capImages = [
     {
       id: 'bone-focus-black',
@@ -202,7 +203,7 @@ export function ProductClientView({ product }: { product: any }) {
   );
   const galleryImages = isFocusCap
     ? capImages.map((image, index) => ({ image, index }))
-    : isDevCollectionShirt
+    : isDevCollectionShirt || isColorSeparatedHoodie
     ? product.images
         .map((image: any, index: number) => ({ image, index }))
         .filter(({ image }: { image: any }) => {

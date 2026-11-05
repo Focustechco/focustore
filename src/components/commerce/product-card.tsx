@@ -78,7 +78,6 @@ export function ProductCard({ product }: ProductCardProps) {
   const effectivePrice = promotionalPrice !== null && promotionalPrice !== undefined && promotionalPrice < price
     ? promotionalPrice
     : price;
-  const reviewsCount = product._count?.reviews ?? 0;
 
   // Extrair cores únicas do produto
   const colorList = React.useMemo(() => {
@@ -237,12 +236,6 @@ export function ProductCard({ product }: ProductCardProps) {
             </Link>
           </div>
 
-          {/* Total de avaliações verificadas */}
-          <div className="flex items-center gap-1 text-[11px] text-zinc-400 h-4">
-            <span className="text-[10px] text-zinc-500">
-              {reviewsCount === 1 ? '1 avaliação' : `${reviewsCount} avaliações`}
-            </span>
-          </div>
         </div>
 
         {/* Linha Inferior: Preço + Cores + Botão Laranja do Carrinho 100% Alinhados */}

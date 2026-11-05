@@ -187,7 +187,7 @@ async function HomePageContent() {
       <FeaturedProductsCarousel products={sortedFeaturedProducts} />
 
       {/* =========================================================
-          6. SEÇÃO COM CARDS DARK (LINHA STREETWEAR & TECHWEAR)
+          6. SEÇÃO COM CARDS DARK (LINHA FOCUS)
           ========================================================= */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex items-end justify-between border-b border-white/10 pb-4">
@@ -198,7 +198,7 @@ async function HomePageContent() {
             </h2>
           </div>
           <Link
-            href="/categoria/vestuario"
+            href="/colecao/focus-lab"
             className="hidden sm:flex text-xs font-bold text-zinc-400 hover:text-white uppercase tracking-wider items-center gap-1.5 transition-colors"
           >
             Ver Coleção Completa <ArrowRight size={14} />

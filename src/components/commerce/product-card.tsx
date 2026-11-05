@@ -88,9 +88,16 @@ export function ProductCard({ product }: ProductCardProps) {
       ];
     }
     if (product.slug === 'moletom-focus-hoodie') {
+      const imageIndexByColor = (color: string) =>
+        product.images.findIndex((image) => {
+          const label = `${image.altText || ''} ${image.url || ''}`.toLowerCase();
+          return color === 'Preto'
+            ? label.includes('preto') || label.includes('black')
+            : label.includes('branco') || label.includes('white');
+        });
       return [
-        { name: 'Preto', hex: '#0D0D0D', imgIndex: 0 },
-        { name: 'Branco', hex: '#FFFFFF', imgIndex: 1 },
+        { name: 'Preto', hex: '#0D0D0D', imgIndex: Math.max(imageIndexByColor('Preto'), 0) },
+        { name: 'Branco', hex: '#FFFFFF', imgIndex: Math.max(imageIndexByColor('Branco'), 0) },
       ];
     }
     if (product.slug === 'chaveiro-focus') {

@@ -26,7 +26,7 @@ const DEFAULT_SLIDES = [
     subtitle:
       "Linha exclusiva desenvolvida para quem vive tecnologia, criatividade e inovação. Tecidos de alta gramatura e corte moderno.",
     primaryButtonText: "Ver coleção",
-    primaryButtonHref: "/colecao/focus-academy",
+    primaryButtonHref: "",
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
     imageUrl: ACADEMY_HERO_IMAGE,

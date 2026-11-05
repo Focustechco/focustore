@@ -62,6 +62,17 @@ export function resolveProductImage(imageUrl?: string | null, name?: string): st
   return imageUrl || '/images/products/camiseta-focus.jpg';
 }
 
+function normalizeCartItem(item: CartItem): CartItem {
+  const isKeychain = (item.name || '').toLowerCase().includes('chaveiro');
+
+  return {
+    ...item,
+    price: isKeychain ? 14.9 : item.price,
+    promotionalPrice: isKeychain ? null : item.promotionalPrice,
+    imageUrl: resolveProductImage(item.imageUrl, item.name),
+  };
+}
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -72,10 +83,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem('focus_cart');
       if (saved) {
         const parsed: CartItem[] = JSON.parse(saved);
-        const updated = parsed.map((item) => ({
-          ...item,
-          imageUrl: resolveProductImage(item.imageUrl, item.name),
-        }));
+        const updated = parsed.map(normalizeCartItem);
         setItems(updated);
       }
     } catch (e) {
@@ -95,16 +103,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, mounted]);
 
   const addItem = (rawItem: CartItem) => {
-    const newItem: CartItem = {
-      ...rawItem,
-      imageUrl: resolveProductImage(rawItem.imageUrl, rawItem.name),
-    };
+    const newItem = normalizeCartItem(rawItem);
     setItems((prev) => {
       const existing = prev.find((i) => i.variantId === newItem.variantId);
       if (existing) {
         return prev.map((i) =>
           i.variantId === newItem.variantId
-            ? { ...i, quantity: i.quantity + newItem.quantity }
+            ? {
+                ...newItem,
+                quantity: i.quantity + newItem.quantity,
+              }
             : i
         );
       }

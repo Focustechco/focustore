@@ -93,6 +93,9 @@ export function ProductCard({ product }: ProductCardProps) {
         { name: 'Branco', hex: '#FFFFFF', imgIndex: 1 },
       ];
     }
+    if (product.slug === 'chaveiro-focus') {
+      return [{ name: 'Preto', hex: '#0D0D0D', imgIndex: 0 }];
+    }
 
     const list: { name: string; hex: string; imgIndex: number }[] = [];
     const seen = new Set<string>();

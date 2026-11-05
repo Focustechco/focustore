@@ -346,7 +346,7 @@ export function ProductClientView({ product }: { product: any }) {
         productId: product.id,
         name: product.name,
         variantName: `Selecionados: ${selectedTypes}`,
-        price: 12.9,
+        price: effectivePrice,
         promotionalPrice: null,
         imageUrl: product.images[selectedImage]?.url || product.images[0]?.url,
         sku: selectedVariant.sku,

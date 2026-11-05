@@ -87,6 +87,12 @@ export function ProductCard({ product }: ProductCardProps) {
         { name: 'Branco', hex: '#FFFFFF', imgIndex: 1 },
       ];
     }
+    if (product.slug === 'moletom-focus-hoodie') {
+      return [
+        { name: 'Preto', hex: '#0D0D0D', imgIndex: 0 },
+        { name: 'Branco', hex: '#FFFFFF', imgIndex: 1 },
+      ];
+    }
     if (product.slug === 'chaveiro-focus') {
       return [{ name: 'Preto', hex: '#0D0D0D', imgIndex: 0 }];
     }
@@ -124,6 +130,7 @@ export function ProductCard({ product }: ProductCardProps) {
     return list;
   }, [product.slug, product.variants, product.images]);
 
+  const selectedColor = colorList.find((color) => color.imgIndex === currentImageIndex)?.name;
   const selectedVariant = isFocusCap
     ? product.variants.find((variant) => {
         const color = variant.color?.toLowerCase() || '';
@@ -131,6 +138,14 @@ export function ProductCard({ product }: ProductCardProps) {
           ? color.includes('branco') || color.includes('white')
           : color.includes('preto') || color.includes('black');
       }) || (currentImageIndex === 1 ? product.variants[1] : product.variants[0])
+    : selectedColor
+    ? product.variants.find((variant) => {
+        const color = variant.color?.toLowerCase() || '';
+        const normalizedSelectedColor = selectedColor.toLowerCase();
+        return color === normalizedSelectedColor ||
+          (normalizedSelectedColor === 'preto' && (color.includes('preto') || color.includes('black'))) ||
+          (normalizedSelectedColor === 'branco' && (color.includes('branco') || color.includes('white')));
+      }) || product.variants[0]
     : product.variants[0];
 
   const handleAddToCart = (e: React.MouseEvent) => {

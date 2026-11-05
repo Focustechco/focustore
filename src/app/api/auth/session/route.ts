@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME, getAuthenticatedUser } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 import { cookies } from 'next/headers';
+import { fastApiRequest, isPostgresSession } from '@/lib/auth/fastapi';
 
 export async function GET() {
   try {
@@ -21,7 +22,14 @@ export async function DELETE() {
     const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
     if (sessionToken) {
-      await prisma.session.deleteMany({ where: { sessionToken } });
+      if (isPostgresSession(sessionToken)) {
+        const backend = await fastApiRequest('/auth/logout', { method: 'POST' }, sessionToken);
+        if (!backend.ok && backend.status !== 401) {
+          return NextResponse.json({ error: 'NÃ£o foi possÃ­vel encerrar sua sessÃ£o.' }, { status: 503 });
+        }
+      } else {
+        await prisma.session.deleteMany({ where: { sessionToken } });
+      }
     }
 
     const response = NextResponse.json({ user: null });

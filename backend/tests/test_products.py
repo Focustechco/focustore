@@ -1,5 +1,19 @@
 import pytest
 
+from app.services.management import product_slug
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [
+        ("Teclado mecânico", "teclado-mecanico"),
+        ("Legacy Product 12", "legacy-product-12-item"),
+        ("!!!", "produto"),
+    ],
+)
+def test_product_slug_is_stable_and_reserves_legacy_fallback(name, expected):
+    assert product_slug(name) == expected
+
 
 def test_create_product_success(admin_client):
     category = admin_client.post(
@@ -162,3 +176,46 @@ def test_list_products_invalid_pagination(admin_client):
     response = admin_client.get("/products?skip=-1&limit=0")
 
     assert response.status_code == 422
+
+
+def test_stock_adjustment_is_atomic_and_persists(admin_client):
+    category = admin_client.post(
+        "/categories", json={"name": "Estoque", "slug": "estoque"}
+    )
+    product = admin_client.post(
+        "/products",
+        json={"name": "Item em estoque", "price": "10.00", "stock": 2,
+              "category_id": category.json()["id"]},
+    )
+    product_id = product.json()["id"]
+
+    response = admin_client.post(
+        f"/products/{product_id}/stock-adjustments", json={"delta": 3}
+    )
+    assert response.status_code == 200
+    assert response.json()["stock"] == 5
+
+
+def test_stock_adjustment_rejects_negative_result_without_mutating(admin_client):
+    category = admin_client.post(
+        "/categories", json={"name": "Limite", "slug": "limite"}
+    )
+    product = admin_client.post(
+        "/products",
+        json={"name": "Estoque limitado", "price": "10.00", "stock": 1,
+              "category_id": category.json()["id"]},
+    )
+    product_id = product.json()["id"]
+
+    response = admin_client.post(
+        f"/products/{product_id}/stock-adjustments", json={"delta": -2}
+    )
+    assert response.status_code == 409
+    assert admin_client.get(f"/products/{product_id}").json()["stock"] == 1
+
+
+def test_stock_adjustment_requires_administrator(client):
+    response = client.post(
+        "/products/1/stock-adjustments", json={"delta": 1}
+    )
+    assert response.status_code == 401

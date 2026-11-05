@@ -1,1 +1,1 @@
-"""Authorization through existing Next.js sessions; no parallel login system."""
+"""Customer sessions use PostgreSQL; legacy administrative sessions remain read-only."""

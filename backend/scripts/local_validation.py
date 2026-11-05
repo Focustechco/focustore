@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import ipaddress
 import sys
 from pathlib import Path
 from typing import Any
@@ -27,7 +28,7 @@ EXPECTED_HOST = "127.0.0.1"
 EXPECTED_PORT = 5432
 EXPECTED_DATABASE = "focusstore_test"
 EXPECTED_USER = "postgres"
-EXPECTED_HEAD = "f4a1d2e3c4b5"
+EXPECTED_HEAD = "a7b8c9d0e1f2"
 ALLOWED_PUBLIC_TABLES = {
     "alembic_version",
     "categories",
@@ -41,6 +42,109 @@ ALLOWED_PUBLIC_TABLES = {
 
 class ValidationError(RuntimeError):
     """A safe validation failure that contains no credentials."""
+
+
+def failure_message(exc: BaseException) -> str:
+    """Return a useful failure category without exposing driver details."""
+    if isinstance(exc, ValidationError):
+        return str(exc)
+    if isinstance(exc, (EOFError, KeyboardInterrupt)):
+        return "entrada da senha cancelada."
+
+    from alembic.util.exc import CommandError
+    from sqlalchemy.exc import ArgumentError, NoSuchModuleError, OperationalError
+    from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
+
+    if isinstance(exc, PermissionError):
+        return "permissão insuficiente para acessar o recurso local."
+    if isinstance(exc, (NoSuchModuleError, ArgumentError)):
+        return "configuração inválida do SQLAlchemy ou do driver PostgreSQL."
+    is_driver_operational_error = (
+        type(exc).__name__ in {"OperationalError", "InterfaceError"}
+        and type(exc).__module__.startswith("psycopg")
+    )
+    if isinstance(exc, OperationalError) or is_driver_operational_error:
+        detail = str(getattr(exc, "orig", exc)).lower()
+        if any(token in detail for token in ("permission denied", "insufficient privilege")):
+            return "permissão insuficiente no PostgreSQL local para consultar o schema."
+        if any(token in detail for token in (
+            "password authentication failed",
+            "no password supplied",
+            "authentication failed",
+            "invalid password",
+            "role ",
+        )):
+            return "falha de autenticação no PostgreSQL local; a senha ou o usuário não foram aceitos."
+        if any(token in detail for token in (
+            "connection refused",
+            "could not connect",
+            "connection timed out",
+            "timeout expired",
+            "server closed the connection",
+        )):
+            return "falha de conexão com o PostgreSQL local; confirme serviço, host e porta."
+        return "falha operacional ao acessar o PostgreSQL local."
+    if isinstance(exc, ProgrammingError):
+        detail = str(getattr(exc, "orig", exc)).lower()
+        if any(token in detail for token in ("permission denied", "insufficient privilege")):
+            return "permissão insuficiente no PostgreSQL local para consultar o schema."
+        return "erro SQL ou schema incompatível no PostgreSQL local."
+    if isinstance(exc, CommandError):
+        return "erro do Alembic ao ler ou aplicar a cadeia de migrations."
+    if isinstance(exc, SQLAlchemyError):
+        return "erro do SQLAlchemy ao acessar o PostgreSQL local."
+    if isinstance(exc, OSError):
+        return "erro do sistema ao acessar um recurso local."
+    return "erro inesperado durante a validação; detalhes sensíveis foram omitidos."
+
+
+def inspection_failure(stage: str, exc: BaseException) -> ValidationError:
+    """Attach a safe inspection stage to a sanitized driver error."""
+    return ValidationError(f"Falha na etapa {stage}: {failure_message(exc)}")
+
+
+def identity_mismatches(identity: tuple[Any, Any, Any, Any, Any]) -> list[str]:
+    """Return safe names of identity fields that do not match the local target."""
+    database, user, host, port, _version = identity
+    mismatches: list[str] = []
+    try:
+        actual_host = ipaddress.ip_interface(host).ip if host is not None else None
+        expected_host = ipaddress.ip_address(EXPECTED_HOST)
+        if isinstance(actual_host, ipaddress.IPv6Address) and actual_host.ipv4_mapped:
+            actual_host = actual_host.ipv4_mapped
+        host_matches = actual_host == expected_host
+    except ValueError:
+        host_matches = False
+    if not host_matches:
+        mismatches.append("host")
+    if port != EXPECTED_PORT:
+        mismatches.append("porta")
+    if database != EXPECTED_DATABASE:
+        mismatches.append("banco")
+    if user != EXPECTED_USER:
+        mismatches.append("usuário")
+    return mismatches
+
+
+def safe_exception_details(exc: BaseException) -> str:
+    """Return non-sensitive exception metadata for troubleshooting."""
+    candidates = [exc, getattr(exc, "orig", None), getattr(exc, "__cause__", None)]
+    driver_exception = next(
+        (
+            candidate
+            for candidate in candidates
+            if candidate is not None and type(candidate).__module__.startswith("psycopg")
+        ),
+        exc,
+    )
+    sqlstate = getattr(driver_exception, "sqlstate", None) or getattr(driver_exception, "pgcode", None)
+    driver = "psycopg" if type(driver_exception).__module__.startswith("psycopg") else "sqlalchemy"
+    sqlstate_text = sqlstate if isinstance(sqlstate, str) and sqlstate.isalnum() else "indisponível"
+    return (
+        f"exceção={type(driver_exception).__name__}; "
+        f"driver={driver}; sqlstate={sqlstate_text}; "
+        f"categoria={failure_message(exc)}"
+    )
 
 
 def project_root() -> Path:
@@ -118,30 +222,40 @@ def migration_revisions(ScriptDirectory: Any, Config: Any) -> tuple[set[str], li
 
 
 def inspect_database(connection: Any, text: Any, revisions: set[str]) -> dict[str, Any]:
-    identity = connection.execute(
-        text(
-            """
-            SELECT current_database(), current_user, inet_server_addr()::text,
-                   inet_server_port(), split_part(version(), ' ', 2)
-            """
-        )
-    ).one()
-    database, user, host, port, version = identity
-    if database != EXPECTED_DATABASE or user != EXPECTED_USER or host != EXPECTED_HOST or port != EXPECTED_PORT:
-        raise ValidationError("A conexão efetiva não corresponde ao destino local autorizado.")
-
-    tables = set(
-        connection.execute(
+    try:
+        identity = connection.execute(
             text(
                 """
-                SELECT table_name
-                FROM information_schema.tables
-                WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
-                ORDER BY table_name
+                SELECT current_database(), current_user, inet_server_addr()::text,
+                       inet_server_port(), split_part(version(), ' ', 2)
                 """
             )
-        ).scalars()
-    )
+        ).one()
+    except Exception as exc:
+        raise inspection_failure("identidade do servidor PostgreSQL", exc) from exc
+    database, user, host, port, version = identity
+    mismatches = identity_mismatches(identity)
+    if mismatches:
+        raise ValidationError(
+            "A conexão efetiva não corresponde ao destino local autorizado; "
+            "divergência em: " + ", ".join(mismatches) + "."
+        )
+
+    try:
+        tables = set(
+            connection.execute(
+                text(
+                    """
+                    SELECT table_name
+                    FROM information_schema.tables
+                    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+                    ORDER BY table_name
+                    """
+                )
+            ).scalars()
+        )
+    except Exception as exc:
+        raise inspection_failure("inventário de tabelas públicas", exc) from exc
     unexpected = tables - ALLOWED_PUBLIC_TABLES
     if unexpected:
         raise ValidationError(
@@ -150,10 +264,13 @@ def inspect_database(connection: Any, text: Any, revisions: set[str]) -> dict[st
 
     revisions_in_db: list[str] = []
     if "alembic_version" in tables:
-        revisions_in_db = list(
-            connection.execute(text("SELECT version_num FROM public.alembic_version ORDER BY version_num"))
-            .scalars()
-        )
+        try:
+            revisions_in_db = list(
+                connection.execute(text("SELECT version_num FROM public.alembic_version ORDER BY version_num"))
+                .scalars()
+            )
+        except Exception as exc:
+            raise inspection_failure("leitura da revisão Alembic", exc) from exc
         if len(revisions_in_db) > 1 or any(revision not in revisions for revision in revisions_in_db):
             raise ValidationError("A revisão Alembic do banco não pertence à cadeia esperada.")
     elif tables:
@@ -161,7 +278,10 @@ def inspect_database(connection: Any, text: Any, revisions: set[str]) -> dict[st
 
     counts: dict[str, int] = {}
     for table in sorted(tables - {"alembic_version"}):
-        counts[table] = int(connection.execute(text(f"SELECT count(*) FROM public.{table}")).scalar_one())
+        try:
+            counts[table] = int(connection.execute(text(f"SELECT count(*) FROM public.{table}")).scalar_one())
+        except Exception as exc:
+            raise inspection_failure(f"contagem da tabela pública {table}", exc) from exc
 
     return {
         "database": database,
@@ -193,25 +313,40 @@ def migrate(connection: Any, command: Any, Config: Any) -> None:
 
 def main() -> int:
     args = parse_args()
+    stage = "inicialização"
     try:
+        stage = "carregamento das dependências"
         ensure_backend_import_path()
         command, Config, ScriptDirectory, create_engine, text, URL = required_dependencies()
+        stage = "verificação da cadeia Alembic"
         revisions, _ = migration_revisions(ScriptDirectory, Config)
-        password = getpass.getpass("Senha do PostgreSQL local (não será exibida): ")
+        try:
+            stage = "entrada interativa da senha"
+            password = getpass.getpass("Senha do PostgreSQL local (não será exibida): ")
+        except (EOFError, KeyboardInterrupt):
+            print("Validação interrompida: entrada da senha cancelada.", file=sys.stderr)
+            return 2
+        stage = "construção da URL SQLAlchemy local"
         url = build_local_url(password, URL)
+        stage = "criação do engine SQLAlchemy"
         engine = create_engine(url, pool_pre_ping=True, hide_parameters=True)
         try:
-            with engine.begin() as connection:
-                snapshot = inspect_database(connection, text, revisions)
-                report(snapshot)
-                if args.migrate:
-                    if snapshot["counts"] and not args.allow_existing_data:
-                        raise ValidationError(
-                            "O banco autorizado já contém dados; revise as contagens e use "
-                            "--allow-existing-data somente após confirmar que são dados de teste."
-                        )
-                    migrate(connection, command, Config)
+            stage = "abertura da conexão SQLAlchemy"
+            with engine.connect() as connection:
+                stage = "inspeção somente leitura do PostgreSQL"
+                with connection.begin():
+                    snapshot = inspect_database(connection, text, revisions)
+                    report(snapshot)
+                    if args.migrate:
+                        if snapshot["counts"] and not args.allow_existing_data:
+                            raise ValidationError(
+                                "O banco autorizado já contém dados; revise as contagens e use "
+                                "--allow-existing-data somente após confirmar que são dados de teste."
+                            )
+                        stage = "execução das migrations Alembic"
+                        migrate(connection, command, Config)
             if args.migrate:
+                stage = "reinspeção do PostgreSQL após migration"
                 with engine.connect() as connection:
                     final_snapshot = inspect_database(connection, text, revisions)
                 print("Migrations concluídas no banco local autorizado.")
@@ -222,10 +357,18 @@ def main() -> int:
             engine.dispose()
         return 0
     except (ValidationError, OSError) as exc:
-        print(f"Validação interrompida: {exc}", file=sys.stderr)
+        print(
+            f"Validação interrompida na etapa {stage}: {failure_message(exc)} "
+            f"({safe_exception_details(exc)})",
+            file=sys.stderr,
+        )
         return 2
-    except Exception:
-        print("Validação interrompida por erro inesperado; detalhes sensíveis foram omitidos.", file=sys.stderr)
+    except Exception as exc:
+        print(
+            f"Validação interrompida na etapa {stage}: {failure_message(exc)} "
+            f"({safe_exception_details(exc)})",
+            file=sys.stderr,
+        )
         return 1
     finally:
         password = None

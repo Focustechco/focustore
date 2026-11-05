@@ -29,7 +29,6 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [cpf, setCpf] = useState('');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
@@ -49,7 +48,6 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
     setNotice('');
     setName('');
     setEmail('');
-    setCpf('');
     setIdentifier('');
     setPassword('');
     setPasswordConfirmation('');
@@ -116,7 +114,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
         body: JSON.stringify(
           mode === 'login'
             ? { identifier, password, remember }
-            : { name, email, cpf, password },
+            : { name, email, password },
         ),
       });
       const result = (await response.json()) as {
@@ -262,26 +260,6 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
                 </div>
               </div>
 
-              <div>
-                <label
-                  htmlFor="login-cpf"
-                  className="mb-2 block text-xs font-bold uppercase text-zinc-300"
-                >
-                  CPF <span className="font-normal normal-case text-zinc-500"></span>
-                </label>
-                <input
-                  id="login-cpf"
-                  name="cpf"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={14}
-                  value={cpf}
-                  onChange={(event) => setCpf(event.target.value)}
-                  placeholder="000.000.000-00"
-                  className="h-11 w-full rounded-xl border border-[#222226] bg-[#09090b] px-3 text-sm outline-none transition placeholder:text-zinc-600 focus:border-[#FF5500]"
-                />
-              </div>
             </>
           )}
 

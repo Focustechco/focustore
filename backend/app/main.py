@@ -1,4 +1,6 @@
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError
@@ -8,6 +10,12 @@ from app.config import get_settings
 from app.services.catalog_service import CatalogUnavailable
 from app.services.management import DomainError
 from app.services.orders import OrdersUnavailable
+
+
+async def auth_validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    if request.url.path.startswith('/api/v1/auth/'):
+        return JSONResponse(status_code=422, content={'detail': 'Dados de autenticacao invalidos.'})
+    return await request_validation_exception_handler(request, exc)
 
 
 async def catalog_unavailable_handler(request: Request, exc: CatalogUnavailable) -> JSONResponse:
@@ -40,6 +48,7 @@ def create_app() -> FastAPI:
     application.add_exception_handler(DomainError, domain_error_handler)
     application.add_exception_handler(SQLAlchemyError, database_error_handler)
     application.add_exception_handler(OrdersUnavailable, orders_error_handler)
+    application.add_exception_handler(RequestValidationError, auth_validation_error_handler)
 
     @application.middleware('http')
     async def private_response_headers(request: Request, call_next):

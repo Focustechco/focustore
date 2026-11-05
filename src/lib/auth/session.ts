@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db/prisma';
+import { isPostgresSession, postgresSessionUser } from '@/lib/auth/fastapi';
 
 export const AUTH_COOKIE_NAME = 'focus_session';
 
@@ -15,6 +16,8 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
   const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
   if (!sessionToken) return null;
+
+  if (isPostgresSession(sessionToken)) return postgresSessionUser(sessionToken);
 
   const session = await prisma.session.findUnique({
     where: { sessionToken },

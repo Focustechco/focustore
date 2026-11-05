@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     catalog_source: Literal['legacy_sqlite', 'postgresql'] = Field(
         default='legacy_sqlite', validation_alias='CATALOG_SOURCE'
     )
+    auth_session_ttl_minutes: int = Field(default=10080, ge=5, le=43200)
+    auth_cookie_secure: bool = Field(default=True)
+    auth_rate_limit_attempts: int = Field(default=10, ge=1, le=100)
+    auth_rate_limit_window_seconds: int = Field(default=900, ge=60, le=86400)
 
     @field_validator('frontend_origin')
     @classmethod

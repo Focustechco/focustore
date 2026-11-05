@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { grantGuestOrder, canReadGuestOrder } from '../src/lib/auth/guest-order';
 import { sameOrigin } from '../src/lib/security/origin';
+import { isPostgresSession } from '../src/lib/auth/fastapi';
 import { validateProductInput, validatePromotionalPrice } from '../src/modules/catalog/product-validation';
 import { restoredCart } from '../src/modules/cart/cart-validation';
 import { postgresTestUrl } from './helpers/postgres-test';
@@ -19,6 +20,12 @@ test('guest order tokens are signed, bound to the order and expire', () => {
 test('origin validation rejects cross-site requests', () => {
   assert.equal(sameOrigin(new Request('http://localhost/api', { headers: { origin: 'http://localhost' } })), true);
   assert.equal(sameOrigin(new Request('http://localhost/api', { headers: { origin: 'https://evil.example' } })), false);
+});
+
+test('keeps PostgreSQL sessions on the PostgreSQL identity boundary', () => {
+  assert.equal(isPostgresSession('pg_session-token'), true);
+  assert.equal(isPostgresSession('legacy-session-token'), false);
+  assert.equal(isPostgresSession(undefined), false);
 });
 
 test('product validation rejects invalid prices and stock', () => {

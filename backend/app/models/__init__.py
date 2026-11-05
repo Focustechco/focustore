@@ -2,5 +2,16 @@
 
 from app.models.category import Category
 from app.models.product import Inventory, Product, ProductCategory, ProductImage, ProductVariant
+from app.models.user import AuthRateLimit, User, UserSession
 
-__all__ = ["Category", "Inventory", "Product", "ProductCategory", "ProductImage", "ProductVariant"]
+__all__ = [
+    "AuthRateLimit",
+    "Category",
+    "Inventory",
+    "Product",
+    "ProductCategory",
+    "ProductImage",
+    "ProductVariant",
+    "User",
+    "UserSession",
+]

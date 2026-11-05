@@ -2,6 +2,8 @@ import { cookies, headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
+import { isPostgresSession } from '@/lib/auth/fastapi';
+import { getAuthenticatedUser } from '@/lib/auth/session';
 
 type AdminAuthorization =
   | { authorized: true; role: 'ADMIN' | 'MANAGER' }
@@ -31,6 +33,17 @@ export async function requireAdmin() {
     return {
       authorized: false,
       response: NextResponse.json({ error: 'Autenticação necessária.' }, { status: 401 }),
+    } satisfies AdminAuthorization;
+  }
+
+  if (isPostgresSession(sessionToken)) {
+    const customer = await getAuthenticatedUser();
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { error: customer ? 'Acesso nÃ£o autorizado.' : 'AutenticaÃ§Ã£o necessÃ¡ria.' },
+        { status: customer ? 403 : 401 },
+      ),
     } satisfies AdminAuthorization;
   }
 

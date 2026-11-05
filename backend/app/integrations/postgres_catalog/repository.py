@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import and_, cast, func, or_, select, String
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.category import Category
@@ -35,6 +35,19 @@ class PostgresCatalogRepository:
             .options(*self._product_options())
         )
         product = self.db.scalars(statement).unique().first()
+        if product is None:
+            legacy_slug = (
+                select(Product)
+                .where(
+                    Product.slug.is_(None),
+                    Product.status == 'ACTIVE',
+                    and_(
+                        func.concat('legacy-product-', cast(Product.id, String)) == slug,
+                    ),
+                )
+                .options(*self._product_options())
+            )
+            product = self.db.scalars(legacy_slug).unique().first()
         return product_schema(product) if product else None
 
     def categories(self, offset: int, limit: int) -> CatalogPage[CatalogCategory]:

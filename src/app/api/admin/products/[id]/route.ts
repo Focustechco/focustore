@@ -71,6 +71,7 @@ export async function PUT(
 
     const existingProduct = await prisma.product.findUnique({
       where: { id },
+      include: { variants: true },
     });
 
     if (!existingProduct) {
@@ -171,7 +172,20 @@ export async function PUT(
             if (variant.colorHex !== undefined) variantData.colorHex = variant.colorHex || null;
             if (variant.size !== undefined) variantData.size = variant.size || null;
             if (variant.model !== undefined) variantData.model = variant.model || null;
-            if (variant.price !== undefined) variantData.price = variant.price;
+            if (variant.price !== undefined) {
+              const existingVariant = existingProduct.variants.find((item) => item.id === variant.id);
+              const basePriceWasChanged =
+                body.basePrice !== undefined &&
+                Number(body.basePrice) !== Number(existingProduct.basePrice);
+              const variantFollowedOldBasePrice =
+                existingVariant &&
+                Math.abs(Number(variant.price) - Number(existingVariant.price)) < 0.001 &&
+                Math.abs(Number(existingVariant.price) - Number(existingProduct.basePrice)) < 0.001;
+              variantData.price =
+                basePriceWasChanged && variantFollowedOldBasePrice
+                  ? Number(body.basePrice)
+                  : variant.price;
+            }
             if (variant.promotionalPrice !== undefined) variantData.promotionalPrice = variant.promotionalPrice;
             if (variant.imageUrl !== undefined) variantData.imageUrl = variant.imageUrl;
             if (variant.isActive !== undefined) variantData.isActive = variant.isActive;

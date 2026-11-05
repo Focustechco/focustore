@@ -505,7 +505,20 @@ export function ProductForm({
                 step="0.01"
                 required
                 value={basePrice}
-                onChange={(e) => setBasePrice(e.target.value)}
+                onChange={(e) => {
+                  const nextBasePrice = e.target.value;
+                  const previousBasePrice = Number(basePrice);
+                  const parsedNextBasePrice = Number(nextBasePrice);
+
+                  setBasePrice(nextBasePrice);
+                  if (nextBasePrice !== '' && Number.isFinite(parsedNextBasePrice)) {
+                    setVariants((currentVariants) => currentVariants.map((variant) =>
+                      Number(variant.price) === previousBasePrice
+                        ? { ...variant, price: parsedNextBasePrice }
+                        : variant
+                    ));
+                  }
+                }}
                 placeholder="189.90"
                 className="w-full bg-[#161616] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-[#FF6500] font-bold text-sm outline-none font-mono"
               />

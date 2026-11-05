@@ -64,12 +64,8 @@ export function resolveProductImage(imageUrl?: string | null, name?: string): st
 }
 
 function normalizeCartItem(item: CartItem): CartItem {
-  const isKeychain = (item.name || '').toLowerCase().includes('chaveiro');
-
   return {
     ...item,
-    price: isKeychain ? 14.9 : item.price,
-    promotionalPrice: isKeychain ? null : item.promotionalPrice,
     imageUrl: resolveProductImage(item.imageUrl, item.name),
   };
 }
@@ -83,16 +79,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem('focus_cart');
       if (saved) {
-<<<<<<< HEAD
         const parsed: CartItem[] = JSON.parse(saved);
         const updated = parsed.map(normalizeCartItem);
-=======
-        const parsed: unknown = JSON.parse(saved);
-        const updated = restoredCart(parsed).map((item) => ({
-          ...item,
-          imageUrl: resolveProductImage(item.imageUrl, item.name),
-        }));
->>>>>>> ae5f5f607ae51cffc36f8a71f2a1524d39539ed9
         setItems(updated);
       }
     } catch (e) {

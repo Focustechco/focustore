@@ -102,7 +102,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
     setNotice('');
 
     if (mode === 'register' && password !== passwordConfirmation) {
-      setError('As senhas não conferem.');
+      setError('As senhas não coincidem.');
       return;
     }
 
@@ -200,7 +200,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} aria-busy={isSubmitting} className="space-y-4">
           {isRegistering && (
             <>
               <div>
@@ -283,7 +283,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
                 name={isRegistering ? 'password' : 'identifier'}
                 type={isRegistering ? (showPassword ? 'text' : 'password') : 'text'}
                 autoComplete={isRegistering ? 'new-password' : 'username'}
-                minLength={isRegistering ? 8 : undefined}
+                minLength={isRegistering ? 12 : undefined}
                 maxLength={72}
                 required
                 value={isRegistering ? password : identifier}
@@ -292,7 +292,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
                     ? setPassword(event.target.value)
                     : setIdentifier(event.target.value)
                 }
-                placeholder={isRegistering ? 'Mínimo de 8 caracteres' : 'seu@email.com'}
+                placeholder={isRegistering ? 'Mínimo de 12 caracteres' : 'seu@email.com'}
                 className={`h-11 w-full rounded-xl border border-[#222226] bg-[#09090b] text-sm outline-none transition placeholder:text-zinc-600 focus:border-[#FF5500] ${
                   isRegistering ? 'pl-3 pr-11' : 'pl-10 pr-3'
                 }`}
@@ -329,7 +329,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
                   name="passwordConfirmation"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  minLength={8}
+                  minLength={12}
                   maxLength={72}
                   required
                   value={passwordConfirmation}
@@ -395,7 +395,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
           )}
 
           {error && (
-            <p role="alert" className="text-sm text-red-400">
+            <p role="alert" aria-live="assertive" className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
               {error}
             </p>
           )}
@@ -403,6 +403,7 @@ export function LoginModal({ isOpen, onClose, onAuthenticated }: LoginModalProps
           <button
             type="submit"
             disabled={isSubmitting}
+            aria-busy={isSubmitting}
             className="h-12 w-full rounded-xl bg-[#FF5500] text-sm font-black uppercase text-black transition hover:bg-[#ff6b1a] focus:outline-none focus:ring-2 focus:ring-[#FF8A40] focus:ring-offset-2 focus:ring-offset-[#121215] disabled:cursor-wait disabled:opacity-70"
           >
             {isSubmitting

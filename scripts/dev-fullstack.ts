@@ -37,15 +37,42 @@ async function main() {
       }
     }
   };
-  process.once('SIGINT', stop);
-  process.once('SIGTERM', stop);
+  process.once('SIGINT', () => { stop(); setTimeout(() => process.exit(130), 2000).unref(); });
+  process.once('SIGTERM', () => { stop(); setTimeout(() => process.exit(143), 2000).unref(); });
   const start = (command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv) => {
     const child = spawn(command, args, { cwd, env, windowsHide: true, stdio: 'inherit' });
     children.push(child);
-    child.once('error', () => { console.error('Não foi possível iniciar um serviço local. Verifique Python e dependências.'); process.exitCode = 1; stop(); });
-    child.once('exit', code => { if (!stopping) { process.exitCode = code || 1; stop(); } });
+    child.once('error', error => {
+      console.error(`Não foi possível iniciar ${command}: ${error.message}`);
+      process.exitCode = 1;
+      stop();
+    });
+    child.once('exit', (code, signal) => {
+      if (!stopping) {
+        console.error(`${command} encerrou inesperadamente (código ${code ?? 'n/a'}, sinal ${signal ?? 'n/a'}).`);
+        process.exitCode = code || 1;
+        stop();
+      }
+    });
     return child;
   };
+
+  async function waitForHttp(url: string, child: ChildProcess, label: string): Promise<void> {
+    const deadline = Date.now() + 30_000;
+    let lastError = 'sem resposta';
+    while (Date.now() < deadline) {
+      if (child.exitCode !== null) throw new Error(`${label} encerrou antes de ficar disponível.`);
+      try {
+        const response = await fetch(url, { signal: AbortSignal.timeout(2_000) });
+        if (response.ok) return;
+        lastError = `HTTP ${response.status}`;
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : 'erro de conexão';
+      }
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    throw new Error(`${label} não respondeu HTTP 200 em 30 segundos (${lastError}).`);
+  }
 
   const frontendEnv = { ...process.env, NODE_ENV: 'development', DATABASE_URL: frontendDatabaseUrl } as NodeJS.ProcessEnv;
   delete frontendEnv.FOCUS_BACKEND_DATABASE_URL;
@@ -62,10 +89,21 @@ async function main() {
   }
   if (process.env.FOCUS_BACKEND_DATABASE_URL) backendEnv.DATABASE_URL = process.env.FOCUS_BACKEND_DATABASE_URL;
 
-  console.log(`Frontend Prisma: PostgreSQL configurado | FastAPI: PostgreSQL próprio${backendEnv.LEGACY_CATALOG_SQLITE_PATH ? ' + catálogo SQLite legado somente leitura' : ''}`);
+  const frontendDatabaseKind = frontendDatabaseUrl.startsWith('file:') ? 'SQLite legado' : 'PostgreSQL';
+  console.log(`Frontend Prisma: ${frontendDatabaseKind} | FastAPI: PostgreSQL próprio${backendEnv.LEGACY_CATALOG_SQLITE_PATH ? ' + catálogo SQLite legado somente leitura' : ''}`);
   console.log(`Next.js: http://127.0.0.1:${frontendPort} | FastAPI: http://127.0.0.1:${backendPort}/docs`);
-  start(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', String(frontendPort)], root, frontendEnv);
-  start(python, ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)], path.join(root, 'backend'), backendEnv);
+  const frontend = start(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', String(frontendPort)], root, frontendEnv);
+  const backend = start(python, ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)], path.join(root, 'backend'), backendEnv);
+  try {
+    await Promise.all([
+      waitForHttp(`http://127.0.0.1:${backendPort}/health`, backend, 'FastAPI'),
+      waitForHttp(`http://127.0.0.1:${frontendPort}`, frontend, 'Next.js'),
+    ]);
+    console.log('FocusStore local disponível: FastAPI /health e Next.js responderam HTTP 200.');
+  } catch (error) {
+    stop();
+    throw error;
+  }
 }
 
 main().catch(error => { console.error(error instanceof Error ? error.message : 'Falha na inicialização local.'); process.exitCode = 1; });

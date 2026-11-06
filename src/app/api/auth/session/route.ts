@@ -25,7 +25,7 @@ export async function DELETE() {
       if (isPostgresSession(sessionToken)) {
         const backend = await fastApiRequest('/auth/logout', { method: 'POST' }, sessionToken);
         if (!backend.ok && backend.status !== 401) {
-          return NextResponse.json({ error: 'NÃ£o foi possÃ­vel encerrar sua sessÃ£o.' }, { status: 503 });
+          return NextResponse.json({ error: 'Não foi possível encerrar sua sessão.' }, { status: 503 });
         }
       } else {
         await prisma.session.deleteMany({ where: { sessionToken } });

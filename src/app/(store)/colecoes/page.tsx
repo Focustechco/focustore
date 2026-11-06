@@ -1,16 +1,9 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Dela_Gothic_One } from "next/font/google";
 import { ChevronRight, Sparkles, ArrowRight, Layers } from "lucide-react";
 import { CatalogService } from "@/modules/catalog/catalog.service";
 import { ProductCard } from "@/components/commerce/product-card";
-
-const delaGothicOne = Dela_Gothic_One({
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
-});
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +73,7 @@ export default async function CollectionsPage() {
 
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           <div className="lg:col-span-6 space-y-5">
-            <h2 className={`${delaGothicOne.className} font-collection-display text-3xl sm:text-4xl lg:text-5xl text-white leading-tight uppercase`}>
+            <h2 className="font-collection-display text-3xl sm:text-4xl lg:text-5xl text-white leading-tight uppercase">
               edição <br></br>{" "}
               <span className="text-[#FF6500]">dev collection </span>
             </h2>

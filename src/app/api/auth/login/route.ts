@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { copySetCookie, fastApiRequestFromNextRequest } from '@/lib/auth/fastapi';
 
 const loginSchema = z.object({
-  identifier: z.string().trim().email('Informe um e-mail vÃ¡lido.').max(254),
+  identifier: z.string().trim().email('Informe um e-mail válido.').max(254),
   password: z.string().min(1, 'Informe sua senha.').max(128),
   remember: z.boolean().optional(),
 });
@@ -11,7 +11,7 @@ const loginSchema = z.object({
 export async function POST(request: Request) {
   let body: unknown;
   try { body = await request.json(); } catch {
-    return NextResponse.json({ error: 'RequisiÃ§Ã£o invÃ¡lida.' }, { status: 400 });
+    return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
   }
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json(
@@ -24,13 +24,13 @@ export async function POST(request: Request) {
     });
     const payload = await backend.json().catch(() => ({}));
     const response = NextResponse.json(
-      backend.ok ? { user: payload } : { error: payload.detail || payload.error || 'NÃ£o foi possÃ­vel entrar.' },
+      backend.ok ? { user: payload } : { error: 'Não foi possível entrar. Verifique seus dados.' },
       { status: backend.status },
     );
     copySetCookie(backend, response);
     return response;
   } catch {
     console.error('Falha ao encaminhar login para a API de identidade.');
-    return NextResponse.json({ error: 'NÃ£o foi possÃ­vel entrar. Tente novamente.' }, { status: 503 });
+    return NextResponse.json({ error: 'Não foi possível entrar. Tente novamente.' }, { status: 503 });
   }
 }

@@ -194,7 +194,7 @@ async function HomePageContent() {
           <div>
             <p className="text-xs font-bold text-[#FF6500] uppercase tracking-widest mb-1">Coleção Focus Tech</p>
             <h2 className="text-2xl font-black text-white tracking-tight uppercase">
-              Linha Focus
+              Linha Focus Lab
             </h2>
           </div>
           <Link

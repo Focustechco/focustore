@@ -4,7 +4,13 @@ import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/prisma';
 
 type AdminAuthorization =
-  | { authorized: true; userId: string; role: 'ADMIN' | 'MANAGER' }
+  | {
+      authorized: true;
+      userId: string;
+      role: 'ADMIN' | 'MANAGER';
+      sessionToken: string;
+      sessionExpires: Date;
+    }
   | { authorized: false; response: NextResponse };
 
 export async function requireAdmin() {
@@ -44,5 +50,7 @@ export async function requireAdmin() {
     authorized: true,
     userId: session.user.id,
     role: session.user.role,
+    sessionToken,
+    sessionExpires: session.expires,
   } satisfies AdminAuthorization;
 }

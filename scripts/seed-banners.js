@@ -8,7 +8,7 @@ const HERO_BANNERS = [
     subtitle:
       "Linha exclusiva desenvolvida para quem vive tecnologia, criatividade e inovação. Tecidos de alta gramatura e corte moderno.",
     ctaText: "Ver coleção",
-    ctaLink: "/categoria/vestuario",
+    ctaLink: "/colecao/focus-academy",
     imageUrl: "/images/hero/hero-focus-academy-banner-2026.png",
     position: 0,
     placement: "home_hero",
@@ -30,7 +30,7 @@ const HERO_BANNERS = [
     subtitle:
       "Camisas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.",
     ctaText: "Ver Coleção",
-    ctaLink: "/categoria/vestuario",
+    ctaLink: "/colecao/focus-lab",
     imageUrl: "/images/hero/hero-movimento-streetwear.png",
     position: 2,
     placement: "home_hero",

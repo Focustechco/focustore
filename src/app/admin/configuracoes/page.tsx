@@ -6,6 +6,7 @@ import {
   CreditCard,
   Save,
   Check,
+  LockKeyhole,
   Phone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,12 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<SettingsFormData>(DEFAULT_SETTINGS);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSaved, setPasswordSaved] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -99,6 +106,46 @@ export default function AdminSettingsPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSaved(false);
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('A confirmação não corresponde à nova senha.');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const response = await fetch('/api/admin/settings/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = (await response.json()) as {
+        success?: boolean;
+        error?: string;
+      };
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Não foi possível alterar a senha.');
+      }
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordSaved(true);
+    } catch (changeError) {
+      setPasswordError(
+        changeError instanceof Error
+          ? changeError.message
+          : 'Não foi possível alterar a senha.',
+      );
+    } finally {
+      setChangingPassword(false);
     }
   };
 
@@ -296,6 +343,113 @@ export default function AdminSettingsPage() {
           </Button>
         </div>
       </form>
+
+      <section className="bg-[#0E0E0E] rounded-2xl border border-white/10 p-5 sm:p-6 space-y-4">
+        <div className="flex items-center gap-2 text-sm font-bold text-white uppercase tracking-wider border-b border-white/5 pb-3">
+          <LockKeyhole size={16} className="text-[#FF6500]" />
+          <span>Segurança da Conta</span>
+        </div>
+
+        <p className="text-xs text-zinc-400">
+          Use uma senha exclusiva com pelo menos 8 caracteres. A alteração encerra
+          suas outras sessões; esta sessão permanecerá ativa.
+        </p>
+
+        {passwordError && (
+          <p
+            role="alert"
+            className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+          >
+            {passwordError}
+          </p>
+        )}
+
+        {passwordSaved && (
+          <p
+            role="status"
+            className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+          >
+            Senha alterada com sucesso. As outras sessões foram encerradas.
+          </p>
+        )}
+
+        <form onSubmit={handlePasswordChange} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
+              <label
+                htmlFor="current-password"
+                className="block text-xs font-semibold text-zinc-400"
+              >
+                Senha atual
+              </label>
+              <input
+                id="current-password"
+                type="password"
+                autoComplete="current-password"
+                required
+                maxLength={72}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                disabled={changingPassword}
+                className="w-full rounded-xl border border-white/10 bg-[#141414] px-3.5 py-2.5 text-white outline-none focus:border-[#FF6500]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="new-password"
+                className="block text-xs font-semibold text-zinc-400"
+              >
+                Nova senha
+              </label>
+              <input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={72}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={changingPassword}
+                className="w-full rounded-xl border border-white/10 bg-[#141414] px-3.5 py-2.5 text-white outline-none focus:border-[#FF6500]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="confirm-password"
+                className="block text-xs font-semibold text-zinc-400"
+              >
+                Confirme a nova senha
+              </label>
+              <input
+                id="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={72}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={changingPassword}
+                className="w-full rounded-xl border border-white/10 bg-[#141414] px-3.5 py-2.5 text-white outline-none focus:border-[#FF6500]"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              type="submit"
+              disabled={changingPassword}
+              className="gap-2 bg-[#FF6500] font-bold uppercase tracking-wider text-white hover:bg-[#FF7A1A]"
+            >
+              <LockKeyhole size={16} />
+              {changingPassword ? 'Alterando...' : 'Alterar senha'}
+            </Button>
+          </div>
+        </form>
+      </section>
     </div>
   );
 }

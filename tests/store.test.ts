@@ -218,6 +218,69 @@ test('admin endpoints and server pages deny unauthenticated and ordinary users',
   adminCookie = login.headers.get('set-cookie')!.split(';')[0];
 });
 
+test('admin can change password securely and other sessions are revoked', async () => {
+  const endpoint = '/api/admin/settings/password';
+  const currentToken = adminCookie.split('=')[1];
+  const currentSession = await prisma.session.findUniqueOrThrow({
+    where: { sessionToken: currentToken },
+  });
+  const otherSession = await prisma.session.create({
+    data: {
+      userId: currentSession.userId,
+      sessionToken: randomUUID(),
+      expires: new Date(Date.now() + 60 * 60 * 1000),
+    },
+  });
+  const request = (body: unknown, cookie = adminCookie, origin = base) =>
+    fetch(`${base}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie,
+        origin,
+      },
+      body: JSON.stringify(body),
+    });
+
+  assert.equal((await api(endpoint, 'POST', {})).status, 401);
+  assert.equal((await request({}, customerCookie)).status, 403);
+  assert.equal((await request({}, adminCookie, 'https://untrusted.example')).status, 403);
+  assert.equal((await request({
+    currentPassword: 'wrong-password',
+    newPassword: 'a-new-strong-password',
+  })).status, 400);
+  assert.equal((await request({
+    currentPassword: 'synthetic-admin-password',
+    newPassword: 'short',
+  })).status, 400);
+  assert.equal((await request({
+    currentPassword: 'synthetic-admin-password',
+    newPassword: 'synthetic-admin-password',
+  })).status, 400);
+
+  const response = await request({
+    currentPassword: 'synthetic-admin-password',
+    newPassword: 'newpass8',
+  });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).success, true);
+  const updatedCookie = response.headers.get('set-cookie')!.split(';')[0];
+  const updatedToken = updatedCookie.split('=')[1];
+  assert.notEqual(updatedToken, currentToken);
+  adminCookie = updatedCookie;
+
+  const updatedUser = await prisma.user.findUniqueOrThrow({
+    where: { id: currentSession.userId },
+  });
+  assert(await bcrypt.compare('newpass8', updatedUser.passwordHash!));
+  assert.equal(await prisma.session.findUnique({ where: { sessionToken: currentToken } }), null);
+  assert.equal(
+    (await prisma.session.findUniqueOrThrow({ where: { sessionToken: updatedToken } })).id,
+    currentSession.id,
+  );
+  assert.equal(await prisma.session.findUnique({ where: { id: otherSession.id } }), null);
+});
+
 test('admin banner detail route preserves authorization and CRUD behavior', async () => {
   const banner = await prisma.banner.create({
     data: { title: 'Synthetic banner', imageUrl: '/images/synthetic.png' },

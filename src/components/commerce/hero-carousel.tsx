@@ -20,6 +20,20 @@ const ACADEMY_HERO_IMAGE =
 const DEFAULT_SLIDES = [
   {
     id: "slide-1",
+    titleLine1: "EXPRESSE SUA",
+    titleLine2: "LINGUAGEM.",
+    subtitle:
+      "Conheça a Dev Collection da Focus Academy. Camisetas exclusivas inspiradas na programação, com estilo, tecnologia e personalidade.",
+    primaryButtonText: "Explorar coleção",
+    primaryButtonHref: "/colecao/dev-collection",
+    secondaryButtonText: "",
+    secondaryButtonHref: "",
+    imageUrl: "/images/banners/banner-camisas-dev.png",
+    mobileImageUrl: "/images/hero-mobile/hero-dev-mobile.png",
+    imageAlt: "Dev Collection da Focus Academy",
+  },
+  {
+    id: "slide-2",
     tagline: "DROP OFICIAL 2026 // STREETWEAR & TECHWEAR",
     titleLine1: "IDEIAS TAMBÉM",
     titleLine2: "SE USAM.",
@@ -32,20 +46,6 @@ const DEFAULT_SLIDES = [
     imageUrl: ACADEMY_HERO_IMAGE,
     mobileImageUrl: "/images/hero-mobile/hero-academy-mobile.png",
     imageAlt: "Linha Streetwear Focus Store",
-  },
-  {
-    id: "slide-2",
-    titleLine1: "EXPRESSE SUA",
-    titleLine2: "LINGUAGEM.",
-    subtitle:
-      "Conheça a Dev Collection da Focus Academy. Camisetas exclusivas inspiradas na programação, com estilo, tecnologia e personalidade.",
-    primaryButtonText: "Explorar coleção",
-    primaryButtonHref: "/colecao/dev-collection",
-    secondaryButtonText: "",
-    secondaryButtonHref: "",
-    imageUrl: "/images/banners/banner-camisas-dev.png",
-    mobileImageUrl: "/images/hero-mobile/hero-dev-mobile.png",
-    imageAlt: "Dev Collection da Focus Academy",
   },
   {
     id: "slide-3",
@@ -106,7 +106,7 @@ export function HeroCarousel({
               b.subtitle ||
               "Linha exclusiva desenvolvida para quem vive tecnologia e inovação.",
             primaryButtonText: b.ctaText || "Ver Coleção",
-            primaryButtonHref: b.ctaLink || "/categoria/vestuario",
+            primaryButtonHref: b.ctaLink || "/colecao/dev-collection",
             secondaryButtonText: "Focus Tech",
             secondaryButtonHref: "/colecao/focus-tech",
             imageUrl,

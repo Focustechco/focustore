@@ -42,7 +42,7 @@ interface VariantInput {
   color: string;
   colorHex: string;
   size: string;
-  price: number;
+  price: number | string;
   promotionalPrice?: number | null;
   imageUrl?: string;
   stock: number;
@@ -286,6 +286,14 @@ export function ProductForm({
       return;
     }
 
+    if (variants.some((variant) => {
+      const price = Number(variant.price);
+      return variant.price === '' || !Number.isFinite(price) || price < 0;
+    })) {
+      setErrorMessage('Informe um preço válido e não negativo para cada variante.');
+      return;
+    }
+
     try {
       setLoading(true);
       const cleanedImages = images.filter((img) => img.trim() !== '');
@@ -307,7 +315,7 @@ export function ProductForm({
         images: cleanedImages,
         variants: variants.map((v) => ({
           ...v,
-          price: Number(v.price || basePrice),
+          price: Number(v.price),
           promotionalPrice: v.promotionalPrice !== null && v.promotionalPrice !== undefined
             ? Number(v.promotionalPrice)
             : null,
@@ -383,7 +391,8 @@ export function ProductForm({
             </a>
           )}
           <Button
-            onClick={handleSubmit}
+            type="submit"
+            form="product-form"
             disabled={loading}
             className="bg-[#FF6500] hover:bg-[#FF7A1A] text-white gap-2 font-bold uppercase tracking-wider"
           >
@@ -407,7 +416,7 @@ export function ProductForm({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form id="product-form" onSubmit={handleSubmit} className="space-y-6">
         {/* 1. INFORMAÇÕES BÁSICAS */}
         <div className="bg-[#0E0E0E] rounded-2xl border border-white/10 p-6 space-y-4">
           <h2 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
@@ -503,6 +512,7 @@ export function ProductForm({
               <input
                 type="number"
                 step="0.01"
+                min="0"
                 required
                 value={basePrice}
                 onChange={(e) => {
@@ -792,9 +802,11 @@ export function ProductForm({
                       <input
                         type="number"
                         step="0.01"
+                        min="0"
+                        required
                         value={variant.price}
                         onChange={(e) =>
-                          handleUpdateVariant(idx, 'price', parseFloat(e.target.value) || 0)
+                          handleUpdateVariant(idx, 'price', e.target.value)
                         }
                         className="w-20 bg-black/60 border border-white/10 focus:border-[#FF6500] rounded-lg px-2 py-1.5 font-mono text-[11px] text-[#FF6500] font-bold outline-none"
                       />

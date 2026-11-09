@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
@@ -10,6 +12,9 @@ from app.config import get_settings
 from app.services.catalog_service import CatalogUnavailable
 from app.services.management import DomainError
 from app.services.orders import OrdersUnavailable
+
+
+logger = logging.getLogger(__name__)
 
 
 async def auth_validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
@@ -27,6 +32,18 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
 
 
 async def database_error_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+    correlation_id = request.headers.get('x-focus-correlation-id', 'missing')
+    original = getattr(exc, 'orig', None)
+    diagnostics = getattr(original, 'diag', None)
+    sqlstate = getattr(diagnostics, 'sqlstate', None) or getattr(original, 'sqlstate', None)
+    constraint = getattr(diagnostics, 'constraint_name', None)
+    logger.error(
+        '[auth:%s] database failure type=%s sqlstate=%s constraint=%s',
+        correlation_id,
+        type(exc).__name__,
+        sqlstate or 'unknown',
+        constraint or 'unknown',
+    )
     return JSONResponse(status_code=503, content={'detail': 'Persistência indisponível.'})
 
 

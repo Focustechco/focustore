@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { copySetCookie, fastApiRequestFromNextRequest } from '@/lib/auth/fastapi';
+import { copySetCookie, FastApiConnectionError, fastApiRequestFromNextRequest } from '@/lib/auth/fastapi';
 
 const loginSchema = z.object({
   identifier: z.string().trim().email('Informe um e-mail válido.').max(254),
@@ -9,6 +10,8 @@ const loginSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  const correlationId = randomUUID();
+  if (process.env.NODE_ENV !== 'production') console.info(`[auth:${correlationId}] login received`);
   let body: unknown;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: 'Requisição inválida.' }, { status: 400 });
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
     const backend = await fastApiRequestFromNextRequest(request, '/auth/login', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ email: parsed.data.identifier, password: parsed.data.password }),
-    });
+    }, correlationId);
     const payload = await backend.json().catch(() => ({}));
     const response = NextResponse.json(
       backend.ok ? { user: payload } : { error: 'Não foi possível entrar. Verifique seus dados.' },
@@ -29,7 +32,11 @@ export async function POST(request: Request) {
     );
     copySetCookie(backend, response);
     return response;
-  } catch {
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      const detail = error instanceof FastApiConnectionError ? error.code : 'internal';
+      console.error(`[auth:${correlationId}] login failed at FastAPI bridge: ${detail}`);
+    }
     console.error('Falha ao encaminhar login para a API de identidade.');
     return NextResponse.json({ error: 'Não foi possível entrar. Tente novamente.' }, { status: 503 });
   }

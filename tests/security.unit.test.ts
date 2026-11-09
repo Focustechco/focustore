@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { grantGuestOrder, canReadGuestOrder } from '../src/lib/auth/guest-order';
-import { sameOrigin } from '../src/lib/security/origin';
-import { isPostgresSession } from '../src/lib/auth/fastapi';
+import { checkOrigin, sameOrigin } from '../src/lib/security/origin';
+import { copySetCookie, isPostgresSession } from '../src/lib/auth/fastapi';
 import { validateProductInput, validatePromotionalPrice } from '../src/modules/catalog/product-validation';
 import { restoredCart } from '../src/modules/cart/cart-validation';
 import { postgresTestUrl } from './helpers/postgres-test';
@@ -20,12 +20,38 @@ test('guest order tokens are signed, bound to the order and expire', () => {
 test('origin validation rejects cross-site requests', () => {
   assert.equal(sameOrigin(new Request('http://localhost/api', { headers: { origin: 'http://localhost' } })), true);
   assert.equal(sameOrigin(new Request('http://localhost/api', { headers: { origin: 'https://evil.example' } })), false);
+  assert.equal(sameOrigin(new Request('http://localhost:3000/api', { headers: { origin: 'http://127.0.0.1:3000' } })), true);
+  const previous = process.env.NEXT_PUBLIC_APP_URL;
+  try {
+    process.env.NEXT_PUBLIC_APP_URL = 'http://127.0.0.1:3000';
+    assert.equal(sameOrigin(new Request('http://localhost:3000/api', { headers: { origin: 'http://127.0.0.1:3000' } })), true);
+    assert.equal(checkOrigin(new Request('http://localhost:3000/api')).allowed, false);
+    const rejected = checkOrigin(new Request('http://localhost:3000/api', { headers: { origin: 'https://evil.example' } }));
+    assert.equal(rejected.receivedOrigin, 'https://evil.example');
+    assert.equal(rejected.requestOrigin, 'http://localhost:3000');
+    assert.equal(rejected.expectedOrigin, 'http://127.0.0.1:3000');
+  } finally {
+    if (previous === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+    else process.env.NEXT_PUBLIC_APP_URL = previous;
+  }
 });
 
 test('keeps PostgreSQL sessions on the PostgreSQL identity boundary', () => {
   assert.equal(isPostgresSession('pg_session-token'), true);
   assert.equal(isPostgresSession('legacy-session-token'), false);
   assert.equal(isPostgresSession(undefined), false);
+});
+
+test('copies FastAPI cookies with Headers as the getSetCookie receiver', () => {
+  const sourceHeaders = {
+    getSetCookie(this: object) {
+      assert.equal(this, sourceHeaders);
+      return ['focus_session=pg_test; Path=/; HttpOnly; SameSite=lax'];
+    },
+  };
+  const target = new Response();
+  copySetCookie({ headers: sourceHeaders } as unknown as Response, target);
+  assert.equal(target.headers.get('set-cookie'), 'focus_session=pg_test; Path=/; HttpOnly; SameSite=lax');
 });
 
 test('product validation rejects invalid prices and stock', () => {

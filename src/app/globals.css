@@ -1,5 +1,4 @@
 
-@import url('https://fonts.cdnfonts.com/css/sf-pro-display');
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
@@ -15,8 +14,7 @@
 body {
   background-color: #080808;
   color: #FFFFFF;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
-    'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--font-inter), Inter, "Segoe UI", Arial, sans-serif;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -24,13 +22,22 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading, nav, button {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
-    'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: var(--font-inter), Inter, "Segoe UI", Arial, sans-serif;
   letter-spacing: -0.022em;
 }
 
 .font-collection-display {
+  font-family: var(--font-collection-display), sans-serif;
+  font-weight: 400;
   letter-spacing: -0.04em;
+}
+
+.font-banner-display {
+  font-family: var(--font-unison-pro), sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 0.9;
 }
 
 /* Custom subtle scrollbar */

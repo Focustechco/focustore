@@ -51,7 +51,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       {/* Header da Categoria */}
       <div className="border-b border-white/10 pb-6 space-y-2">
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4">
-          <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight uppercase">
+          <h1 className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">
             {title}
           </h1>
           <span className="text-xs text-muted font-semibold uppercase tracking-wider">

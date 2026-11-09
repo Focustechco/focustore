@@ -203,9 +203,9 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <div className="group relative flex flex-col bg-[#0F0F0F] rounded-2xl overflow-hidden border border-white/10 hover:border-[#FF6500]/50 transition-all duration-300 hover:shadow-[0_15px_30px_rgba(0,0,0,0.8)] hover:-translate-y-1 h-full justify-between select-none">
+    <div className="group relative flex h-full select-none flex-col justify-between overflow-hidden rounded-xl border border-white/10 bg-[#0D0D0D] transition-colors duration-300 hover:border-white/25">
       {/* 1. TOPO: FOTO DO PRODUTO COM ILUMINAÇÃO AMBIENTE LARANJA */}
-      <div className="relative aspect-square w-full bg-[#0F0F0F] overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-square w-full overflow-hidden bg-[#111]">
         {/* Botão de Favorito (Coração Outline Branco / Preenchido Laranja) */}
         <button
           onClick={handleToggleFavorite}
@@ -248,7 +248,7 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
 
       {/* 2. BASE DO CARD: INFORMAÇÕES, AVALIAÇÃO, PREÇO & BOTÃO CARRINHO LARANJA */}
-      <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1 gap-2.5 bg-[#0F0F0F] border-t border-white/5">
+      <div className="flex flex-1 flex-col justify-between gap-2.5 border-t border-white/5 bg-[#0D0D0D] p-3 sm:p-4">
         <div className="space-y-1.5 flex flex-col">
           {/* Nome do Produto com altura padronizada para 2 linhas exatas */}
           <div className="h-9 sm:h-10 flex items-start">

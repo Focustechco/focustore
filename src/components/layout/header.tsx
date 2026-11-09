@@ -177,8 +177,8 @@ export function Header() {
   const customerName = customer?.name?.trim() || customer?.email.split('@')[0];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#080808] text-white">
-      <div className="relative mx-auto flex h-[76px] max-w-[1800px] items-center justify-between gap-3 px-4 sm:px-6 lg:h-[88px] lg:px-10">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-[#080808]/95 text-white backdrop-blur-md">
+      <div className="relative mx-auto flex h-[64px] max-w-[1800px] items-center justify-between gap-3 px-4 sm:px-6 lg:h-[72px] lg:px-10">
         {/* LOGO FOCUS STORE OFICIAL */}
         <Link href="/" className="flex items-center flex-shrink-0 relative overflow-visible -ml-1 sm:ml-0">
           <FocusLogo size="xl" mobileSize="md" />
@@ -196,7 +196,7 @@ export function Header() {
                 href={item.href}
                 aria-hidden={coveredNavItems.includes(index)}
                 tabIndex={coveredNavItems.includes(index) ? -1 : undefined}
-                className={`${coveredNavItems.includes(index) ? 'invisible pointer-events-none' : ''} whitespace-nowrap text-[11px] font-semibold uppercase transition-colors 2xl:text-xs ${
+                className={`${coveredNavItems.includes(index) ? 'invisible pointer-events-none' : ''} whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide transition-colors 2xl:text-xs ${
                   item.label === 'Ofertas'
                     ? 'text-white hover:text-[#FF5500]'
                     : isActive

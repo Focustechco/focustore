@@ -90,7 +90,7 @@ export default async function CollectionPage({ params }: Props) {
             </div>
           )}
 
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">
+          <h1 className="text-3xl font-black uppercase tracking-tight text-white sm:text-5xl">
             Coleção {collectionName}
           </h1>
 

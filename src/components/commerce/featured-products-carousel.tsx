@@ -47,14 +47,17 @@ export function FeaturedProductsCarousel({ products }: FeaturedProductsCarouselP
   };
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-4 select-none">
+    <section className="mx-auto w-full max-w-[1440px] select-none space-y-5 px-4 sm:px-6 lg:px-8">
       {/* Header da Seção com Título, Subtítulo e Setas de Navegação Funcionais */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-end justify-between gap-4 border-b border-white/10 pb-3">
         <div>
-          <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#FF6500]">
+            Seleção Focus
+          </p>
+          <h2 className="text-xl font-bold uppercase tracking-tight text-white sm:text-2xl">
             Produtos em destaque
           </h2>
-          <p className="text-xs text-zinc-400 mt-0.5">
+          <p className="mt-1 text-xs text-zinc-400 sm:text-sm">
             Seleção especial para quem vive tecnologia, criatividade e inovação.
           </p>
         </div>
@@ -91,12 +94,12 @@ export function FeaturedProductsCarousel({ products }: FeaturedProductsCarouselP
       {/* Carrossel Horizontal Fluido dos Produtos */}
       <div
         ref={scrollContainerRef}
-        className="flex gap-3.5 sm:gap-4 overflow-x-auto pb-4 scrollbar-none snap-x snap-mandatory items-stretch scroll-smooth"
+        className="flex snap-x snap-mandatory items-stretch gap-3 overflow-x-auto pb-3 scroll-smooth scrollbar-none sm:gap-4"
       >
         {products.map((product) => (
           <div
             key={product.id}
-            className="flex-shrink-0 w-[calc(50%-7px)] sm:w-[calc(33.333%-11px)] md:w-[calc(25%-12px)] lg:w-[calc(16.666%-13.5px)] snap-start flex flex-col h-full"
+            className="flex h-full flex-shrink-0 snap-start flex-col w-[calc(50%-6px)] sm:w-[calc(33.333%-11px)] md:w-[calc(25%-12px)] xl:w-[calc(20%-13px)]"
           >
             <ProductCard product={product} />
           </div>

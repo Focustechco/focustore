@@ -50,8 +50,8 @@ const DEFAULT_SLIDES = [
   {
     id: "slide-3",
     tagline: "FOCUS STREETWEAR // LINHA ESSENCIAL",
-    titleLine1: "FAÇA PARTE DO",
-    titleLine2: "MOVIMENTO.",
+    titleLine1: "FAÇA PARTE",
+    titleLine2: "DO MOVIMENTO.",
     subtitle:
       "Camisas, moletons e polos exclusivas para quem respira tecnologia. Garanta suas peças com 10% OFF no PIX pelo cupom FOCUS10.",
     primaryButtonText: "Ver Coleção",
@@ -81,6 +81,8 @@ export function HeroCarousel({
           )
           .map((b, idx) => {
           const titleLines = b.title.split("\n");
+          const normalizedTitle = titleLines.join(" ").replace(/\s+/g, " ").trim();
+          const isMovementBanner = /^FAÇA PARTE DO MOVIMENTO\.?$/i.test(normalizedTitle);
           const imageUrl =
             b.imageUrl === "/images/hero/hero-models-banner.png" ||
             b.imageUrl.startsWith("https://i.ibb.co/")
@@ -100,8 +102,8 @@ export function HeroCarousel({
               b.imageUrl === "/images/banners/banner-camisas-dev.png"
                 ? "VISTA SEU CÓDIGO."
                 : "FOCUS EXCLUSIVE // DROP 2026",
-            titleLine1: titleLines[0] || b.title,
-            titleLine2: titleLines[1] || "",
+            titleLine1: isMovementBanner ? "FAÇA PARTE" : titleLines[0] || b.title,
+            titleLine2: isMovementBanner ? "DO MOVIMENTO." : titleLines[1] || "",
             subtitle:
               b.subtitle ||
               "Linha exclusiva desenvolvida para quem vive tecnologia e inovação.",
@@ -123,6 +125,8 @@ export function HeroCarousel({
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const titleLine1Ref = useRef<HTMLSpanElement>(null);
+  const titleLine2Ref = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (isPaused) return;
@@ -135,6 +139,65 @@ export function HeroCarousel({
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [isPaused, slides.length, currentSlide]);
+
+  useEffect(() => {
+    let animationFrame = 0;
+    let isDisposed = false;
+
+    const alignTitleLines = () => {
+      const firstLine = titleLine1Ref.current;
+      const secondLine = titleLine2Ref.current;
+      if (!firstLine || !secondLine) return;
+      const titleLines = [firstLine, secondLine];
+
+      titleLines.forEach((line) => {
+        line.style.fontSize = '';
+      });
+
+      const baseSizes = titleLines.map((line) =>
+        Number.parseFloat(window.getComputedStyle(line).fontSize),
+      );
+      const measureWidth = (line: HTMLSpanElement) => {
+        const range = document.createRange();
+        range.selectNodeContents(line);
+        return range.getBoundingClientRect().width;
+      };
+      let widths = titleLines.map(measureWidth);
+      if (widths.some((width) => width <= 0)) return;
+
+      const availableWidth = titleLines[0].parentElement?.clientWidth ?? widths[0];
+      const targetWidth = Math.min(
+        window.innerWidth < 640 ? 245 : 400,
+        availableWidth,
+      );
+
+      const fontSizes = [...baseSizes];
+      for (let iteration = 0; iteration < 4; iteration += 1) {
+        titleLines.forEach((line, index) => {
+          fontSizes[index] *= targetWidth / widths[index];
+          line.style.fontSize = `${fontSizes[index]}px`;
+        });
+        widths = titleLines.map(measureWidth);
+        if (widths.every((width) => Math.abs(width - targetWidth) < 0.1)) break;
+      }
+    };
+
+    const scheduleAlignment = () => {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(alignTitleLines);
+    };
+
+    void document.fonts.ready.then(() => {
+      if (!isDisposed) scheduleAlignment();
+    });
+    window.addEventListener('resize', scheduleAlignment);
+
+    return () => {
+      isDisposed = true;
+      cancelAnimationFrame(animationFrame);
+      window.removeEventListener('resize', scheduleAlignment);
+    };
+  }, [currentSlide, slides[currentSlide]?.titleLine1, slides[currentSlide]?.titleLine2]);
 
   const nextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -210,9 +273,9 @@ export function HeroCarousel({
   const isAcademyHero = slide.imageUrl.includes("hero-focus-academy-banner-2026");
 
   return (
-    <section className="max-w-[1440px] mx-auto mt-6 px-4 sm:px-6 lg:px-8 select-none sm:mt-8">
+    <section className="mx-auto w-full max-w-[1600px] select-none">
       <div
-        className="relative h-[calc(100svh-96px)] min-h-[520px] max-h-[680px] sm:h-auto sm:min-h-[420px] lg:min-h-[460px] rounded-2xl sm:rounded-3xl overflow-hidden bg-[#0A0A0A] border border-white/10 hover:border-[#FF6500]/30 transition-all duration-500 shadow-2xl flex flex-col justify-between p-0 sm:p-10 lg:p-12 group"
+        className="group relative flex h-[min(72svh,660px)] min-h-[500px] max-h-[660px] flex-col justify-between overflow-hidden border-y border-white/10 bg-[#0A0A0A] p-0 transition-colors duration-500 hover:border-[#FF6500]/30 sm:h-[min(68svh,660px)] sm:min-h-[440px] sm:border-x sm:border-x-white/10 sm:px-10 sm:py-10 lg:px-14"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
         onPointerDown={handlePointerDown}
@@ -258,18 +321,21 @@ export function HeroCarousel({
         </div>
 
         {/* 2. Conteúdo Editorial (No Desktop: layout padrão centralizado na vertical à esquerda; No Mobile: ancorado no rodapé) */}
-        <div className="absolute left-5 right-5 bottom-[96px] z-20 max-w-xl space-y-2 sm:relative sm:left-auto sm:right-auto sm:bottom-auto sm:space-y-3.5 sm:mt-auto sm:my-auto">
-          {slide.tagline === "VISTA SEU CÓDIGO." && (
-            <p className="text-xs sm:text-xs font-bold uppercase tracking-[0.18em] text-[#FF6500] drop-shadow-sm">
+        <div className="absolute left-5 right-5 bottom-[96px] z-20 max-w-xl space-y-2 sm:relative sm:left-auto sm:right-auto sm:bottom-auto sm:w-full sm:space-y-3.5 sm:mt-auto sm:my-auto">
+          {slide.tagline && (
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF6500] drop-shadow-sm sm:text-xs">
               {slide.tagline}
             </p>
           )}
-          <h1 className="line-clamp-2 text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.08] sm:leading-[1.05] uppercase drop-shadow-md">
-            {slide.titleLine1}
+          <h1 className="font-banner-display text-left text-white uppercase leading-[0.98] drop-shadow-md">
+            <span ref={titleLine1Ref} className="block w-fit whitespace-nowrap text-[1.5rem] leading-[0.9] sm:text-[2rem] lg:text-[2.25rem]">
+              {slide.titleLine1}
+            </span>
             {slide.titleLine2 && (
               <>
-                <br className="hidden xs:inline sm:inline" />{" "}
-                <span className="text-[#FF6500]">{slide.titleLine2}</span>
+                <span ref={titleLine2Ref} className="block w-fit whitespace-nowrap text-[1.5rem] leading-[0.9] text-[#FF6500] sm:text-[2.25rem] lg:text-[2.75rem]">
+                  {slide.titleLine2}
+                </span>
               </>
             )}
           </h1>

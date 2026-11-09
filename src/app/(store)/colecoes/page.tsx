@@ -1,16 +1,9 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Dela_Gothic_One } from "next/font/google";
 import { ChevronRight, Sparkles, ArrowRight, Layers } from "lucide-react";
 import { CatalogService } from "@/modules/catalog/catalog.service";
 import { ProductCard } from "@/components/commerce/product-card";
-
-const delaGothicOne = Dela_Gothic_One({
-  subsets: ["latin"],
-  weight: "400",
-  display: "swap",
-});
 
 export const dynamic = "force-dynamic";
 
@@ -58,7 +51,7 @@ export default async function CollectionsPage() {
 
       {/* Header */}
       <div className="border-b border-white/10 pb-8 space-y-3">
-        <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight uppercase">
+        <h1 className="text-3xl font-black uppercase tracking-tight text-white sm:text-5xl">
           Coleções{" "}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-[#FF6500]">
             FOCUS®
@@ -80,7 +73,7 @@ export default async function CollectionsPage() {
 
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           <div className="lg:col-span-6 space-y-5">
-            <h2 className={`${delaGothicOne.className} font-collection-display text-3xl sm:text-4xl lg:text-5xl text-white leading-tight uppercase`}>
+            <h2 className="font-collection-display text-3xl uppercase leading-tight text-white sm:text-4xl lg:text-5xl">
               edição <br></br>{" "}
               <span className="text-[#FF6500]">dev collection </span>
             </h2>
@@ -150,7 +143,7 @@ export default async function CollectionsPage() {
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase flex items-center gap-2.5">
+            <h2 className="flex items-center gap-2.5 text-xl font-black uppercase tracking-tight text-white sm:text-2xl">
               <span className="w-2 h-2 rounded-full bg-[#FF6500]" />
               Itens Exclusivos • DEV COLLECTION
             </h2>
@@ -180,7 +173,7 @@ export default async function CollectionsPage() {
       <section className="space-y-6 pt-6 border-t border-white/10">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight uppercase flex items-center gap-2.5">
+            <h2 className="flex items-center gap-2.5 text-xl font-black uppercase tracking-tight text-white sm:text-2xl">
               <span className="w-2 h-2 rounded-full bg-[#FF6500]" />
               Coleção Focus Tech • Sua conexão com a tecnologia
             </h2>

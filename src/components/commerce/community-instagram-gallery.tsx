@@ -122,16 +122,16 @@ export function CommunityInstagramGallery({ banners }: { banners?: any[] }) {
   };
 
   return (
-    <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-6 select-none">
+    <section className="mx-auto w-full max-w-[1440px] select-none space-y-5 px-4 sm:px-6 lg:px-8">
       {/* Header Centralizado no estilo INSIDER IN REAL LIFE */}
       <div className="flex items-end justify-between border-b border-white/10 pb-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-bold text-[#FF6500] uppercase tracking-widest mb-1">
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#FF6500]">
             <InstagramIcon size={14} className="text-[#FF6500]" />
             <span>@focus.store</span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase">
-            FOCUS IN REAL LIFE
+          <h2 className="text-2xl font-black uppercase tracking-tight text-white sm:text-3xl">
+            FOCUS COMMUNITY
           </h2>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             Veja como nossa comunidade veste e usa Focus no dia a dia. Marque <span className="text-white font-semibold">@focus.store</span> para aparecer aqui.
@@ -147,7 +147,7 @@ export function CommunityInstagramGallery({ banners }: { banners?: any[] }) {
         {posts.map((post, index) => (
           <div
             key={post.id}
-            className="group relative flex-shrink-0 w-56 sm:w-64 aspect-square rounded-2xl overflow-hidden bg-[#121212] border border-white/10 hover:border-[#FF6500]/50 transition-all duration-300 shadow-xl snap-start"
+            className="group relative aspect-square w-52 flex-shrink-0 snap-start overflow-hidden rounded-xl border border-white/10 bg-[#121212] transition-colors duration-300 hover:border-white/30 sm:w-60"
           >
             <button
               type="button"

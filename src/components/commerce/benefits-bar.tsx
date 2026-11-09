@@ -33,7 +33,7 @@ const BENEFITS = [
 
 export function BenefitsBar() {
   return (
-    <section className="relative select-none overflow-hidden border-b border-white/10 bg-[#0A0A0A] py-2 text-white">
+    <section className="relative select-none overflow-hidden border-b border-white/10 bg-[#0A0A0A] py-1.5 text-white">
       {/* 1. VERSÃO DESKTOP (Grid estático elegante de 5 colunas) */}
       <div className="mx-auto hidden max-w-[1800px] px-4 sm:px-6 xl:block xl:px-10">
         <div className="grid grid-cols-5 items-center justify-between text-xs">

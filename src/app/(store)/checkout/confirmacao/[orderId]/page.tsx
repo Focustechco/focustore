@@ -6,6 +6,10 @@ import { OrderService } from '@/modules/orders/order.service';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { OrderConfirmationClient } from './order-confirmation-client';
+import { getPostgresOrder } from '@/lib/orders/postgres-orders';
+import { cookies } from 'next/headers';
+import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import { isPostgresSession } from '@/lib/auth/fastapi';
 
 interface Props {
   params: Promise<{ orderId: string }>;
@@ -13,6 +17,39 @@ interface Props {
 
 export default async function OrderConfirmationPage({ params }: Props) {
   const { orderId } = await params;
+  const sessionToken = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  const postgresOrder = await getPostgresOrder(orderId);
+  if (isPostgresSession(sessionToken) && !postgresOrder) notFound();
+  if (postgresOrder) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 space-y-8">
+        <div className="text-center space-y-2">
+          <span className="text-xs font-bold text-[#FF6500] uppercase tracking-widest">Pedido Registrado</span>
+          <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tight">Pedido criado com sucesso</h1>
+          <p className="text-xs sm:text-sm text-zinc-400">
+            Número do pedido: <span className="text-white font-bold">{postgresOrder.orderNumber}</span>
+          </p>
+          <p className="text-sm text-amber-300">Status: aguardando pagamento. Nenhuma cobrança foi realizada.</p>
+        </div>
+        <div className="bg-surface p-6 rounded-2xl border border-white/10 space-y-4">
+          {postgresOrder.items.map((item) => (
+            <div key={item.id} className="flex justify-between text-xs">
+              <span className="text-white">{item.productName} · {item.variantName} x{item.quantity}</span>
+              <span className="text-white">{formatPrice(item.totalPrice)}</span>
+            </div>
+          ))}
+          <div className="flex justify-between border-t border-white/10 pt-3 text-base font-bold text-white">
+            <span>Total</span>
+            <span className="text-[#FF6500]">{formatPrice(postgresOrder.total)}</span>
+          </div>
+        </div>
+        <div className="flex justify-center gap-4">
+          <Link href="/"><Button variant="outline" size="sm">Voltar para a Loja</Button></Link>
+          <Link href="/conta/pedidos"><Button size="sm" className="bg-[#FF6500] hover:bg-[#FF7A1A]">Acompanhar Pedido</Button></Link>
+        </div>
+      </div>
+    );
+  }
   const order = await OrderService.getOrderById(orderId);
 
   if (!order) {

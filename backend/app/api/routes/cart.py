@@ -1,15 +1,22 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends, Path, Response
+from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.db.dependencies import get_db
 from app.schemas.cart import Availability, CartQuote, CartQuoteInput
 from app.services.cart import CartService
 
 router = APIRouter(tags=['Cart and availability'])
 
 
-def service() -> CartService:
-    return CartService(get_settings().legacy_catalog_sqlite_path)
+def service(db: Session = Depends(get_db)) -> CartService:
+    settings = get_settings()
+    return CartService(
+        settings.legacy_catalog_sqlite_path,
+        db=db,
+        source=settings.catalog_source,
+    )
 
 
 Service = Annotated[CartService, Depends(service)]

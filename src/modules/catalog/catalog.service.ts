@@ -286,6 +286,16 @@ export class CatalogService {
   }
 
   static async getRelatedProducts(productId: string, categoryId?: string) {
+    if (isFastApiCatalogEnabled) {
+      const products = (await fetchCatalogProducts())
+        .filter((product) => product.id !== productId)
+        .filter((product) => !HIDDEN_PRODUCT_SLUGS.includes(product.slug))
+        .filter((product) => !categoryId || product.categories.some((item) => item.id === categoryId))
+        .slice(0, 4)
+        .map(toStoreProduct);
+      return products;
+    }
+
     try {
       return await prisma.product.findMany({
         where: {

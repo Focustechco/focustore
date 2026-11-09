@@ -55,7 +55,8 @@ def register(
     try:
         user, token = register_user(db, data, get_settings(), _client_host(request))
     except RateLimitExceeded as exc:
-        raise HTTPException(429, "Tente novamente mais tarde.") from exc
+        raise HTTPException(429, "Tente novamente mais tarde.",
+                            headers={'Retry-After': str(exc.retry_after)}) from exc
     except DuplicateEmail as exc:
         raise HTTPException(409, "E-mail já cadastrado.") from exc
     _set_session_cookie(response, token)
@@ -73,7 +74,8 @@ def login(
     try:
         user, token = login_user(db, data, get_settings(), _client_host(request))
     except RateLimitExceeded as exc:
-        raise HTTPException(429, "Tente novamente mais tarde.") from exc
+        raise HTTPException(429, "Tente novamente mais tarde.",
+                            headers={'Retry-After': str(exc.retry_after)}) from exc
     except InvalidCredentials as exc:
         raise HTTPException(401, "Credenciais inválidas.") from exc
     _set_session_cookie(response, token)

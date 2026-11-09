@@ -36,6 +36,8 @@ let categoryId: string;
 
 async function api(route: string, method = 'GET', body?: unknown, cookie?: string) {
   return fetch(base + route, { method, redirect: 'manual', headers: {
+    origin: base,
+    'sec-fetch-site': 'same-origin',
     ...(body === undefined ? {} : { 'content-type': 'application/json' }),
     ...(cookie ? { cookie } : {}),
   }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -163,7 +165,7 @@ test('malformed saved cart is ignored and destructive demo scripts fail closed',
 test('registration, duplicate email, hash, login, expiration and logout persist correctly', async () => {
   const registration = { name: 'Synthetic Customer', email: 'customer@example.test', password: 'synthetic-password' };
   let response = await api('/api/auth/register', 'POST', registration);
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 201);
   customerCookie = response.headers.get('set-cookie')!.split(';')[0];
   assert.match(response.headers.get('set-cookie')!, /HttpOnly/i);
   assert.match(response.headers.get('set-cookie')!, /SameSite=lax/i);

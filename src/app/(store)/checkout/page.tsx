@@ -70,7 +70,7 @@ export default function CheckoutPage() {
     setIdempotencyKey(`idemp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`);
   }, []);
 
-  const total = subtotal + shippingOption.price;
+  const total = subtotal;
 
   const handleCepLookup = async (cepValue: string) => {
     const clean = cepValue.replace(/\D/g, '');
@@ -99,16 +99,9 @@ export default function CheckoutPage() {
 
     try {
       const payload = {
-        customer,
-        shippingAddress: address,
-        shippingOption,
-        paymentMethod,
-        cardDetails: paymentMethod === 'CREDIT_CARD' ? {
+        /* Payment is intentionally not collected in this PostgreSQL order flow.
           number: card.number.slice(-4), // Apenas 4 últimos dígitos
-          holder: card.holder,
-          expiry: card.expiry,
-          installments: Number(card.installments),
-        } : undefined,
+        */
         items: items.map((i) => ({
           variantId: i.variantId,
           quantity: i.quantity,
@@ -116,7 +109,7 @@ export default function CheckoutPage() {
         idempotencyKey,
       };
 
-      const res = await fetch('/api/checkout', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -129,7 +122,7 @@ export default function CheckoutPage() {
       }
 
       clearCart();
-      router.push(`/checkout/confirmacao/${data.order.id}`);
+      router.push(`/checkout/confirmacao/${data.id}`);
     } catch (err: any) {
       setError(err.message || 'Falha ao concluir pedido.');
       setLoading(false);
@@ -155,6 +148,9 @@ export default function CheckoutPage() {
         <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight">
           Finalizar Compra
         </h1>
+        <p className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200">
+          Este pedido será criado como pendente. Nenhuma cobrança ou reserva de estoque será realizada nesta etapa.
+        </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
@@ -476,12 +472,12 @@ export default function CheckoutPage() {
 
             <Button
               onClick={handleFinishOrder}
-              disabled={loading || !customer.name || !customer.email || !address.street}
+              disabled={loading}
               fullWidth
               size="lg"
               className="gap-2 shadow-focus/30 shadow-md font-bold uppercase tracking-wider"
             >
-              {loading ? 'Processando Pedido...' : 'CONCLUIR PEDIDO'} <ArrowRight size={18} />
+              {loading ? 'Registrando Pedido...' : 'CRIAR PEDIDO PENDENTE'} <ArrowRight size={18} />
             </Button>
 
             <p className="text-[11px] text-muted text-center">

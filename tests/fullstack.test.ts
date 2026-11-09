@@ -94,6 +94,8 @@ async function restartStack() {
 
 async function api(route: string, method = 'GET', body?: unknown) {
   return fetch(frontend + route, { method, headers: {
+    origin: frontend,
+    'sec-fetch-site': 'same-origin',
     ...(body === undefined ? {} : { 'content-type': 'application/json' }),
     ...(cookie ? { cookie } : {}),
   }, body: body === undefined ? undefined : JSON.stringify(body), redirect: 'manual' });
@@ -143,8 +145,25 @@ test('missing or invalid configured SQLite is rejected without creating a file',
 
 test('HTTP registration and sessions persist after logout, login and application restart', { timeout: 120000 }, async () => {
   const registration = { name: 'Persistence Test', email, password };
-  const created = await api('/api/auth/register', 'POST', registration);
-  assert.equal(created.status, 200);
+  // Reproduce the browser fetch from LoginModal, including its same-origin
+  // request headers. The FastAPI contract is 201 Created, not 200 OK.
+  const created = await fetch(frontend + '/api/auth/register', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      origin: frontend,
+      'sec-fetch-site': 'same-origin',
+    },
+    body: JSON.stringify(registration),
+    redirect: 'manual',
+  });
+  assert.equal(created.status, 201);
+  const createdBody = await created.json() as { user?: { id: string; name: string; email: string; role: string } };
+  assert.deepEqual(createdBody.user && {
+    name: createdBody.user.name,
+    email: createdBody.user.email,
+    role: createdBody.user.role,
+  }, { name: registration.name, email: registration.email, role: 'CUSTOMER' });
   cookie = created.headers.get('set-cookie')!.split(';')[0];
   const stored = await client.user.findUniqueOrThrow({ where: { email } });
   assert.equal(await client.user.count(), 1);

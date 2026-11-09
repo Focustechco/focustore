@@ -1,4 +1,6 @@
 import logging
+import re
+import secrets
 
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
@@ -16,6 +18,16 @@ from app.services.orders import OrdersUnavailable
 
 logger = logging.getLogger(__name__)
 
+_SAFE_CORRELATION_ID = re.compile(r'^[A-Za-z0-9._:-]{1,128}$')
+
+
+def _correlation_id(request: Request) -> str:
+    """Accept only log-safe correlation IDs supplied by trusted bridges."""
+    candidate = request.headers.get('x-focus-correlation-id', '')
+    if _SAFE_CORRELATION_ID.fullmatch(candidate):
+        return candidate
+    return secrets.token_hex(16)
+
 
 async def auth_validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     if request.url.path.startswith('/api/v1/auth/'):
@@ -32,7 +44,7 @@ async def domain_error_handler(request: Request, exc: DomainError) -> JSONRespon
 
 
 async def database_error_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
-    correlation_id = request.headers.get('x-focus-correlation-id', 'missing')
+    correlation_id = _correlation_id(request)
     original = getattr(exc, 'orig', None)
     diagnostics = getattr(original, 'diag', None)
     sqlstate = getattr(diagnostics, 'sqlstate', None) or getattr(original, 'sqlstate', None)
@@ -44,11 +56,26 @@ async def database_error_handler(request: Request, exc: SQLAlchemyError) -> JSON
         sqlstate or 'unknown',
         constraint or 'unknown',
     )
-    return JSONResponse(status_code=503, content={'detail': 'Persistência indisponível.'})
+    return JSONResponse(
+        status_code=503,
+        content={'detail': 'Persistência indisponível.'},
+        headers={'x-focus-correlation-id': correlation_id},
+    )
 
 
 async def orders_error_handler(request: Request, exc: OrdersUnavailable) -> JSONResponse:
-    return JSONResponse(status_code=503, content={'detail': 'Pedidos indisponíveis.'})
+    correlation_id = _correlation_id(request)
+    cause = exc.__cause__
+    logger.error(
+        '[orders:%s] order persistence failure cause=%s',
+        correlation_id,
+        type(cause).__name__ if cause is not None else 'unknown',
+    )
+    return JSONResponse(
+        status_code=503,
+        content={'detail': 'Pedidos indisponíveis.'},
+        headers={'x-focus-correlation-id': correlation_id},
+    )
 
 
 def create_app() -> FastAPI:
@@ -70,8 +97,17 @@ def create_app() -> FastAPI:
     @application.middleware('http')
     async def private_response_headers(request: Request, call_next):
         response = await call_next(request)
-        if request.url.path.startswith(('/api/v1/users', '/api/v1/orders')):
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault('Referrer-Policy', 'no-referrer')
+        response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        if request.url.scheme == 'https':
+            response.headers.setdefault(
+                'Strict-Transport-Security', 'max-age=31536000; includeSubDomains'
+            )
+        if request.url.path.startswith(('/api/v1/auth', '/api/v1/users', '/api/v1/orders')):
             response.headers['Cache-Control'] = 'no-store'
+        if request.url.path.startswith(('/api/v1/users', '/api/v1/orders')):
             vary = response.headers.get('Vary')
             response.headers['Vary'] = f'{vary}, Cookie' if vary else 'Cookie'
         return response

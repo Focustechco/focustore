@@ -9,9 +9,10 @@ from app.config import get_settings
 from app.db.base import Base
 from app.db.dependencies import get_db
 from app.main import create_app
-from app.models.user import User, UserSession
+from app.models.user import AuthRateLimit, User, UserSession
 from app.security.passwords import verify_password
 from app.security.tokens import session_token_hash
+from app.services.auth import _rate_key
 
 
 @pytest.fixture
@@ -146,3 +147,68 @@ def test_auth_mutations_require_origin_and_public_role_cannot_escalate(auth_cont
 
     client.headers["origin"] = "https://evil.example"
     assert client.post("/api/v1/auth/logout").status_code == 403
+
+
+def test_login_rate_limit_is_account_scoped_and_ignores_forwarded_headers(auth_context, monkeypatch):
+    client, _ = auth_context
+    monkeypatch.setenv('AUTH_RATE_LIMIT_ATTEMPTS', '2')
+    monkeypatch.setenv('AUTH_RATE_LIMIT_IP_ATTEMPTS', '100')
+    monkeypatch.setenv('AUTH_RATE_LIMIT_WINDOW_SECONDS', '60')
+    get_settings.cache_clear()
+    try:
+        assert _register(client).status_code == 201
+        client.cookies.clear()
+        payload = {'email': 'customer@example.test', 'password': 'wrong-password'}
+        assert client.post('/api/v1/auth/login', json=payload,
+                           headers={'x-forwarded-for': '198.51.100.1'}).status_code == 401
+        assert client.post('/api/v1/auth/login', json=payload,
+                           headers={'x-forwarded-for': '203.0.113.10'}).status_code == 401
+        limited = client.post('/api/v1/auth/login', json=payload,
+                              headers={'x-forwarded-for': '192.0.2.44'})
+        assert limited.status_code == 429
+        assert 1 <= int(limited.headers['retry-after']) <= 60
+        assert limited.json() == {'detail': 'Tente novamente mais tarde.'}
+    finally:
+        get_settings.cache_clear()
+
+
+def test_login_rate_limit_is_ip_scoped_across_account_identifiers(auth_context, monkeypatch):
+    client, _ = auth_context
+    monkeypatch.setenv('AUTH_RATE_LIMIT_ATTEMPTS', '100')
+    monkeypatch.setenv('AUTH_RATE_LIMIT_IP_ATTEMPTS', '2')
+    monkeypatch.setenv('AUTH_RATE_LIMIT_WINDOW_SECONDS', '60')
+    get_settings.cache_clear()
+    try:
+        for email in ('one@example.test', 'two@example.test'):
+            assert client.post('/api/v1/auth/login', json={
+                'email': email, 'password': 'wrong-password',
+            }).status_code == 401
+        limited = client.post('/api/v1/auth/login', json={
+            'email': 'three@example.test', 'password': 'wrong-password',
+        })
+        assert limited.status_code == 429
+    finally:
+        get_settings.cache_clear()
+
+
+def test_login_rate_limit_window_expires_without_waiting(auth_context, monkeypatch):
+    client, sessions = auth_context
+    monkeypatch.setenv('AUTH_RATE_LIMIT_ATTEMPTS', '1')
+    monkeypatch.setenv('AUTH_RATE_LIMIT_IP_ATTEMPTS', '100')
+    monkeypatch.setenv('AUTH_RATE_LIMIT_WINDOW_SECONDS', '60')
+    get_settings.cache_clear()
+    try:
+        payload = {'email': 'expiring@example.test', 'password': 'wrong-password'}
+        assert client.post('/api/v1/auth/login', json=payload).status_code == 401
+        assert client.post('/api/v1/auth/login', json=payload).status_code == 429
+
+        with sessions() as db:
+            row = db.get(AuthRateLimit, _rate_key('login-account', payload['email']))
+            assert row is not None
+            row.window_started = datetime.now(timezone.utc) - timedelta(seconds=61)
+            db.commit()
+
+        # The expired window resets automatically; no real sleep is needed.
+        assert client.post('/api/v1/auth/login', json=payload).status_code == 401
+    finally:
+        get_settings.cache_clear()

@@ -36,6 +36,26 @@ test('origin validation rejects cross-site requests', () => {
   }
 });
 
+test('origin validation accepts only explicitly configured tunnel origins', () => {
+  const previousAppUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const previousAllowed = process.env.FOCUS_ALLOWED_ORIGINS;
+  try {
+    process.env.NEXT_PUBLIC_APP_URL = 'http://127.0.0.1:3000';
+    process.env.FOCUS_ALLOWED_ORIGINS = 'https://tunnel.example';
+    assert.equal(checkOrigin(new Request('http://127.0.0.1:3000/api', {
+      headers: { origin: 'https://tunnel.example' },
+    })).allowed, true);
+    assert.equal(checkOrigin(new Request('http://127.0.0.1:3000/api', {
+      headers: { origin: 'https://untrusted.example' },
+    })).allowed, false);
+  } finally {
+    if (previousAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+    else process.env.NEXT_PUBLIC_APP_URL = previousAppUrl;
+    if (previousAllowed === undefined) delete process.env.FOCUS_ALLOWED_ORIGINS;
+    else process.env.FOCUS_ALLOWED_ORIGINS = previousAllowed;
+  }
+});
+
 test('keeps PostgreSQL sessions on the PostgreSQL identity boundary', () => {
   assert.equal(isPostgresSession('pg_session-token'), true);
   assert.equal(isPostgresSession('legacy-session-token'), false);

@@ -8,13 +8,13 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, text
-from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
 from app.db.dependencies import get_db
 from app.main import create_app
 from app.models import Product
+from postgres_test_guard import safe_test_url, validate_identity
 
 
 @pytest.fixture
@@ -22,11 +22,10 @@ def postgres(monkeypatch, isolated_settings):
     raw = os.environ.get("TEST_DATABASE_URL")
     if not raw:
         pytest.skip("Set TEST_DATABASE_URL to a temporary local PostgreSQL database")
-    url = make_url(raw)
-    assert url.get_backend_name() == "postgresql"
-    assert url.host in {"127.0.0.1", "localhost", "::1"}
-    assert url.database == "focusstore_test"
+    url = safe_test_url(raw)
     admin = create_engine(url, hide_parameters=True)
+    with admin.connect() as connection:
+        validate_identity(connection, url)
     schema = "product_flow_" + uuid4().hex
     with admin.begin() as connection:
         connection.execute(text(f'CREATE SCHEMA "{schema}"'))

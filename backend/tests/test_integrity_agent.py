@@ -6,10 +6,10 @@ from alembic import command
 from alembic.config import Config
 import pytest
 from sqlalchemy import create_engine, event, text
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError
 
 from app.agents import integrity as agent
+from postgres_test_guard import safe_test_url, validate_identity
 
 
 @pytest.fixture
@@ -20,11 +20,10 @@ def postgres(monkeypatch):
         if os.environ.get('CI'):
             pytest.fail('CI requires TEST_DATABASE_URL for PostgreSQL integration')
         pytest.skip('Set TEST_DATABASE_URL to a temporary local PostgreSQL *_test database')
-    url = make_url(raw)
-    assert url.get_backend_name() == 'postgresql'
-    assert url.host in {'localhost', '127.0.0.1', '::1'}
-    assert url.database and url.database.endswith('_test')
+    url = safe_test_url(raw)
     admin = create_engine(url, hide_parameters=True)
+    with admin.connect() as connection:
+        validate_identity(connection, url)
     schema = 'agent_test_' + uuid4().hex
     with admin.begin() as connection:
         connection.execute(text(f'CREATE SCHEMA "{schema}"'))

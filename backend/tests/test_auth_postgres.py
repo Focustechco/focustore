@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -9,12 +10,14 @@ from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect, select, text
-from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 
 from app.db.dependencies import get_db
 from app.main import create_app
 from app.models.user import User, UserSession
+from app.services.auth import RateLimitExceeded, _consume_rate_limit
+from app.config import get_settings
+from postgres_test_guard import safe_test_url, validate_identity
 
 
 @pytest.fixture
@@ -22,12 +25,11 @@ def postgres_auth(monkeypatch):
     raw = os.environ.get("TEST_DATABASE_URL")
     if not raw:
         pytest.skip("Set TEST_DATABASE_URL to the authorized local focusstore_test database")
-    url = make_url(raw)
-    assert url.get_backend_name() == "postgresql"
-    assert url.host in {"127.0.0.1", "localhost", "::1"}
-    assert url.database == "focusstore_test"
+    url = safe_test_url(raw)
 
     admin = create_engine(url, hide_parameters=True)
+    with admin.connect() as connection:
+        validate_identity(connection, url)
     schema = "auth_test_" + uuid4().hex
     with admin.begin() as connection:
         connection.execute(text(f'CREATE SCHEMA "{schema}"'))
@@ -112,3 +114,27 @@ def test_customer_identity_migration_round_trip_in_isolated_postgres(postgres_au
     command.upgrade(migration_config, "head")
     tables = set(inspect(engine).get_table_names())
     assert {"users", "user_sessions", "auth_rate_limits"}.issubset(tables)
+
+
+def test_auth_rate_limit_is_atomic_for_concurrent_sessions(postgres_auth, monkeypatch):
+    _client, sessions, _engine, _migration_config = postgres_auth
+    monkeypatch.setenv('AUTH_RATE_LIMIT_ATTEMPTS', '1')
+    monkeypatch.setenv('AUTH_RATE_LIMIT_WINDOW_SECONDS', '60')
+    get_settings.cache_clear()
+    settings = get_settings()
+
+    def consume():
+        with sessions() as db:
+            try:
+                _consume_rate_limit(db, settings, 'concurrent-login-account',
+                                    'concurrent@example.test', 1)
+                return 'allowed'
+            except RateLimitExceeded:
+                return 'limited'
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(lambda _index: consume(), (1, 2)))
+        assert sorted(results) == ['allowed', 'limited']
+    finally:
+        get_settings.cache_clear()

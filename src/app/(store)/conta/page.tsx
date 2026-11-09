@@ -4,12 +4,25 @@ import { Package, Heart, MapPin, User, ChevronRight } from 'lucide-react';
 import { OrderService } from '@/modules/orders/order.service';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
 import { getAuthenticatedUser } from '@/lib/auth/session';
+import { cookies } from 'next/headers';
+import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import { getPostgresOrders } from '@/lib/orders/postgres-orders';
+import { isPostgresSession } from '@/lib/auth/fastapi';
 
 export default async function CustomerAccountPage() {
   const customer = await getAuthenticatedUser();
-  const userOrders = customer
-    ? await OrderService.getOrdersByUserId(customer.id)
-    : [];
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  let userOrders: any[] = [];
+  let ordersError = false;
+  if (customer) {
+    try {
+      userOrders = isPostgresSession(token)
+        ? await getPostgresOrders()
+        : await OrderService.getOrdersByUserId(customer.id);
+    } catch {
+      ordersError = true;
+    }
+  }
   const recentOrders = userOrders.slice(0, 3);
 
   return (
@@ -90,7 +103,11 @@ export default async function CustomerAccountPage() {
           </Link>
         </div>
 
-        {recentOrders.length === 0 ? (
+        {ordersError ? (
+          <div className="text-center py-8 text-xs text-red-300">
+            Não foi possível carregar seus pedidos agora.
+          </div>
+        ) : recentOrders.length === 0 ? (
           <div className="text-center py-8 text-xs text-muted">
             Você ainda não realizou pedidos na Focus Store.
           </div>

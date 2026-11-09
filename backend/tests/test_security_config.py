@@ -73,3 +73,29 @@ def test_sql_errors_are_sanitized(admin_client, monkeypatch):
     })
     assert response.status_code == 503
     assert response.json() == {'detail': 'Persistência indisponível.'}
+
+
+def test_security_headers_and_log_safe_correlation_id(admin_client, monkeypatch):
+    from sqlalchemy.exc import OperationalError
+    from app.services import management
+
+    def fail(*args, **kwargs):
+        raise OperationalError('SELECT secret', {}, Exception('database failure'))
+
+    monkeypatch.setattr(management, 'create_product', fail)
+    response = admin_client.post(
+        '/products',
+        headers={'x-focus-correlation-id': 'safe\nforged'},
+        json={'name': 'One', 'price': '1.00', 'stock': 1, 'category_id': 1},
+    )
+
+    assert response.status_code == 503
+    correlation = response.headers['x-focus-correlation-id']
+    assert '\n' not in correlation and '\r' not in correlation
+    assert len(correlation) == 32
+
+    health = admin_client.get('/health')
+    assert health.headers['x-content-type-options'] == 'nosniff'
+    assert health.headers['x-frame-options'] == 'DENY'
+    assert health.headers['referrer-policy'] == 'no-referrer'
+    assert health.headers['permissions-policy'] == 'camera=(), microphone=(), geolocation=()'

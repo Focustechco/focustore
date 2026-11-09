@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { restoredCart } from './cart-validation';
 
 export interface CartItem {
   variantId: string;
@@ -24,6 +25,8 @@ interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
+  quoteError: string | null;
+  isQuoting: boolean;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
 }
@@ -66,16 +69,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [isQuoting, setIsQuoting] = useState(false);
+  const lastQuotedSignature = useRef('');
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('focus_cart');
       if (saved) {
-        const parsed: CartItem[] = JSON.parse(saved);
-        const updated = parsed.map((item) => ({
-          ...item,
-          imageUrl: resolveProductImage(item.imageUrl, item.name),
-        }));
+        const parsed: unknown = JSON.parse(saved);
+        const validLines = restoredCart(parsed);
+        const updated = validLines.map((line) => {
+          const original = (parsed as CartItem[]).find((item) => item.variantId === line.variantId);
+          return {
+            ...(original || {}),
+            variantId: line.variantId,
+            quantity: line.quantity,
+            name: original?.name || 'Produto',
+            imageUrl: resolveProductImage(original?.imageUrl, original?.name),
+          } as CartItem;
+        });
         setItems(updated);
       }
     } catch (e) {
@@ -94,9 +107,63 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, mounted]);
 
+  useEffect(() => {
+    if (!mounted) return;
+    const signature = items
+      .map((item) => `${item.variantId}:${item.quantity}`)
+      .sort()
+      .join('|');
+    if (!signature) {
+      setQuoteError(null);
+      setIsQuoting(false);
+      lastQuotedSignature.current = '';
+      return;
+    }
+    if (signature === lastQuotedSignature.current) return;
+    lastQuotedSignature.current = signature;
+    const controller = new AbortController();
+    setIsQuoting(true);
+    setQuoteError(null);
+    fetch('/api/cart/quote', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        items: items.map(({ variantId, quantity }) => ({ variantId, quantity })),
+      }),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(data?.detail || data?.error || 'Não foi possível validar o carrinho.');
+        }
+        return data as { items: { variant_id: string; unit_price: number | string; quantity: number }[] };
+      })
+      .then((quote) => {
+        const prices = new Map(quote.items.map((line) => [line.variant_id, Number(line.unit_price)]));
+        setItems((current) => current.map((item) => {
+          const unitPrice = prices.get(item.variantId);
+          return unitPrice === undefined ? item : { ...item, price: unitPrice, promotionalPrice: null };
+        }));
+        setQuoteError(null);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+        setQuoteError(error instanceof Error ? error.message : 'Não foi possível validar o carrinho.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsQuoting(false);
+      });
+    return () => controller.abort();
+  }, [items, mounted]);
+
   const addItem = (rawItem: CartItem) => {
+    const quantity = Number.isSafeInteger(rawItem.quantity)
+      ? Math.min(999, Math.max(1, rawItem.quantity))
+      : 1;
     const newItem: CartItem = {
       ...rawItem,
+      quantity,
       imageUrl: resolveProductImage(rawItem.imageUrl, rawItem.name),
     };
     setItems((prev) => {
@@ -122,6 +189,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeItem(variantId);
       return;
     }
+    quantity = Math.min(999, Math.floor(quantity));
     setItems((prev) =>
       prev.map((i) => (i.variantId === variantId ? { ...i, quantity } : i))
     );
@@ -150,6 +218,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         clearCart,
         totalItems,
         subtotal,
+        quoteError,
+        isQuoting,
         isCartOpen,
         setIsCartOpen,
       }}

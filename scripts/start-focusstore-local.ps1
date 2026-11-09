@@ -66,6 +66,12 @@ try {
     $env:FRONTEND_ORIGIN = 'http://127.0.0.1:3000'
     $env:AUTH_COOKIE_SECURE = 'false'
     $env:NEXT_PUBLIC_APP_URL = 'http://127.0.0.1:3000'
+    $env:FOCUS_CATALOG_SOURCE = 'fastapi'
+    $env:FOCUS_FASTAPI_BASE_URL = 'http://127.0.0.1:8000'
+    $env:CATALOG_SOURCE = 'postgresql'
+    # For a browser reached through a local reverse proxy/tunnel, set the
+    # exact public origin in FOCUS_ALLOWED_ORIGINS before starting this script.
+    # The origin checker never trusts forwarded Host headers automatically.
     $env:FOCUS_FRONTEND_PORT = '3000'
     $env:FOCUS_BACKEND_PORT = '8000'
 
@@ -84,6 +90,9 @@ try {
     Remove-Item Env:FRONTEND_ORIGIN -ErrorAction SilentlyContinue
     Remove-Item Env:AUTH_COOKIE_SECURE -ErrorAction SilentlyContinue
     Remove-Item Env:NEXT_PUBLIC_APP_URL -ErrorAction SilentlyContinue
+    Remove-Item Env:FOCUS_CATALOG_SOURCE -ErrorAction SilentlyContinue
+    Remove-Item Env:FOCUS_FASTAPI_BASE_URL -ErrorAction SilentlyContinue
+    Remove-Item Env:CATALOG_SOURCE -ErrorAction SilentlyContinue
     Remove-Item Env:FOCUS_FRONTEND_PORT -ErrorAction SilentlyContinue
     Remove-Item Env:FOCUS_BACKEND_PORT -ErrorAction SilentlyContinue
     $plainPassword = $null

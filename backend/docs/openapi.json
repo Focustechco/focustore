@@ -709,11 +709,48 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "OrderCreateInput": {
+        "additionalProperties": false,
+        "properties": {
+          "idempotencyKey": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotencykey"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderItemInput"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "OrderCreateInput",
+        "type": "object"
+      },
       "OrderDetail": {
         "properties": {
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "default": "BRL",
+            "title": "Currency",
             "type": "string"
           },
           "discount_amount": {
@@ -772,6 +809,29 @@
         "title": "OrderDetail",
         "type": "object"
       },
+      "OrderItemInput": {
+        "additionalProperties": false,
+        "properties": {
+          "quantity": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 999.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "variantId": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Variantid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "variantId",
+          "quantity"
+        ],
+        "title": "OrderItemInput",
+        "type": "object"
+      },
       "OrderLine": {
         "properties": {
           "id": {
@@ -788,6 +848,17 @@
               }
             ],
             "title": "Image Url"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
           },
           "product_name": {
             "title": "Product Name",
@@ -869,6 +940,11 @@
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "default": "BRL",
+            "title": "Currency",
             "type": "string"
           },
           "discount_amount": {
@@ -1718,6 +1794,52 @@
           }
         ],
         "summary": "List Orders",
+        "tags": [
+          "Own orders"
+        ]
+      },
+      "post": {
+        "operationId": "create_order_api_v1_orders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCreateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Invalid order"
+          },
+          "503": {
+            "description": "Source unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Create Order",
         "tags": [
           "Own orders"
         ]

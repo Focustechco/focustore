@@ -9,7 +9,10 @@ import { formatPrice } from '@/lib/utils/formatters';
 import { Button } from '../ui/button';
 
 export function CartDrawer() {
-  const { items, isCartOpen, setIsCartOpen, removeItem, updateQuantity, subtotal, totalItems } = useCart();
+  const {
+    items, isCartOpen, setIsCartOpen, removeItem, updateQuantity, subtotal, totalItems,
+    quoteError, isQuoting,
+  } = useCart();
 
   // Bloqueia scroll da pagina quando o carrinho estiver aberto
   useEffect(() => {
@@ -153,6 +156,11 @@ export function CartDrawer() {
           {/* Rodapé / Subtotal & Checkout */}
           {items.length > 0 && (
             <div className="p-6 border-t border-white/10 bg-[#121212] space-y-4">
+              {quoteError && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                  {quoteError}
+                </div>
+              )}
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between text-zinc-400">
                   <span>Subtotal</span>
@@ -171,10 +179,14 @@ export function CartDrawer() {
               <div className="space-y-2">
                 <Link
                   href="/checkout"
-                  onClick={() => setIsCartOpen(false)}
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#FF6500] hover:bg-[#FF7A1A] text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#FF6500]/25 hover:scale-[1.01]"
+                  onClick={(event) => {
+                    if (quoteError || isQuoting) event.preventDefault();
+                    else setIsCartOpen(false);
+                  }}
+                  aria-disabled={Boolean(quoteError || isQuoting)}
+                  className={`w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#FF6500]/25 ${quoteError || isQuoting ? 'pointer-events-auto cursor-not-allowed bg-zinc-700' : 'bg-[#FF6500] hover:bg-[#FF7A1A] hover:scale-[1.01]'}`}
                 >
-                  <span>Finalizar Compra</span>
+                  <span>{isQuoting ? 'Validando carrinho...' : 'Finalizar Compra'}</span>
                   <ArrowRight size={16} />
                 </Link>
 

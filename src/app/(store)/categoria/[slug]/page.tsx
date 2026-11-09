@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { ProductCard } from '@/components/commerce/product-card';
+import { CatalogErrorState } from '@/components/commerce/catalog-state';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -16,6 +17,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   let category = null;
   let products: Awaited<ReturnType<typeof CatalogService.getAllProducts>> = [];
+  let catalogError = false;
 
   try {
     category = slug !== 'todos' ? await CatalogService.getCategoryBySlug(slug) : null;
@@ -32,6 +34,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     });
   } catch {
     products = [];
+    catalogError = true;
   }
 
   const title = slug === 'todos' ? 'Todos os Produtos' : category?.name || slug;
@@ -63,7 +66,9 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
       {/* Filtros e Grid */}
       <div className="space-y-6">
-        {products.length === 0 ? (
+        {catalogError ? (
+          <CatalogErrorState />
+        ) : products.length === 0 ? (
           <div className="py-20 text-center space-y-3 bg-surface rounded-2xl border border-white/5">
             <h3 className="text-lg font-bold text-white uppercase">Nenhum produto encontrado</h3>
             <p className="text-xs text-muted">Tente ajustar seus filtros ou explore outras categorias.</p>

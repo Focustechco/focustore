@@ -8,6 +8,7 @@ import { FeaturedProductsCarousel } from '@/components/commerce/featured-product
 import { MobileProductsCarousel } from '@/components/commerce/mobile-products-carousel';
 import { CommunityInstagramGallery } from '@/components/commerce/community-instagram-gallery';
 import { FAQAccordion } from '@/components/commerce/faq-accordion';
+import { CatalogErrorState } from '@/components/commerce/catalog-state';
 import { Button } from '@/components/ui/button';
 import { Suspense } from "react";
 
@@ -39,6 +40,16 @@ async function HomePageContent() {
   const heroBanners = heroBannersResult.status === 'fulfilled' ? heroBannersResult.value : [];
   const featuredBanners = featuredBannersResult.status === 'fulfilled' ? featuredBannersResult.value : [];
   const realLifeBanners = realLifeBannersResult.status === 'fulfilled' ? realLifeBannersResult.value : [];
+
+  if (productsResult.status === 'rejected') {
+    return (
+      <div className="min-h-screen bg-[#080808] px-4 py-16 text-white sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-3xl">
+          <CatalogErrorState />
+        </div>
+      </div>
+    );
+  }
 
   // Ordenação dos produtos para o carrossel interativo de destaques (com navegação pelas setas)
   const priorityOrder = [

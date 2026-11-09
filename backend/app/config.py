@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     auth_session_ttl_minutes: int = Field(default=10080, ge=5, le=43200)
     auth_cookie_secure: bool = Field(default=True)
     auth_rate_limit_attempts: int = Field(default=10, ge=1, le=100)
+    auth_rate_limit_ip_attempts: int = Field(default=30, ge=1, le=300)
     auth_rate_limit_window_seconds: int = Field(default=900, ge=60, le=86400)
 
     @field_validator('frontend_origin')

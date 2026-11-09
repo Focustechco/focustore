@@ -9,7 +9,7 @@ import { formatPrice } from '@/lib/utils/formatters';
 import { Button } from '@/components/ui/button';
 
 export default function CartPage() {
-  const { items, removeItem, updateQuantity, clearCart, subtotal, totalItems } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, subtotal, totalItems, quoteError, isQuoting } = useCart();
   const [couponCode, setCouponCode] = useState('');
   const [couponApplied, setCouponApplied] = useState<any>(null);
   const [couponError, setCouponError] = useState('');
@@ -286,11 +286,23 @@ export default function CartPage() {
               </div>
             </div>
 
-            <Link href="/checkout">
-              <Button fullWidth size="lg" className="mt-2 gap-2 shadow-focus/20 shadow">
-                IR PARA O CHECKOUT <ArrowRight size={18} />
+            <Link
+              href="/checkout"
+              aria-disabled={Boolean(quoteError || isQuoting)}
+              onClick={(event) => {
+                if (quoteError || isQuoting) event.preventDefault();
+              }}
+            >
+              <Button disabled={Boolean(quoteError || isQuoting)} fullWidth size="lg" className="mt-2 gap-2 shadow-focus/20 shadow">
+                {isQuoting ? 'VALIDANDO CARRINHO...' : 'IR PARA O CHECKOUT'} <ArrowRight size={18} />
               </Button>
             </Link>
+
+            {quoteError && (
+              <p className="mt-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300">
+                {quoteError}
+              </p>
+            )}
 
             <div className="space-y-1.5 pt-2 text-[11px] text-muted">
               <div className="flex items-center gap-2">

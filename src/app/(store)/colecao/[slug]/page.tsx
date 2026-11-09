@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { ChevronRight, Sparkles, Flame, ShieldCheck, ArrowRight, Truck } from 'lucide-react';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { ProductCard } from '@/components/commerce/product-card';
+import { CatalogErrorState } from '@/components/commerce/catalog-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +38,7 @@ export default async function CollectionPage({ params }: Props) {
   const { slug } = await params;
   let collection: Awaited<ReturnType<typeof CatalogService.getCollectionBySlug>> = null;
   let allProducts: Awaited<ReturnType<typeof CatalogService.getAllProducts>> = [];
+  let catalogError = false;
   try {
     collection = await CatalogService.getCollectionBySlug(slug);
   } catch {
@@ -46,6 +48,7 @@ export default async function CollectionPage({ params }: Props) {
     allProducts = await CatalogService.getAllProducts();
   } catch {
     allProducts = [];
+    catalogError = true;
   }
 
   const collectionProducts = allProducts.filter((p) =>
@@ -119,7 +122,9 @@ export default async function CollectionPage({ params }: Props) {
           <span className="text-xs text-zinc-400">Exibindo todos os itens</span>
         </div>
 
-        {collectionProducts.length === 0 ? (
+        {catalogError ? (
+          <CatalogErrorState />
+        ) : collectionProducts.length === 0 ? (
           <div className="py-20 text-center space-y-4 bg-[#0F0F0F] rounded-2xl border border-white/5">
             <p className="text-zinc-400 text-sm">Nenhum produto cadastrado nesta coleção no momento.</p>
             <Link

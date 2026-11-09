@@ -4,18 +4,31 @@ import { ChevronRight, Package } from 'lucide-react';
 import { prisma } from '@/lib/db/prisma';
 import { formatPrice, formatDate } from '@/lib/utils/formatters';
 import { getAuthenticatedUser } from '@/lib/auth/session';
+import { cookies } from 'next/headers';
+import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import { getPostgresOrders } from '@/lib/orders/postgres-orders';
+import { isPostgresSession } from '@/lib/auth/fastapi';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CustomerOrdersPage() {
   const customer = await getAuthenticatedUser();
-  const orders = customer
-    ? await prisma.order.findMany({
-        where: { userId: customer.id },
-        include: { items: true, payments: true, shipments: true },
-        orderBy: { createdAt: 'desc' },
-      })
-    : [];
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  let orders: any[] = [];
+  let ordersError = false;
+  if (customer) {
+    try {
+      orders = isPostgresSession(token)
+        ? await getPostgresOrders()
+        : await prisma.order.findMany({
+            where: { userId: customer.id },
+            include: { items: true, payments: true, shipments: true },
+            orderBy: { createdAt: 'desc' },
+          });
+    } catch {
+      ordersError = true;
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -39,7 +52,11 @@ export default async function CustomerOrdersPage() {
       </div>
 
       <div className="space-y-4">
-        {orders.length === 0 ? (
+        {ordersError ? (
+          <div className="p-8 text-center rounded-2xl bg-surface border border-red-500/30 text-red-300 text-sm">
+            Não foi possível carregar seu histórico agora.
+          </div>
+        ) : orders.length === 0 ? (
           <div className="p-8 text-center rounded-2xl bg-surface border border-white/10 text-muted text-sm">
             {customer
               ? 'Nenhum pedido encontrado no momento.'

@@ -27,16 +27,27 @@ function localOriginAliases(origin: string): string[] {
   }
 }
 
+function configuredOrigins(): string[] {
+  return [
+    process.env.NEXT_PUBLIC_APP_URL,
+    ...(process.env.FOCUS_ALLOWED_ORIGINS?.split(',') ?? []),
+  ].flatMap((value) => {
+    const parsed = parseOrigin(value?.trim());
+    return parsed ? [parsed] : [];
+  });
+}
+
 export function checkOrigin(request: Request): OriginCheck {
   const receivedOrigin = parseOrigin(request.headers.get('origin'));
   const requestOrigin = parseOrigin(request.url);
-  const configuredOrigin = parseOrigin(process.env.NEXT_PUBLIC_APP_URL);
+  const configured = configuredOrigins();
+  const configuredOrigin = configured[0] ?? null;
   const allowed = new Set<string>();
   if (requestOrigin) allowed.add(requestOrigin);
-  if (configuredOrigin) allowed.add(configuredOrigin);
+  configured.forEach((origin) => allowed.add(origin));
   if (process.env.NODE_ENV !== 'production') {
     if (requestOrigin) localOriginAliases(requestOrigin).forEach((origin) => allowed.add(origin));
-    if (configuredOrigin) localOriginAliases(configuredOrigin).forEach((origin) => allowed.add(origin));
+    configured.forEach((origin) => localOriginAliases(origin).forEach((alias) => allowed.add(alias)));
   }
 
   return {

@@ -23,7 +23,9 @@ class InvalidCredentials(Exception):
 
 
 class RateLimitExceeded(Exception):
-    pass
+    def __init__(self, retry_after: int):
+        self.retry_after = max(1, retry_after)
+        super().__init__('authentication rate limit exceeded')
 
 
 _DUMMY_PASSWORD_HASH = hash_password("focusstore-invalid-user-password")
@@ -52,7 +54,8 @@ def _rate_key(scope: str, identity: str) -> str:
     return hashlib.sha256(f"{scope}:{identity}".encode("utf-8")).hexdigest()
 
 
-def _consume_rate_limit(db: Session, settings: Settings, scope: str, identity: str) -> None:
+def _consume_rate_limit(db: Session, settings: Settings, scope: str, identity: str,
+                        limit: int) -> None:
     key_hash = _rate_key(scope, identity)
     now = _now()
     try:
@@ -70,7 +73,13 @@ def _consume_rate_limit(db: Session, settings: Settings, scope: str, identity: s
             else:
                 row.attempts += 1
             row.updated_at = now
-            allowed = row.attempts <= settings.auth_rate_limit_attempts
+            allowed = row.attempts <= limit
+        # Keep the window timestamp before commit/expiration so Retry-After is
+        # derived from the same value that was used for the decision.
+        retry_after = None
+        if not allowed:
+            elapsed = max(0, int((now - _as_utc(row.window_started)).total_seconds()))
+            retry_after = settings.auth_rate_limit_window_seconds - elapsed
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -83,10 +92,14 @@ def _consume_rate_limit(db: Session, settings: Settings, scope: str, identity: s
             raise
         row.attempts += 1
         row.updated_at = now
-        allowed = row.attempts <= settings.auth_rate_limit_attempts
+        allowed = row.attempts <= limit
+        retry_after = None
+        if not allowed:
+            elapsed = max(0, int((now - _as_utc(row.window_started)).total_seconds()))
+            retry_after = settings.auth_rate_limit_window_seconds - elapsed
         db.commit()
     if not allowed:
-        raise RateLimitExceeded
+        raise RateLimitExceeded(retry_after or settings.auth_rate_limit_window_seconds)
 
 
 def _clear_rate_limit(db: Session, scope: str, identity: str) -> None:
@@ -104,8 +117,14 @@ def _new_session(user: User, settings: Settings) -> tuple[UserSession, str]:
     return session, raw_token
 
 
+def _consume_auth_limits(db: Session, settings: Settings, scope: str,
+                         email: str, client_host: str) -> None:
+    _consume_rate_limit(db, settings, f'{scope}-account', email, settings.auth_rate_limit_attempts)
+    _consume_rate_limit(db, settings, f'{scope}-ip', client_host, settings.auth_rate_limit_ip_attempts)
+
+
 def register(db: Session, data: RegisterRequest, settings: Settings, client_host: str) -> tuple[User, str]:
-    _consume_rate_limit(db, settings, "register", f"{client_host}:{data.email}")
+    _consume_auth_limits(db, settings, 'register', data.email, client_host)
     user = User(name=data.name, email=data.email, password_hash=hash_password(data.password), role="CUSTOMER")
     try:
         db.add(user)
@@ -119,12 +138,12 @@ def register(db: Session, data: RegisterRequest, settings: Settings, client_host
         if not _is_email_conflict(exc):
             raise
         raise DuplicateEmail from exc
-    _clear_rate_limit(db, "register", f"{client_host}:{data.email}")
+    _clear_rate_limit(db, 'register-account', data.email)
     return user, raw_token
 
 
 def login(db: Session, data: LoginRequest, settings: Settings, client_host: str) -> tuple[User, str]:
-    _consume_rate_limit(db, settings, "login", f"{client_host}:{data.email}")
+    _consume_auth_limits(db, settings, 'login', data.email, client_host)
     user = db.scalar(select(User).where(User.email == data.email))
     valid = verify_password(data.password, user.password_hash if user else _DUMMY_PASSWORD_HASH)
     if user is None or not valid or user.role != "CUSTOMER":
@@ -139,7 +158,7 @@ def login(db: Session, data: LoginRequest, settings: Settings, client_host: str)
     except SQLAlchemyError:
         db.rollback()
         raise
-    _clear_rate_limit(db, "login", f"{client_host}:{data.email}")
+    _clear_rate_limit(db, 'login-account', data.email)
     return user, raw_token
 
 

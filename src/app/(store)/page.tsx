@@ -29,17 +29,26 @@ export default function HomePage() {
 }
 
 async function HomePageContent() {
-  const [productsResult, heroBannersResult, featuredBannersResult, realLifeBannersResult] =
+  const [
+    productsResult,
+    heroBannersResult,
+    featuredBannersResult,
+    realLifeBannersResult,
+    collectionBannerResult,
+  ] =
     await Promise.allSettled([
     CatalogService.getAllProducts(),
     CatalogService.getBanners('home_hero'),
     CatalogService.getBanners('home_featured'),
     CatalogService.getBanners('home_real_life'),
+    CatalogService.getBanners('home_collection'),
   ]);
   const products = productsResult.status === 'fulfilled' ? productsResult.value : [];
   const heroBanners = heroBannersResult.status === 'fulfilled' ? heroBannersResult.value : [];
   const featuredBanners = featuredBannersResult.status === 'fulfilled' ? featuredBannersResult.value : [];
   const realLifeBanners = realLifeBannersResult.status === 'fulfilled' ? realLifeBannersResult.value : [];
+  const collectionBanner =
+    collectionBannerResult.status === 'fulfilled' ? collectionBannerResult.value[0] : undefined;
 
   // Ordenação dos produtos para o carrossel interativo de destaques (com navegação pelas setas)
   const priorityOrder = [
@@ -270,12 +279,12 @@ async function HomePageContent() {
 
       <section className="mx-auto w-full max-w-[1440px] space-y-6 px-4 sm:px-6 lg:px-8">
         <Link
-          href="/colecao/focus-lab"
+          href={collectionBanner?.ctaLink || '/colecao/focus-lab'}
           className="group relative isolate flex min-h-[250px] items-end overflow-hidden rounded-xl border border-white/10 bg-[#101010] p-6 sm:min-h-[330px] sm:items-center sm:p-10 lg:p-14"
         >
           <Image
-            src="/images/hero/hero-collection-banner.png"
-            alt="Peças da coleção Focus Lab"
+            src={collectionBanner?.imageUrl || '/images/hero/hero-collection-banner.png'}
+            alt={collectionBanner?.title || 'Peças da coleção Focus Lab'}
             fill
             sizes="(max-width: 768px) 100vw, 1440px"
             className="absolute inset-0 -z-20 object-cover object-[65%_center] transition-transform duration-700 group-hover:scale-[1.03]"
@@ -283,13 +292,13 @@ async function HomePageContent() {
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/95 via-black/70 to-black/5" />
           <div className="max-w-md space-y-3">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF6500] sm:text-xs">
-              Coleção em destaque
+              {collectionBanner?.subtitle || 'Coleção em destaque'}
             </p>
             <h2 className="font-collection-display text-4xl uppercase text-white sm:text-6xl">
-              Focus Lab
+              {collectionBanner?.title || 'Focus Lab'}
             </h2>
             <span className="inline-flex items-center gap-2 rounded-md bg-[#FF6500] px-4 py-3 text-[10px] font-bold uppercase tracking-wide text-white transition-colors group-hover:bg-[#ff7a1a]">
-              Conheça a coleção <ArrowRight size={14} />
+              {collectionBanner?.ctaText || 'Conheça a coleção'} <ArrowRight size={14} />
             </span>
           </div>
         </Link>

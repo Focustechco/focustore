@@ -35,7 +35,15 @@ interface Banner {
   createdAt: string;
 }
 
-type TabType = 'home_hero' | 'home_featured' | 'home_real_life';
+type TabType = 'home_hero' | 'home_featured' | 'home_collection' | 'home_real_life';
+
+const DEFAULT_COLLECTION_BANNER = {
+  title: 'Focus Lab',
+  subtitle: 'Coleção em destaque',
+  ctaText: 'Conheça a coleção',
+  ctaLink: '/colecao/focus-lab',
+  imageUrl: '/images/hero/hero-collection-banner.png',
+};
 
 export default function AdminBannersPage() {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -80,23 +88,28 @@ export default function AdminBannersPage() {
   const openCreateModal = (defaultPlacement?: string) => {
     setEditingBanner(null);
     const placementToUse = defaultPlacement || activeTab;
+    const isCollection = placementToUse === 'home_collection';
 
     setFormData({
-      title: '',
-      subtitle: '',
+      title: isCollection ? DEFAULT_COLLECTION_BANNER.title : '',
+      subtitle: isCollection ? DEFAULT_COLLECTION_BANNER.subtitle : '',
       ctaText:
         placementToUse === 'home_hero'
           ? 'Ver Coleção'
           : placementToUse === 'home_featured'
           ? 'Explorar'
+          : isCollection
+          ? DEFAULT_COLLECTION_BANNER.ctaText
           : 'Ver no Instagram',
       ctaLink:
         placementToUse === 'home_hero'
           ? '/categoria/vestuario'
           : placementToUse === 'home_featured'
           ? '/categoria/todos'
+          : isCollection
+          ? DEFAULT_COLLECTION_BANNER.ctaLink
           : 'https://instagram.com/focus.store',
-      imageUrl: '',
+      imageUrl: isCollection ? DEFAULT_COLLECTION_BANNER.imageUrl : '',
       position: banners.filter((b) => b.placement === placementToUse).length,
       placement: placementToUse,
       isActive: true,
@@ -247,6 +260,8 @@ export default function AdminBannersPage() {
         return { label: 'Hero Principal', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
       case 'home_featured':
         return { label: 'Destaques (3 Cards)', color: 'bg-[#FF6500]/10 text-[#FF6500] border-[#FF6500]/20' };
+      case 'home_collection':
+        return { label: 'Coleção Focus Lab', color: 'bg-orange-500/10 text-orange-300 border-orange-500/20' };
       case 'home_real_life':
         return { label: 'Focus in Real Life', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' };
       default:
@@ -263,6 +278,8 @@ export default function AdminBannersPage() {
         return 'Novo Slide da Hero';
       case 'home_featured':
         return 'Novo Card de Destaque';
+      case 'home_collection':
+        return 'Editar Banner Focus Lab';
       case 'home_real_life':
         return 'Nova Foto da Comunidade';
       default:
@@ -279,6 +296,9 @@ export default function AdminBannersPage() {
     if (placement === 'home_featured') {
       return isEdit ? 'Editar Card de Destaque' : 'Novo Card de Destaque';
     }
+    if (placement === 'home_collection') {
+      return isEdit ? 'Editar Banner Focus Lab' : 'Configurar Banner Focus Lab';
+    }
     if (placement === 'home_real_life') {
       return isEdit ? 'Editar Foto da Comunidade' : 'Nova Foto Focus in Real Life';
     }
@@ -294,16 +314,18 @@ export default function AdminBannersPage() {
             Gerenciador de Banners & Fotos
           </h1>
           <p className="text-xs text-zinc-400 mt-1">
-            Personalize e crie novos slides para a Hero, cards de destaques e fotos da galeria Focus in Real Life.
+            Personalize os banners da Home, os cards de destaque e as fotos da galeria Focus in Real Life.
           </p>
         </div>
 
-        <Button
-          onClick={() => openCreateModal()}
-          className="gap-2 bg-[#FF6500] hover:bg-[#FF7A1A] text-white shadow-lg shadow-[#FF6500]/20 font-bold"
-        >
-          <Plus size={16} /> {getCreateButtonLabel()}
-        </Button>
+        {!(activeTab === 'home_collection' && countByPlacement('home_collection') > 0) && (
+          <Button
+            onClick={() => openCreateModal()}
+            className="gap-2 bg-[#FF6500] hover:bg-[#FF7A1A] text-white shadow-lg shadow-[#FF6500]/20 font-bold"
+          >
+            <Plus size={16} /> {getCreateButtonLabel()}
+          </Button>
+        )}
       </div>
 
       {/* Tabs Navigation */}
@@ -332,6 +354,17 @@ export default function AdminBannersPage() {
           <span>Destaques (3 Cards) ({countByPlacement('home_featured')})</span>
         </button>
 
+        <button
+          onClick={() => setActiveTab('home_collection')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+            activeTab === 'home_collection'
+              ? 'bg-[#FF6500] text-white shadow-md shadow-[#FF6500]/20'
+              : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <ImageIcon size={14} />
+          <span>Banner Focus Lab ({countByPlacement('home_collection')})</span>
+        </button>
         <button
           onClick={() => setActiveTab('home_real_life')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
@@ -368,13 +401,31 @@ export default function AdminBannersPage() {
         </div>
       ) : filteredBanners.length === 0 ? (
         <div className="bg-[#0D0D0D] border border-white/10 rounded-2xl p-12 text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/5 mx-auto flex items-center justify-center text-zinc-500">
-            <ImageIcon size={24} />
-          </div>
+          {activeTab === 'home_collection' ? (
+            <div className="relative mx-auto h-48 w-full max-w-2xl overflow-hidden rounded-xl border border-white/10 bg-black">
+              <Image
+                src={DEFAULT_COLLECTION_BANNER.imageUrl}
+                alt="Banner atual da coleção Focus Lab"
+                fill
+                sizes="(max-width: 768px) 100vw, 672px"
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-12 h-12 rounded-2xl bg-white/5 mx-auto flex items-center justify-center text-zinc-500">
+              <ImageIcon size={24} />
+            </div>
+          )}
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-white uppercase">Nenhum item cadastrado nesta seção</h3>
+            <h3 className="text-sm font-bold text-white uppercase">
+              {activeTab === 'home_collection'
+                ? 'Banner Focus Lab usando a imagem padrão do site'
+                : 'Nenhum item cadastrado nesta seção'}
+            </h3>
             <p className="text-xs text-zinc-400">
-              Clique no botão abaixo para adicionar um novo item a esta seção da loja.
+              {activeTab === 'home_collection'
+                ? 'Configure o banner para editar a imagem, o título e o link da coleção. Até lá, a imagem padrão continua na loja.'
+                : 'Clique no botão abaixo para adicionar um novo item a esta seção da loja.'}
             </p>
           </div>
           <Button onClick={() => openCreateModal()} size="sm" className="gap-2 bg-[#FF6500]">
@@ -527,6 +578,7 @@ export default function AdminBannersPage() {
                 >
                   <option value="home_hero">Hero Principal (Slides no topo da Home)</option>
                   <option value="home_featured">Destaques (3 Cards abaixo da Hero: Kits, Exclusivos, Movimento)</option>
+                  <option value="home_collection">Banner da Coleção Focus Lab (Home)</option>
                   <option value="home_real_life">Focus in Real Life (Galeria de Fotos da Comunidade)</option>
                 </select>
               </div>
@@ -578,6 +630,8 @@ export default function AdminBannersPage() {
                   placeholder={
                     formData.placement === 'home_real_life'
                       ? 'Ex: /images/community/sua-foto.jpg ou URL externa'
+                      : formData.placement === 'home_collection'
+                      ? DEFAULT_COLLECTION_BANNER.imageUrl
                       : 'Ex: /images/banners/seu-banner.png ou URL externa'
                   }
                   className="w-full bg-[#181818] border border-white/10 focus:border-[#FF6500] rounded-xl px-3.5 py-2.5 text-white outline-none font-mono text-xs"
@@ -620,6 +674,8 @@ export default function AdminBannersPage() {
                   placeholder={
                     formData.placement === 'home_real_life'
                       ? 'Ex: @seu_usuario ou @focus.community'
+                      : formData.placement === 'home_collection'
+                      ? 'Ex: Focus Lab'
                       : formData.placement === 'home_featured'
                       ? 'Ex: KITS E\nPRESENTES'
                       : 'Ex: IDEIAS TAMBÉM\nSE USAM.'
@@ -641,6 +697,8 @@ export default function AdminBannersPage() {
                   placeholder={
                     formData.placement === 'home_real_life'
                       ? 'Ex: Camisa Focus Classic Black & Boné Lab'
+                      : formData.placement === 'home_collection'
+                      ? 'Ex: Coleção em destaque'
                       : formData.placement === 'home_featured'
                       ? 'Ex: Para quem pensa diferente.'
                       : 'Ex: Linha exclusiva desenvolvida para quem vive tecnologia...'

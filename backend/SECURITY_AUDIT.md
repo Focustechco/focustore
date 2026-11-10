@@ -257,3 +257,36 @@ nem ao `requirements.txt`.
 - Migrations: **nenhuma executada**.
 - Seeds, resets, importações e pagamentos: **não executados**.
 - Commit ou push: **não realizados**.
+
+## Validacao PostgreSQL concorrente - 2026-11-10
+
+A pendencia de validacao dinamica foi concluida em um cluster PostgreSQL 18.6
+novo e descartavel, exclusivo desta tarefa: `127.0.0.1:55441`, banco
+`focusstore_itest`, papel `focus_test_owner`, schema `public`, encoding UTF8.
+A identidade efetiva foi conferida antes das migrations; o PostgreSQL
+`focusstore_test` em 5432, outros bancos existentes, SQLite legado e Supabase
+nao foram acessados.
+
+Foram validados a primeira insercao concorrente, o bloqueio `SELECT FOR UPDATE`,
+o retry apos conflito de unicidade, atualizacoes concorrentes, expiracao de
+janela, `Retry-After` e a rejeicao de `X-Forwarded-For`/`X-Real-IP`. Em cinco
+repeticoes do teste atomico, duas sessoes independentes produziram sempre uma
+tentativa permitida e uma limitada. Um estresse adicional produziu 10/20
+permitidas/limitadas por conta, com contador persistido 20, e 30/40 por origem,
+com contador persistido 40. Nao houve lost updates, deadlocks ou erros 500.
+
+O schema chegou ao head Alembic `c9d0e1f2a3b4`, `alembic check` e integridade
+passaram, e `auth_rate_limits` manteve sua chave primaria e constraint
+`attempts >= 0`. A politica observada continua fail-closed para falhas de
+persistencia do contador.
+
+A suite coletou 178 testes e foi validada em grupos deterministicos: **178
+passed, 0 failed, 0 skipped**, com um warning conhecido de deprecacao
+Starlette/httpx. OpenAPI, sintaxe Python e `pip check` tambem passaram. O
+comando monolitico da suite nao emitiu resumo normal nesta execucao, por isso o
+resultado final foi baseado nos grupos que cobriram todos os 178 testes.
+
+Classificacao final do rate limiting: **PASS**. O cluster temporario foi
+encerrado e removido. Frontend, bancos existentes, SQLite, Supabase, migrations
+historicas e contrato de cadastro `409` permaneceram inalterados; nenhum
+commit, push, seed, pagamento ou alteracao de estoque real foi realizado.

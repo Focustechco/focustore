@@ -2,14 +2,26 @@ name: Backend quality (no deploy)
 
 on:
   push:
-    branches: [back-end]
+    branches: [main, back-end]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-quality.yml'
 
   pull_request:
-    branches: [back-end]
+    branches: [main, back-end]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-quality.yml'
 
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: backend-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -18,22 +30,22 @@ jobs:
       postgres:
         image: postgres:18
         env:
-          POSTGRES_USER: focusstore
+          POSTGRES_USER: focusstore_ci
           POSTGRES_PASSWORD: focusstore_ci_only
-          POSTGRES_DB: focusstore_test
+          POSTGRES_DB: focusstore_ci
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U focusstore -d focusstore_test"
+          --health-cmd "pg_isready -U focusstore_ci -d focusstore_ci"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg://focusstore:focusstore_ci_only@localhost:5432/focusstore_test
+      DATABASE_URL: postgresql+psycopg://focusstore_ci:focusstore_ci_only@127.0.0.1:5433/focusstore_ci
       FOCUS_DEBUG: 'false'
       APP_NAME: FocusStore API
       APP_VERSION: '0.1.0'
-      TEST_DATABASE_URL: postgresql+psycopg://focusstore:focusstore_ci_only@localhost:5432/focusstore_test
+      TEST_DATABASE_URL: postgresql+psycopg://focusstore_ci:focusstore_ci_only@127.0.0.1:5433/focusstore_ci
     defaults:
       run:
         working-directory: backend
@@ -48,12 +60,29 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      - name: Validate installed dependencies
+        run: python -m pip check
+      - name: Audit dependencies
+        run: |
+          python -m pip install pip-audit==2.10.1
+          python -m pip_audit -r requirements.txt --strict
       - name: Apply migrations to temporary database
         run: python -m alembic upgrade head
       - name: Check migrations against models
         run: python -m alembic check
       - name: Run tests including PostgreSQL integration
-        run: python -m pytest -q -ra
+        run: python -m pytest -q -ra --junitxml=pytest-report.xml
+      - name: Reject unexpected skipped tests
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse('pytest-report.xml').getroot()
+          skipped = int(root.attrib.get('skipped', '0'))
+          if skipped:
+              raise SystemExit(f'CI must not skip backend tests; observed {skipped} skipped test(s)')
+          print('No backend tests were skipped')
+          PY
       - name: 'Integrity agent: PostgreSQL schema and data'
         if: ${{ !cancelled() }}
         run: python -m app.agents.integrity

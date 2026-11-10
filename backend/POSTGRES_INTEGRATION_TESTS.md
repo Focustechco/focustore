@@ -114,3 +114,32 @@ O ambiente Docker não foi utilizado porque o daemon não estava disponível.
 Nenhuma validação foi feita contra o PostgreSQL `focusstore_test` existente,
 Supabase ou SQLite legado. Nenhum produto, usuário, pedido ou estoque real foi
 alterado.
+
+## Validacao final do rate limiting - 2026-11-10
+
+Foi criado um novo cluster PostgreSQL 18.6 descartavel, exclusivo desta
+execucao, com UTF-8, em `127.0.0.1:55441`, banco `focusstore_itest` e papel
+`focus_test_owner`. A identidade efetiva foi validada antes das migrations.
+
+O cluster iniciou vazio, recebeu apenas as migrations existentes, chegou a
+`c9d0e1f2a3b4`, passou `alembic check` e `app.agents.integrity`. A tabela
+`auth_rate_limits` possui chave primaria em `key_hash` e o check
+`attempts >= 0`.
+
+Resultados de concorrencia real com sessoes PostgreSQL independentes: cinco
+repeticoes do teste atomico, todas com exatamente uma tentativa permitida e
+uma limitada; 20 tentativas simultaneas por conta produziram 10 permitidas,
+10 limitadas e contador persistido 20; 40 tentativas simultaneas por origem
+produziram 30 permitidas, 10 limitadas e contador persistido 40. Nao houve
+lost update, deadlock ou HTTP 500 observado. Headers falsificados, expiracao
+deterministica e `Retry-After` permanecem cobertos pelos testes direcionados.
+
+A suite completa coletou 178 testes. O comando monolitico nao produziu um
+resumo normal nesta execucao; os mesmos testes foram executados em grupos
+deterministicos, totalizando **178 passed, 0 failed, 0 skipped**, com apenas o
+warning conhecido de deprecacao Starlette/httpx. Tambem passaram OpenAPI,
+compilacao Python, integridade e `pip check`. O rate limiting permanece
+fail-closed quando o armazenamento do contador falha.
+
+Nenhum codigo de aplicacao, migration, frontend ou contrato publico foi
+alterado nesta validacao. O cluster foi encerrado e removido ao final.

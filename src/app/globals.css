@@ -1,4 +1,5 @@
 
+@import url('https://fonts.googleapis.com/css2?family=Xmind:wght@800&display=swap');
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
@@ -33,9 +34,9 @@ h1, h2, h3, h4, h5, h6, .font-heading, nav, button {
 }
 
 .font-banner-display {
-  font-family: var(--font-unison-pro), sans-serif;
-  font-style: italic;
-  font-weight: 700;
+  font-family: 'Xmind', sans-serif;
+  font-style: normal;
+  font-weight: 800;
   letter-spacing: -0.045em;
   line-height: 0.9;
 }

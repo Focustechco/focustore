@@ -39,6 +39,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const [added, setAdded] = useState(false);
 
   const isFocusCap = product.slug === 'bone-focus-lab';
+  const isKeychainProduct = product.slug === 'chaveiro-focus';
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const favorited = isFavorite(product.id) || isFavorite(product.slug);
   const selectedImage = product.images[currentImageIndex] || product.images[0];
@@ -100,7 +101,7 @@ export function ProductCard({ product }: ProductCardProps) {
         { name: 'Branco', hex: '#FFFFFF', imgIndex: Math.max(imageIndexByColor('Branco'), 0) },
       ];
     }
-    if (product.slug === 'chaveiro-focus') {
+    if (isKeychainProduct) {
       return [{ name: 'Preto', hex: '#0D0D0D', imgIndex: 0 }];
     }
 
@@ -135,7 +136,7 @@ export function ProductCard({ product }: ProductCardProps) {
     });
 
     return list;
-  }, [product.slug, product.variants, product.images]);
+  }, [isKeychainProduct, product.slug, product.variants, product.images]);
 
   const selectedColor = colorList.find((color) => color.imgIndex === currentImageIndex)?.name;
   const selectedVariant = isFocusCap
@@ -224,12 +225,14 @@ export function ProductCard({ product }: ProductCardProps) {
             src={primaryImage}
             alt={product.name}
             fill
-            className={`${product.slug === 'chaveiro-focus' ? 'object-cover scale-[1.12]' : 'object-cover'} ${
-              canPreviewFront
-                ? 'transition-opacity duration-500 ease-in-out'
-                : product.slug === 'chaveiro-focus'
-                  ? 'transition-transform duration-500'
-                  : 'group-hover:scale-108 transition-transform duration-500'
+            className={`${
+              isKeychainProduct
+                ? 'object-cover scale-[1.12] group-hover:scale-[1.2] transition-all duration-500 ease-in-out'
+                : `object-cover ${
+                    canPreviewFront
+                      ? 'transition-opacity duration-500 ease-in-out'
+                      : 'group-hover:scale-108 transition-transform duration-500'
+                  }`
             } ${canPreviewFront ? 'group-hover/image:opacity-0' : ''}`}
             sizes="(max-width: 768px) 50vw, 20vw"
             quality={primaryImage.includes('/images/camisas/') ? 90 : undefined}

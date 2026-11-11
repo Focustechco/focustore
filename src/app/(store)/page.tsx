@@ -64,7 +64,6 @@ async function HomePageContent() {
     'bone-focus-lab',
     'suporte-headphone-focus',
     'kit-canetas-focus',
-    'caneta-focus-black',
     'stickers-focus',
     'chaveiro-focus',
     'caneca-focus-lab',

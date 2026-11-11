@@ -42,7 +42,7 @@ const DEFAULT_COLLECTION_BANNER = {
   subtitle: 'Coleção em destaque',
   ctaText: 'Conheça a coleção',
   ctaLink: '/colecao/focus-lab',
-  imageUrl: '/images/hero/hero-collection-banner.png',
+  imageUrl: '/images/hero/hero-collection-banner.webp',
 };
 
 export default function AdminBannersPage() {

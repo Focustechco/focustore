@@ -134,19 +134,19 @@ async function HomePageContent() {
       title: 'Moletons',
       href: '/categoria/vestuario',
       productSlug: 'moletom-focus-hoodie',
-      fallbackImage: '/images/products/moletom-focus-hoodie.jpg',
+      fallbackImage: '/images/products/Modelo-moletom-preto.webp',
     },
     {
       title: 'Bonés',
       href: '/categoria/acessorios',
       productSlug: 'bone-focus-signature',
-      fallbackImage: '/images/products/bone-focus-signature.jpg',
+      fallbackImage: '/images/products/bone-focus-signature.webp',
     },
     {
       title: 'Acessórios',
       href: '/categoria/acessorios',
       productSlug: 'garrafa-termica-focus',
-      fallbackImage: '/images/products/garrafa-focus.jpg',
+      fallbackImage: '/images/products/garrafa-focus.webp',
     },
   ];
 
@@ -283,7 +283,7 @@ async function HomePageContent() {
           className="group relative isolate flex min-h-[250px] items-end overflow-hidden rounded-xl border border-white/10 bg-[#101010] p-6 sm:min-h-[330px] sm:items-center sm:p-10 lg:p-14"
         >
           <Image
-            src={collectionBanner?.imageUrl || '/images/hero/hero-collection-banner.png'}
+            src={collectionBanner?.imageUrl || '/images/hero/hero-collection-banner.webp'}
             alt={collectionBanner?.title || 'Peças da coleção Focus Lab'}
             fill
             sizes="(max-width: 768px) 100vw, 1440px"

@@ -15,6 +15,7 @@ export interface FavoriteProduct {
   categories?: { category: { name: string; slug: string } }[];
   variants?: any[];
   images?: { url: string; altText?: string | null }[];
+  catalogSource?: 'fastapi' | 'prisma';
 }
 
 interface FavoritesContextType {
@@ -86,6 +87,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
         categories: product.categories,
         variants: product.variants,
         images: product.images,
+        catalogSource: product.catalogSource,
       };
       setFavorites((prev) => [normalizedProduct, ...prev]);
       return true;

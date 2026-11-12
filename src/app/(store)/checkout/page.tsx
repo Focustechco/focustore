@@ -14,7 +14,7 @@ import {
   ArrowRight,
   ShoppingBag
 } from 'lucide-react';
-import { resolveProductImage, useCart } from '@/modules/cart/cart-context';
+import { isFastApiCatalogItem, resolveProductImage, useCart } from '@/modules/cart/cart-context';
 import { formatPrice } from '@/lib/utils/formatters';
 import { Button } from '@/components/ui/button';
 
@@ -71,6 +71,7 @@ export default function CheckoutPage() {
   }, []);
 
   const total = subtotal + shippingOption.price;
+  const hasReadOnlyCatalogItem = items.some(isFastApiCatalogItem);
 
   const handleCepLookup = async (cepValue: string) => {
     const clean = cepValue.replace(/\D/g, '');
@@ -94,6 +95,10 @@ export default function CheckoutPage() {
   };
 
   const handleFinishOrder = async () => {
+    if (hasReadOnlyCatalogItem) {
+      setError('Itens do catálogo FastAPI são somente para consulta e não podem ser finalizados pelo checkout Prisma.');
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -474,9 +479,15 @@ export default function CheckoutPage() {
               </div>
             )}
 
+            {hasReadOnlyCatalogItem && (
+              <div role="alert" className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-300">
+                Remova os itens do catálogo FastAPI para concluir uma compra pelo checkout Prisma.
+              </div>
+            )}
+
             <Button
               onClick={handleFinishOrder}
-              disabled={loading || !customer.name || !customer.email || !address.street}
+              disabled={hasReadOnlyCatalogItem || loading || !customer.name || !customer.email || !address.street}
               fullWidth
               size="lg"
               className="gap-2 shadow-focus/30 shadow-md font-bold uppercase tracking-wider"

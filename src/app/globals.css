@@ -3,6 +3,14 @@
 @import "tailwindcss";
 @config "../../tailwind.config.ts";
 
+@font-face {
+  font-family: "Brigends Expanded";
+  src: url("./fonts/Brigends-Expanded.otf") format("opentype");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
 :root {
   --background: #080808;
   --foreground: #FFFFFF;
@@ -38,6 +46,14 @@ h1, h2, h3, h4, h5, h6, .font-heading, nav, button {
   font-style: normal;
   font-weight: 800;
   letter-spacing: -0.045em;
+  line-height: 0.9;
+}
+
+.font-banner-brigends {
+  font-family: "Brigends Expanded", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.035em;
   line-height: 0.9;
 }
 

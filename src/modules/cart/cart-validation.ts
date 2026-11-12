@@ -33,7 +33,8 @@ export function restoredCart(value: unknown): CartItem[] {
           item.promotionalPrice < item.price)) &&
       (item.imageUrl === undefined || item.imageUrl === null || typeof item.imageUrl === 'string') &&
       (item.size === undefined || item.size === null || typeof item.size === 'string') &&
-      (item.color === undefined || item.color === null || typeof item.color === 'string')
+      (item.color === undefined || item.color === null || typeof item.color === 'string') &&
+      (item.catalogSource === undefined || item.catalogSource === 'prisma' || item.catalogSource === 'fastapi')
     );
   });
 }

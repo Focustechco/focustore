@@ -24,8 +24,12 @@ def test_migrations_online_offline():
     engine = create_engine(get_settings().database_url)
     try:
         schema = inspect(engine)
-        assert {c["name"] for c in schema.get_columns("categories")} == {"id", "name", "slug"}
+        category_columns = {c["name"] for c in schema.get_columns("categories")}
+        assert {"id", "name", "slug", "description", "image_url", "position", "is_active"}.issubset(category_columns)
         assert any(c["column_names"] == ["slug"] for c in schema.get_unique_constraints("categories"))
+        assert {"product_images", "product_variants", "inventory", "product_categories"}.issubset(
+            set(schema.get_table_names())
+        )
         command.downgrade(config, "base")
         assert "categories" not in inspect(engine).get_table_names()
     finally:

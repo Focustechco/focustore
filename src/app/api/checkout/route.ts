@@ -30,7 +30,7 @@ const checkoutSchema = z.object({
     postalCode: z.string().trim().min(8).max(10),
   }),
   items: z.array(z.object({
-    variantId: z.string().min(1).max(100),
+    variantId: z.string().uuid({ message: 'Esta variante não pertence ao catálogo Prisma compatível com checkout.' }),
     quantity: z.number().int().positive().max(100),
   })).min(1).max(100),
   couponCode: z.string().trim().max(100).optional(),

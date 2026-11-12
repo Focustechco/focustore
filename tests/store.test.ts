@@ -1,6 +1,6 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
@@ -14,10 +14,11 @@ import { imageDestination, limitedFormData, sanitizeImage, MAX_IMAGE_BYTES } fro
 import sharp from 'sharp';
 import { validateProductInput, validatePromotionalPrice } from '../src/modules/catalog/product-validation';
 import { sameOrigin } from '../src/lib/security/origin';
+import { isFastApiCatalogItem } from '../src/modules/cart/cart-context';
 import { restoredCart } from '../src/modules/cart/cart-validation';
 import { assertDemoSeed } from '../scripts/seed-safety.cjs';
 import { nextTestConfig } from './helpers/next-config';
-import { postgresTestUrl } from './helpers/postgres-test';
+import { sqliteTestUrl } from './helpers/test-database';
 
 let directory: string;
 let fixtureRoot: string;
@@ -45,7 +46,7 @@ before(async () => {
   fixtureRoot = path.join(process.cwd(), '.local-validation');
   await mkdir(fixtureRoot, { recursive: true });
   directory = await mkdtemp(path.join(fixtureRoot, 'focusstore-audit-test-'));
-  const url = postgresTestUrl('store');
+  const url = sqliteTestUrl(directory, 'store');
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', NEXTAUTH_SECRET: randomUUID() });
   process.env.SOCIAL_LOGIN_ORIGIN = ''; // Never call real OAuth providers in this HTTP suite.
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'],
@@ -88,11 +89,13 @@ after(async () => {
     } else { server.kill('SIGTERM'); }
   }
   await prisma?.$disconnect();
-  // Preserve the synthetic PostgreSQL schema for inspection; never clean databases.
+  const { prisma: globalPrisma } = await import('../src/lib/db/prisma');
+  await globalPrisma.$disconnect();
+  await rm(directory, { recursive: true, force: true });
 });
 
-test('database configuration requires PostgreSQL and rejects local/unsupported sources', () => {
-  assert.throws(() => databaseUrl({ DATABASE_URL: 'file:./custom.db' }));
+test('database configuration supports SQLite and rejects unsupported sources', () => {
+  assert.equal(databaseUrl({ DATABASE_URL: 'file:./custom.db' }), 'file:./custom.db');
   assert.throws(() => databaseUrl({ NODE_ENV: 'production' }));
   assert.equal(databaseUrl({ DATABASE_URL: 'postgresql://user:pass@db.example/store?sslmode=require' }), 'postgresql://user:pass@db.example/store?sslmode=require');
   assert.equal(databaseUrl({ DATABASE_URL: 'postgres://user:pass@db.example/store' }), 'postgres://user:pass@db.example/store');
@@ -160,7 +163,23 @@ test('malformed saved cart is ignored and destructive demo scripts fail closed',
   assert.throws(() => assertDemoSeed());
 });
 
+test('saved cart retains an explicit FastAPI source marker without accepting unknown sources', () => {
+  const item = {
+    variantId: '42', productId: '7', name: 'FastAPI product', variantName: 'Default', sku: 'FAST-42', quantity: 1, price: 10,
+    catalogSource: 'fastapi' as const,
+  };
+  const [restored] = restoredCart([item]);
+  assert.equal(restored.catalogSource, 'fastapi');
+  assert.equal(isFastApiCatalogItem(restored), true);
+  assert.equal(isFastApiCatalogItem({ ...item, catalogSource: undefined }), true);
+  assert.deepEqual(restoredCart([{ ...item, catalogSource: 'unknown' }]), []);
+});
+
 test('registration, duplicate email, hash, login, expiration and logout persist correctly', async () => {
+  const cpfRegistration = { name: 'CPF Customer', email: 'cpf@example.test', cpf: '123.456.789-09', password: 'synthetic-password' };
+  assert.equal((await api('/api/auth/register', 'POST', cpfRegistration)).status, 200);
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { email: cpfRegistration.email } })).cpf, '12345678909');
+
   const registration = { name: 'Synthetic Customer', email: 'customer@example.test', password: 'synthetic-password' };
   let response = await api('/api/auth/register', 'POST', registration);
   assert.equal(response.status, 200);
@@ -169,6 +188,7 @@ test('registration, duplicate email, hash, login, expiration and logout persist 
   assert.match(response.headers.get('set-cookie')!, /SameSite=lax/i);
   if (process.env.FOCUS_TEST_PRODUCTION === '1') assert.match(response.headers.get('set-cookie')!, /Secure/i);
   const user = await prisma.user.findUniqueOrThrow({ where: { email: registration.email } });
+  assert.equal(user.cpf, null);
   assert.notEqual(user.passwordHash, registration.password);
   assert(await bcrypt.compare(registration.password, user.passwordHash!));
   assert.equal((await api('/api/auth/register', 'POST', registration)).status, 409);
@@ -211,7 +231,7 @@ test('admin endpoints and server pages deny unauthenticated and ordinary users',
   }
   const page = await api('/admin/pedidos');
   assert.equal(page.status, 307);
-  assert.match(page.headers.get('location')!, /login/);
+  assert.equal(page.headers.get('location'), '/admin-acesso');
   await prisma.user.create({ data: { name: 'Synthetic Admin', email: 'admin@example.test', role: 'ADMIN', passwordHash: await bcrypt.hash('synthetic-admin-password', 4) } });
   const login = await api('/api/auth/login', 'POST', { identifier: 'admin@example.test', password: 'synthetic-admin-password' });
   assert.equal(login.status, 200);
@@ -231,7 +251,7 @@ test('admin can change password securely and other sessions are revoked', async 
       expires: new Date(Date.now() + 60 * 60 * 1000),
     },
   });
-  const request = (body: unknown, cookie = adminCookie, origin = base) =>
+  const request = (body: unknown, cookie = adminCookie, origin = base.replace('127.0.0.1', 'localhost')) =>
     fetch(`${base}${endpoint}`, {
       method: 'POST',
       headers: {
@@ -245,10 +265,11 @@ test('admin can change password securely and other sessions are revoked', async 
   assert.equal((await api(endpoint, 'POST', {})).status, 401);
   assert.equal((await request({}, customerCookie)).status, 403);
   assert.equal((await request({}, adminCookie, 'https://untrusted.example')).status, 403);
-  assert.equal((await request({
+  const wrongPassword = await request({
     currentPassword: 'wrong-password',
     newPassword: 'a-new-strong-password',
-  })).status, 400);
+  });
+  assert.equal(wrongPassword.status, 400);
   assert.equal((await request({
     currentPassword: 'synthetic-admin-password',
     newPassword: 'short',
@@ -338,6 +359,19 @@ function checkoutInput() {
     shippingOption: { carrier: 'Focus Express', serviceName: 'Standard SP', price: 0, estimatedDays: 0 },
     items: [{ variantId, quantity: 1 }], paymentMethod: 'PIX' as const, idempotencyKey: randomUUID() };
 }
+
+test('checkout rejects FastAPI variant identities before attempting a Prisma lookup', async () => {
+  const response = await api('/api/checkout', 'POST', {
+    ...checkoutInput(),
+    items: [{ variantId: '42', quantity: 1 }],
+  });
+  if (process.env.FOCUS_TEST_PRODUCTION === '1') {
+    assert.equal(response.status, 503);
+    return;
+  }
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /catálogo Prisma compatível com checkout/i);
+});
 
 test('checkout derives identity from session; demonstration is unavailable in production', async () => {
   if (process.env.FOCUS_TEST_PRODUCTION === '1') {

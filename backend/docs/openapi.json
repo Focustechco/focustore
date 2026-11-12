@@ -328,6 +328,18 @@
             ],
             "title": "Promotional Price"
           },
+          "public_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Id"
+          },
           "short_description": {
             "anyOf": [
               {
@@ -455,6 +467,18 @@
               }
             ],
             "title": "Promotional Price"
+          },
+          "public_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Id"
           },
           "quantity_available": {
             "anyOf": [
@@ -943,6 +967,11 @@
             "title": "Price",
             "type": "string"
           },
+          "public_id": {
+            "format": "uuid",
+            "title": "Public Id",
+            "type": "string"
+          },
           "stock": {
             "maximum": 2147483647.0,
             "minimum": 0.0,
@@ -955,7 +984,8 @@
           "price",
           "stock",
           "category_id",
-          "id"
+          "id",
+          "public_id"
         ],
         "title": "ProductResponse",
         "type": "object"

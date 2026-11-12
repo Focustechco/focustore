@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -16,6 +17,7 @@ class ProductResponse(ProductCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    public_id: UUID
 
 
 class ProductUpdate(BaseModel):

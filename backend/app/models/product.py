@@ -1,7 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
+from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -17,9 +18,13 @@ class Product(Base):
         Index('ux_products_slug', 'slug', unique=True),
         Index('ux_products_sku', 'sku', unique=True),
         Index('ix_products_catalog_status', 'status', 'slug'),
+        UniqueConstraint('public_id', name='uq_products_public_id'),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # PostgreSQL stores this generic SQLAlchemy UUID as its native UUID type.
+    # The integer primary key remains the internal relational identity.
+    public_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, default=uuid4)
 
     name: Mapped[str] = mapped_column(
         String(150),
@@ -103,9 +108,12 @@ class ProductVariant(Base):
             'promotional_price IS NULL OR promotional_price <= price',
             name='ck_product_variants_promo_not_above_price',
         ),
+        UniqueConstraint('public_id', name='uq_product_variants_public_id'),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Independent from the integer primary key and any external catalog source.
+    public_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, default=uuid4)
     product_id: Mapped[int] = mapped_column(ForeignKey('products.id', ondelete='CASCADE'), nullable=False)
     sku: Mapped[str] = mapped_column(String(120), nullable=False)
     name: Mapped[str] = mapped_column(String(150), nullable=False)

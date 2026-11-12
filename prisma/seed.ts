@@ -423,7 +423,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/products/camiseta-focus.jpg",
+            url: "/images/products/Camiseta-focus.png",
             isPrimary: true,
             altText: "Camisa Focus",
           },
@@ -496,9 +496,16 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/products/polo-focus.jpg",
+            url: "/images/products/Polo-FocusModelo.png",
             isPrimary: true,
             altText: "Polo Focus Tech",
+            position: 0,
+          },
+          {
+            url: "/images/products/polo-focus.png",
+            isPrimary: false,
+            altText: "Polo Focus Tech",
+            position: 1,
           },
         ],
       },
@@ -562,7 +569,7 @@ Vista seu código. Expresse sua linguagem.`,
             altText: "Boné Focus Lab - Preto",
           },
           {
-            url: "/images/products/bone-focus-white-v2.jpg",
+            url: "/images/products/bone-focus-white.png",
             isPrimary: false,
             altText: "Boné Focus Lab - Branco",
           },
@@ -612,7 +619,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/products/garrafa-focus.jpg",
+            url: "/images/products/garrafa-focus.png",
             isPrimary: true,
             altText: "Garrafa Térmica Focus",
           },
@@ -710,7 +717,7 @@ Vista seu código. Expresse sua linguagem.`,
       images: {
         create: [
           {
-            url: "/images/products/caneca-focus.jpg",
+            url: "/images/products/caneca-focus.png",
             isPrimary: true,
             altText: "Caneca Focus Lab",
           },

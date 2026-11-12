@@ -127,25 +127,25 @@ async function HomePageContent() {
       title: 'Camisetas',
       href: '/categoria/vestuario',
       productSlug: 'camisa-focus-lab',
-      fallbackImage: '/images/products/camiseta-focus.jpg',
+      fallbackImage: '/images/products/Camiseta-focus.png',
     },
     {
       title: 'Moletons',
       href: '/categoria/vestuario',
       productSlug: 'moletom-focus-hoodie',
-      fallbackImage: '/images/products/Modelo-moletom-preto.webp',
+      fallbackImage: '/images/products/Moletom-preto.png',
     },
     {
       title: 'Bonés',
       href: '/categoria/acessorios',
       productSlug: 'bone-focus-signature',
-      fallbackImage: '/images/products/bone-focus-signature.webp',
+      fallbackImage: '/images/products/bone-focus-signature.png',
     },
     {
       title: 'Acessórios',
       href: '/categoria/acessorios',
       productSlug: 'garrafa-termica-focus',
-      fallbackImage: '/images/products/garrafa-focus.webp',
+      fallbackImage: '/images/products/garrafa-focus.png',
     },
   ];
 

@@ -32,24 +32,24 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const REAL_PRODUCT_IMAGES: Record<string, string> = {
-  'moletom': '/images/products/Modelo-moletom-preto.webp',
-  'hoodie': '/images/products/Modelo-moletom-preto.webp',
-  'polo': '/images/products/polo-focus.jpg',
-  'camisa': '/images/products/camiseta-focus.jpg',
-  'bone': '/images/products/bone-focus-white-v2.jpg',
-  'boné': '/images/products/bone-focus-white-v2.jpg',
-  'garrafa': '/images/products/garrafa-focus.webp',
+  'moletom': '/images/products/Moletom-preto.png',
+  'hoodie': '/images/products/Moletom-preto.png',
+  'polo': '/images/products/Polo-FocusModelo.png',
+  'camisa': '/images/products/Camiseta-focus.png',
+  'bone': '/images/products/bone-focus-white.png',
+  'boné': '/images/products/bone-focus-white.png',
+  'garrafa': '/images/products/garrafa-focus.png',
   'celular': '/images/products/suporte-celular-focus.jpg',
   'headphone': '/images/products/suporte-headphone-focus.jpg',
   'sticker': '/images/products/stickers-focus.jpg',
   'adesivo': '/images/products/stickers-focus.jpg',
   'chaveiro': '/images/products/chaveiro-focus.jpg',
-  'copo': '/images/products/copo-termico-focus.webp',
-  'mousepad': '/images/products/mousepad-focus.jpg',
-  'desk mat': '/images/products/mousepad-focus.jpg',
-  'canetas': '/images/products/kit-canetas-focus.jpg',
+  'copo': '/images/products/copo-termico-focus.png',
+  'mousepad': '/images/products/Mousepad-Focus.png',
+  'desk mat': '/images/products/Mousepad-Focus.png',
+  'canetas': '/images/products/kit-canetas-focus.png',
   'caneta': '/images/products/caneta-focus-black.png',
-  'caneca': '/images/products/caneca-focus.webp',
+  'caneca': '/images/products/caneca-focus.png',
 };
 
 export function resolveProductImage(imageUrl?: string | null, name?: string): string {

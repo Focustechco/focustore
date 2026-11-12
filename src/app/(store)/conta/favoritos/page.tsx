@@ -121,7 +121,7 @@ export default function FavoritosPage() {
 
                   <Link href={`/produto/${product.slug}`} className="relative w-full h-full block">
                     <Image
-                      src={product.imageUrl || '/images/products/camiseta-focus.jpg'}
+                      src={product.imageUrl || '/images/products/Camiseta-focus.png'}
                       alt={product.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"

@@ -15,6 +15,8 @@ export interface CartItem {
   quantity: number;
   size?: string | null;
   color?: string | null;
+  /** FastAPI catalog identities are intentionally not compatible with Prisma checkout. */
+  catalogSource?: 'fastapi' | 'prisma';
 }
 
 interface CartContextType {
@@ -63,6 +65,10 @@ export function resolveProductImage(imageUrl?: string | null, name?: string): st
   return imageUrl || '/images/products/placeholder.svg';
 }
 
+export function isFastApiCatalogItem(item: CartItem): boolean {
+  return item.catalogSource === 'fastapi';
+}
+
 function normalizeCartItem(item: CartItem): CartItem {
   return {
     ...item,
@@ -79,8 +85,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     try {
       const saved = localStorage.getItem('focus_cart');
       if (saved) {
-        const parsed: CartItem[] = JSON.parse(saved);
-        const updated = parsed.map(normalizeCartItem);
+        const updated = restoredCart(JSON.parse(saved)).map(normalizeCartItem);
         setItems(updated);
       }
     } catch (e) {
@@ -100,6 +105,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, mounted]);
 
   const addItem = (rawItem: CartItem) => {
+    if (isFastApiCatalogItem(rawItem)) return;
     const newItem = normalizeCartItem(rawItem);
     setItems((prev) => {
       const existing = prev.find((i) => i.variantId === newItem.variantId);

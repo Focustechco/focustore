@@ -18,6 +18,7 @@ function productFixture(): CatalogProductResponse {
 
 test('adapter converts FastAPI product fields, relations, images and inventory', () => {
   const product = adaptCatalogProduct(productFixture());
+  assert.equal(product.catalogSource, 'fastapi');
   assert.equal(product.basePrice, 129.90);
   assert.equal(product.promotionalPrice, 99.90);
   assert.deepEqual(product.images.map(image => image.id), ['image-1', 'image-2']);

@@ -14,6 +14,7 @@ import { imageDestination, limitedFormData, sanitizeImage, MAX_IMAGE_BYTES } fro
 import sharp from 'sharp';
 import { validateProductInput, validatePromotionalPrice } from '../src/modules/catalog/product-validation';
 import { sameOrigin } from '../src/lib/security/origin';
+import { isFastApiCatalogItem } from '../src/modules/cart/cart-context';
 import { restoredCart } from '../src/modules/cart/cart-validation';
 import { assertDemoSeed } from '../scripts/seed-safety.cjs';
 import { nextTestConfig } from './helpers/next-config';
@@ -160,6 +161,17 @@ test('malformed saved cart is ignored and destructive demo scripts fail closed',
   assert.deepEqual(restoredCart({}), []);
   assert.deepEqual(restoredCart([null, { quantity: -1 }, { quantity: Number.NaN }]), []);
   assert.throws(() => assertDemoSeed());
+});
+
+test('saved cart retains an explicit FastAPI source marker without accepting unknown sources', () => {
+  const item = {
+    variantId: '42', productId: '7', name: 'FastAPI product', variantName: 'Default', sku: 'FAST-42', quantity: 1, price: 10,
+    catalogSource: 'fastapi' as const,
+  };
+  const [restored] = restoredCart([item]);
+  assert.equal(restored.catalogSource, 'fastapi');
+  assert.equal(isFastApiCatalogItem(restored), true);
+  assert.deepEqual(restoredCart([{ ...item, catalogSource: 'unknown' }]), []);
 });
 
 test('registration, duplicate email, hash, login, expiration and logout persist correctly', async () => {
@@ -346,6 +358,15 @@ function checkoutInput() {
     shippingOption: { carrier: 'Focus Express', serviceName: 'Standard SP', price: 0, estimatedDays: 0 },
     items: [{ variantId, quantity: 1 }], paymentMethod: 'PIX' as const, idempotencyKey: randomUUID() };
 }
+
+test('checkout rejects FastAPI variant identities before attempting a Prisma lookup', async () => {
+  const response = await api('/api/checkout', 'POST', {
+    ...checkoutInput(),
+    items: [{ variantId: '42', quantity: 1 }],
+  });
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /catálogo Prisma compatível com checkout/i);
+});
 
 test('checkout derives identity from session; demonstration is unavailable in production', async () => {
   if (process.env.FOCUS_TEST_PRODUCTION === '1') {

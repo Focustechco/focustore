@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Tag, Check } from 'lucide-react';
-import { useCart, resolveProductImage } from '@/modules/cart/cart-context';
+import { isFastApiCatalogItem, useCart, resolveProductImage } from '@/modules/cart/cart-context';
 import { formatPrice } from '@/lib/utils/formatters';
 import { Button } from '@/components/ui/button';
 
@@ -72,6 +72,7 @@ export default function CartPage() {
   const discountAmount = couponApplied?.discountAmount || 0;
   const shippingCost = couponApplied?.freeShipping ? 0 : (shippingOption?.price || 0);
   const finalTotal = Math.max(0, subtotal - discountAmount + shippingCost);
+  const hasReadOnlyCatalogItem = items.some(isFastApiCatalogItem);
 
   if (items.length === 0) {
     return (
@@ -286,11 +287,22 @@ export default function CartPage() {
               </div>
             </div>
 
-            <Link href="/checkout">
-              <Button fullWidth size="lg" className="mt-2 gap-2 shadow-focus/20 shadow">
-                IR PARA O CHECKOUT <ArrowRight size={18} />
-              </Button>
-            </Link>
+            {hasReadOnlyCatalogItem ? (
+              <>
+                <p role="alert" className="text-xs text-amber-300">
+                  Itens do catálogo FastAPI são somente para consulta e não podem seguir para o checkout Prisma.
+                </p>
+                <Button fullWidth size="lg" disabled className="mt-2 gap-2">
+                  CHECKOUT INDISPONÍVEL <ArrowRight size={18} />
+                </Button>
+              </>
+            ) : (
+              <Link href="/checkout">
+                <Button fullWidth size="lg" className="mt-2 gap-2 shadow-focus/20 shadow">
+                  IR PARA O CHECKOUT <ArrowRight size={18} />
+                </Button>
+              </Link>
+            )}
 
             <div className="space-y-1.5 pt-2 text-[11px] text-muted">
               <div className="flex items-center gap-2">

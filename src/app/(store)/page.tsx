@@ -133,7 +133,7 @@ async function HomePageContent() {
       title: 'Moletons',
       href: '/categoria/vestuario',
       productSlug: 'moletom-focus-hoodie',
-      fallbackImage: '/images/products/Moletom-preto.png',
+      fallbackImage: '/images/products/Modelo-moletom-preto.webp',
     },
     {
       title: 'Bonés',

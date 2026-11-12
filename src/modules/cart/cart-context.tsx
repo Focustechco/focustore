@@ -34,8 +34,8 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const REAL_PRODUCT_IMAGES: Record<string, string> = {
-  'moletom': '/images/products/Moletom-preto.png',
-  'hoodie': '/images/products/Moletom-preto.png',
+  'moletom': '/images/products/Modelo-moletom-preto.webp',
+  'hoodie': '/images/products/Modelo-moletom-preto.webp',
   'polo': '/images/products/Polo-FocusModelo.png',
   'camisa': '/images/products/Camiseta-focus.png',
   'bone': '/images/products/bone-focus-white.png',

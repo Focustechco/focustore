@@ -618,7 +618,7 @@ Vista seu código. Expresse sua linguagem.`,
           altText: "Camisa Focus Techwear - Preto",
         },
         {
-          url: "/images/products/camiseta-focus-preta.webp",
+          url: "/images/products/camiseta-focus-preta-v2.png",
           isPrimary: false,
           altText: "Camisa Focus Techwear - Preto",
         },

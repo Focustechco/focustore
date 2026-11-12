@@ -163,6 +163,10 @@ test('malformed saved cart is ignored and destructive demo scripts fail closed',
 });
 
 test('registration, duplicate email, hash, login, expiration and logout persist correctly', async () => {
+  const cpfRegistration = { name: 'CPF Customer', email: 'cpf@example.test', cpf: '123.456.789-09', password: 'synthetic-password' };
+  assert.equal((await api('/api/auth/register', 'POST', cpfRegistration)).status, 200);
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { email: cpfRegistration.email } })).cpf, '12345678909');
+
   const registration = { name: 'Synthetic Customer', email: 'customer@example.test', password: 'synthetic-password' };
   let response = await api('/api/auth/register', 'POST', registration);
   assert.equal(response.status, 200);
@@ -171,6 +175,7 @@ test('registration, duplicate email, hash, login, expiration and logout persist 
   assert.match(response.headers.get('set-cookie')!, /SameSite=lax/i);
   if (process.env.FOCUS_TEST_PRODUCTION === '1') assert.match(response.headers.get('set-cookie')!, /Secure/i);
   const user = await prisma.user.findUniqueOrThrow({ where: { email: registration.email } });
+  assert.equal(user.cpf, null);
   assert.notEqual(user.passwordHash, registration.password);
   assert(await bcrypt.compare(registration.password, user.passwordHash!));
   assert.equal((await api('/api/auth/register', 'POST', registration)).status, 409);
@@ -213,7 +218,7 @@ test('admin endpoints and server pages deny unauthenticated and ordinary users',
   }
   const page = await api('/admin/pedidos');
   assert.equal(page.status, 307);
-  assert.match(page.headers.get('location')!, /login/);
+  assert.equal(page.headers.get('location'), '/admin-acesso');
   await prisma.user.create({ data: { name: 'Synthetic Admin', email: 'admin@example.test', role: 'ADMIN', passwordHash: await bcrypt.hash('synthetic-admin-password', 4) } });
   const login = await api('/api/auth/login', 'POST', { identifier: 'admin@example.test', password: 'synthetic-admin-password' });
   assert.equal(login.status, 200);
@@ -233,7 +238,7 @@ test('admin can change password securely and other sessions are revoked', async 
       expires: new Date(Date.now() + 60 * 60 * 1000),
     },
   });
-  const request = (body: unknown, cookie = adminCookie, origin = base) =>
+  const request = (body: unknown, cookie = adminCookie, origin = base.replace('127.0.0.1', 'localhost')) =>
     fetch(`${base}${endpoint}`, {
       method: 'POST',
       headers: {
@@ -247,10 +252,11 @@ test('admin can change password securely and other sessions are revoked', async 
   assert.equal((await api(endpoint, 'POST', {})).status, 401);
   assert.equal((await request({}, customerCookie)).status, 403);
   assert.equal((await request({}, adminCookie, 'https://untrusted.example')).status, 403);
-  assert.equal((await request({
+  const wrongPassword = await request({
     currentPassword: 'wrong-password',
     newPassword: 'a-new-strong-password',
-  })).status, 400);
+  });
+  assert.equal(wrongPassword.status, 400);
   assert.equal((await request({
     currentPassword: 'synthetic-admin-password',
     newPassword: 'short',

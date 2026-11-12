@@ -20,6 +20,16 @@ export async function PUT(
       lowStockThreshold,
     } = body;
 
+    if (
+      quantityAvailable !== undefined &&
+      (!Number.isSafeInteger(Number(quantityAvailable)) || Number(quantityAvailable) < 0)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'A quantidade dispon\u00edvel deve ser um inteiro n\u00e3o negativo.' },
+        { status: 400 },
+      );
+    }
+
     // Find inventory by variantId or inventory id
     let inventory = await prisma.inventory.findFirst({
       where: { OR: [{ id }, { variantId: id }] },

@@ -226,9 +226,13 @@ test('Prisma catalog updates survive restart without mutating the FastAPI legacy
   assert.equal((await catalog.getProductBySlug('fullstack-product'))!.name, 'Updated product');
   assert.equal((await fetch(backend + '/api/v1/catalog/products?offset=1&limit=1')).status, 503);
   assert.equal(await client.product.count(), 1);
-  const denied = await fetch(backend + '/products', { method: 'POST', headers: { 'content-type': 'application/json' },
+  const unauthenticated = await fetch(backend + '/products', { method: 'POST', headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ name: 'Must not write', price: '1.00', stock: 1, category_id: 1 }) });
-  assert.equal(denied.status, 503);
+  assert.equal(unauthenticated.status, 401);
+  const identityUnavailable = await fetch(backend + '/products', { method: 'POST', headers: {
+    'content-type': 'application/json', cookie,
+  }, body: JSON.stringify({ name: 'Must not write', price: '1.00', stock: 1, category_id: 1 }) });
+  assert.equal(identityUnavailable.status, 503);
 });
 
 test('Prisma applies its merchandising exclusion without copying records into FastAPI', async () => {

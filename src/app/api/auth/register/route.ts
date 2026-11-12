@@ -9,7 +9,14 @@ const registrationSchema = z.object({
   name: z.string().trim().min(2, 'Informe seu nome.').max(100),
   email: z.string().trim().email('Informe um e-mail válido.').max(254),
   cpf: z.string().optional(),
-  password: z.string().min(8, 'A senha deve ter ao menos 8 caracteres.').max(72),
+  password: z
+    .string()
+    .min(8, 'A senha deve ter ao menos 8 caracteres.')
+    .max(72)
+    .refine(
+      (password) => Buffer.byteLength(password, 'utf8') <= 72,
+      'A senha deve ter no m\u00e1ximo 72 bytes em UTF-8.',
+    ),
 });
 
 function isValidCpf(cpf: string) {
@@ -25,6 +32,18 @@ function isValidCpf(cpf: string) {
   };
 
   return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
+}
+
+function normalizedCpf(value: string | undefined): string | null | undefined {
+  const input = value?.trim();
+  if (!input) return null;
+
+  // CPF is optional, but a supplied value may contain only its usual
+  // punctuation. Do not turn arbitrary text into an absent CPF.
+  if (!/^[\d.()\-\s]+$/.test(input)) return undefined;
+
+  const cpf = input.replace(/\D/g, '');
+  return isValidCpf(cpf) ? cpf : undefined;
 }
 
 export async function POST(request: Request) {
@@ -45,9 +64,9 @@ export async function POST(request: Request) {
 
   const { name, password } = parsed.data;
   const email = parsed.data.email.toLowerCase();
-  const cpf = parsed.data.cpf?.replace(/\D/g, '') || null;
+  const cpf = normalizedCpf(parsed.data.cpf);
 
-  if (cpf && !isValidCpf(cpf)) {
+  if (cpf === undefined) {
     return NextResponse.json({ error: 'Informe um CPF válido.' }, { status: 400 });
   }
 

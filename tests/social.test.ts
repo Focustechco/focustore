@@ -69,7 +69,7 @@ before(async () => {
     configs.set(provider, config);
   }
 });
-after(async () => { await db?.$disconnect(); });
+after(async () => { await db?.$disconnect(); await rm(directory, { recursive: true, force: true }); });
 const dependencies: SocialDependencies = { get db() { return db; }, configuration: async provider => configs.get(provider)! };
 
 async function begin(provider: Provider, input: Record<string, unknown> = {}, session?: string) {
@@ -232,7 +232,9 @@ test('redirects and origins are restricted; Apple needs HTTPS; secrets are not o
   const previousOrigin = process.env.SOCIAL_LOGIN_ORIGIN;
   process.env.SOCIAL_LOGIN_ORIGIN = 'http://localhost:3000';
   try {
-    assert.equal((await handlers.startSocial(new NextRequest('http://localhost:3000/api/auth/social/apple/start'), 'apple', dependencies)).status, 503);
+    assert.equal((await handlers.startSocial(new NextRequest('http://localhost:3000/api/auth/social/apple/start', {
+      headers: { origin: 'http://localhost:3000' },
+    }), 'apple', dependencies)).status, 503);
   } finally { process.env.SOCIAL_LOGIN_ORIGIN = previousOrigin; }
 });
 

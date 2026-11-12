@@ -46,7 +46,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const primaryImage = isFocusCap
     ? currentImageIndex === 0
       ? '/images/products/bone-focus.jpg'
-      : '/images/products/bone-focus-white-v2.jpg'
+      : '/images/products/bone-focus-white.png'
     : selectedImage?.url || '/images/products/placeholder.svg';
   const frontImage = product.images.find((image) =>
     image.altText?.toLowerCase().includes('frente')

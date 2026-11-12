@@ -3,22 +3,22 @@ const prisma = new PrismaClient();
 
 async function updateImages() {
   const updates = [
-    { slug: "caneca-focus-lab", url: "/images/products/caneca-focus.jpg" },
+    { slug: "caneca-focus-lab", url: "/images/products/caneca-focus.png" },
     { slug: "bone-focus-lab", url: "/images/products/bone-focus.jpg" },
     {
       slug: "camisa-focus-lab",
       name: "Camisa Focus",
-      url: "/images/products/camiseta-focus.jpg",
+      url: "/images/products/Camiseta-focus.png",
     },
     {
       slug: "moletom-focus-lab",
       name: "Polo Focus Tech",
-      url: "/images/products/polo-focus.jpg",
+      url: "/images/products/Polo-FocusModelo.png",
     },
     {
       slug: "garrafa-termica-focus",
       name: "Garrafa Térmica Focus",
-      url: "/images/products/garrafa-focus.jpg",
+      url: "/images/products/garrafa-focus.png",
     },
     {
       slug: "chaveiro-focus",

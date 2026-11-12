@@ -108,7 +108,7 @@ export function ProductClientView({ product }: { product: any }) {
     },
     {
       id: 'bone-focus-white',
-      url: '/images/products/bone-focus-white-v2.jpg',
+      url: '/images/products/bone-focus-white.png',
       altText: 'Boné Focus Lab - Branco',
     },
   ];
@@ -135,10 +135,10 @@ export function ProductClientView({ product }: { product: any }) {
 
   const getProductImageUrl = (url?: string | null) => {
     if (isFocusCap && url?.endsWith('/bone-focus-white.jpg')) {
-      return '/images/products/bone-focus-white-v2.jpg';
+      return '/images/products/bone-focus-white.png';
     }
 
-    return url || '/images/products/camiseta-focus.jpg';
+    return url || '/images/products/Camiseta-focus.png';
   };
 
   // Simulação de frete

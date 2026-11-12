@@ -180,10 +180,7 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#080808]/95 text-white backdrop-blur-md">
       <div className="relative mx-auto flex h-[64px] max-w-[1800px] items-center justify-between gap-3 px-4 sm:px-6 lg:h-[72px] lg:px-10">
         {/* LOGO FOCUS STORE OFICIAL */}
-        <Link
-          href="/"
-          className="relative flex flex-shrink-0 items-center overflow-visible -ml-1 sm:ml-0 max-xl:absolute max-xl:left-1/2 max-xl:-translate-x-1/2"
-        >
+        <Link href="/" className="flex items-center flex-shrink-0 relative overflow-visible -ml-1 sm:ml-0">
           <FocusLogo size="xl" mobileSize="md" />
         </Link>
 
@@ -214,8 +211,8 @@ export function Header() {
         </nav>
 
         {/* AÇÕES À DIREITA */}
-        <div className="flex flex-shrink-0 items-center gap-3 text-white sm:gap-5 max-xl:absolute max-xl:left-2 max-xl:right-4 max-xl:top-1/2 max-xl:h-8 max-xl:-translate-y-1/2 max-xl:gap-0 max-xl:pointer-events-none">
-          <div className="relative h-8 w-8 flex-shrink-0 max-xl:absolute max-xl:left-8 max-xl:pointer-events-auto">
+        <div className="flex flex-shrink-0 items-center gap-3 text-white sm:gap-5">
+          <div className="relative h-8 w-8 flex-shrink-0">
             {!isSearchOpen ? (
               <button
                 type="button"
@@ -256,7 +253,7 @@ export function Header() {
             <Link
               href="/conta"
               aria-label={`Minha conta: ${customerName}`}
-              className="hidden items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors hover:text-[#FF5500] xl:flex"
+              className="hidden items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors hover:text-[#FF5500] sm:flex"
             >
               <User size={22} strokeWidth={1.8} />
               <span className="max-w-24 truncate 2xl:max-w-32">Olá, {customerName}</span>
@@ -266,7 +263,7 @@ export function Header() {
               type="button"
               onClick={() => setIsLoginOpen(true)}
               aria-label="Entrar na conta"
-              className="hidden items-center justify-center p-1 transition-colors hover:text-[#FF5500] xl:flex"
+              className="hidden items-center justify-center p-1 transition-colors hover:text-[#FF5500] sm:flex"
             >
               <User size={22} strokeWidth={1.8} />
             </button>
@@ -277,7 +274,7 @@ export function Header() {
               type="button"
               onClick={handleLogout}
               aria-label="Sair da conta"
-              className="hidden items-center p-1 text-zinc-400 transition-colors hover:text-[#FF5500] xl:flex"
+              className="hidden items-center p-1 text-zinc-400 transition-colors hover:text-[#FF5500] sm:flex"
             >
               <LogOut size={16} />
             </button>
@@ -285,7 +282,7 @@ export function Header() {
 
           <Link
             href="/conta/favoritos"
-            className="group relative flex items-center justify-center p-1 text-white transition-colors hover:text-[#FF5500] focus:outline-none max-xl:absolute max-xl:right-10 max-xl:pointer-events-auto"
+            className="group relative flex items-center justify-center p-1 text-white transition-colors hover:text-[#FF5500] focus:outline-none"
             aria-label="Ver favoritos"
           >
             <Heart
@@ -305,7 +302,7 @@ export function Header() {
 
           <button
             onClick={() => setIsCartOpen(true)}
-            className="group relative flex items-center justify-center p-1 text-white transition-colors hover:text-[#FF5500] focus:outline-none max-xl:absolute max-xl:right-0 max-xl:pointer-events-auto"
+            className="group relative flex items-center justify-center p-1 text-white transition-colors hover:text-[#FF5500] focus:outline-none"
             aria-label="Abrir carrinho"
           >
             <ShoppingBag size={22} strokeWidth={1.9} />
@@ -320,7 +317,7 @@ export function Header() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-            className="relative z-[60] p-2 text-white transition-colors hover:text-[#FF5500] xl:hidden max-xl:absolute max-xl:left-0 max-xl:pointer-events-auto"
+            className="relative z-[60] p-2 text-white transition-colors hover:text-[#FF5500] xl:hidden"
           >
             {!mobileMenuOpen && <Menu size={22} />}
           </button>

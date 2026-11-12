@@ -327,7 +327,7 @@ export function HeroCarousel({
               {slide.tagline}
             </p>
           )}
-          <h1 className="font-banner-display text-left text-white uppercase leading-[0.98] drop-shadow-md">
+          <h1 className="font-banner-brigends text-left text-white uppercase leading-[0.98] drop-shadow-md">
             <span ref={titleLine1Ref} className="block w-fit whitespace-nowrap text-[1.5rem] leading-[0.9] sm:text-[2rem] lg:text-[2.25rem]">
               {slide.titleLine1}
             </span>

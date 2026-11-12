@@ -1,6 +1,6 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
@@ -12,7 +12,7 @@ import { exportJWK, generateKeyPair, SignJWT, jwtVerify, importSPKI, exportPKCS8
 import { appleClientSecret, safeReturnTo, socialOrigin, type Provider } from '../src/lib/auth/social/config';
 import { flowCookie, openFlow, type SocialFlow } from '../src/lib/auth/social/flow';
 import type { SocialDependencies } from '../src/lib/auth/social/http';
-import { postgresTestUrl } from './helpers/postgres-test';
+import { sqliteTestUrl } from './helpers/test-database';
 
 const origin = 'https://shop.example.test';
 let db: PrismaClient;
@@ -24,11 +24,13 @@ type Scenario = { flow: SocialFlow; provider: Provider; sub: string; email?: str
   wrongSignature?: boolean; issuer?: string; audience?: string; nonce?: string; expired?: boolean; role?: string };
 const codes = new Map<string, Scenario>();
 let tokenRequests = 0;
+let directory = '';
 
 before(async () => {
   const root = path.join(process.cwd(), '.local-validation');
   await mkdir(root, { recursive: true });
-  const url = postgresTestUrl('social');
+  directory = await mkdtemp(path.join(root, 'social-'));
+  const url = sqliteTestUrl(directory, 'social');
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', SOCIAL_LOGIN_ORIGIN: origin, SOCIAL_LOGIN_SECRET: randomUUID() });
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--skip-generate'], { env: process.env, stdio: 'pipe' });
   db = new PrismaClient({ datasources: { db: { url } }, log: [] });

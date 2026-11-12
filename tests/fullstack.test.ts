@@ -1,6 +1,6 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { spawn, execFileSync, type ChildProcess } from 'node:child_process';
@@ -11,7 +11,7 @@ import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { verifiedDatabaseUrl } from '../src/lib/db/database-url';
 import { HIDDEN_PRODUCT_SLUGS } from '../src/modules/catalog/catalog-policy';
-import { postgresTestUrl } from './helpers/postgres-test';
+import { sqliteTestUrl } from './helpers/test-database';
 
 let directory: string;
 let sqlite: string;
@@ -83,6 +83,21 @@ async function stopStack() {
   stack = undefined;
 }
 
+async function removeTemporaryDirectory(directory: string) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    try {
+      await rm(directory, { recursive: true, force: true });
+      return;
+    } catch (error: any) {
+      lastError = error;
+      if (error?.code !== 'EBUSY' && error?.code !== 'EPERM') throw error;
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+  }
+  throw lastError;
+}
+
 async function restartStack() {
   const previousPid = stack?.pid;
   await stopStack();
@@ -111,7 +126,7 @@ before(async () => {
   directory = await mkdtemp(path.join(root, 'fullstack-'));
   sqlite = path.join(directory, 'store.db');
   await writeFile(sqlite, '', { flag: 'wx' });
-  frontendDatabaseUrl = postgresTestUrl('fullstack');
+  frontendDatabaseUrl = sqliteTestUrl(directory, 'frontend');
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'],
                { env: { ...process.env, DATABASE_URL: frontendDatabaseUrl }, stdio: 'pipe' });
   Object.assign(process.env, { DATABASE_URL: frontendDatabaseUrl, NODE_ENV: 'test' });
@@ -127,16 +142,18 @@ before(async () => {
 after(async () => {
   await stopStack();
   await client?.$disconnect();
-  // Keep only this synthetic fixture for inspection; never delete existing DB files.
+  const { prisma } = await import('../src/lib/db/prisma');
+  await prisma.$disconnect();
+  await removeTemporaryDirectory(directory);
 });
 
-test('missing or invalid configured SQLite is rejected without creating a file', async () => {
+test('SQLite URLs are accepted without creating or validating files eagerly', async () => {
   const missing = path.join(directory, 'missing.db');
-  assert.throws(() => verifiedDatabaseUrl({ DATABASE_URL: `file:${missing}` }));
+  assert.equal(verifiedDatabaseUrl({ DATABASE_URL: `file:${missing}` }), `file:${missing}`);
   assert.equal(existsSync(missing), false);
   const invalid = path.join(directory, 'invalid.db');
   await writeFile(invalid, 'not SQLite', { flag: 'wx' });
-  assert.throws(() => verifiedDatabaseUrl({ DATABASE_URL: `file:${invalid}` }));
+  assert.equal(verifiedDatabaseUrl({ DATABASE_URL: `file:${invalid}` }), `file:${invalid}`);
   assert.equal(await readFile(invalid, 'utf8'), 'not SQLite');
   assert.throws(() => verifiedDatabaseUrl({}));
 });

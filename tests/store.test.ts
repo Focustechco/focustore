@@ -1,6 +1,6 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { once } from 'node:events';
@@ -17,7 +17,7 @@ import { sameOrigin } from '../src/lib/security/origin';
 import { restoredCart } from '../src/modules/cart/cart-validation';
 import { assertDemoSeed } from '../scripts/seed-safety.cjs';
 import { nextTestConfig } from './helpers/next-config';
-import { postgresTestUrl } from './helpers/postgres-test';
+import { sqliteTestUrl } from './helpers/test-database';
 
 let directory: string;
 let fixtureRoot: string;
@@ -45,7 +45,7 @@ before(async () => {
   fixtureRoot = path.join(process.cwd(), '.local-validation');
   await mkdir(fixtureRoot, { recursive: true });
   directory = await mkdtemp(path.join(fixtureRoot, 'focusstore-audit-test-'));
-  const url = postgresTestUrl('store');
+  const url = sqliteTestUrl(directory, 'store');
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', NEXTAUTH_SECRET: randomUUID() });
   process.env.SOCIAL_LOGIN_ORIGIN = ''; // Never call real OAuth providers in this HTTP suite.
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'],
@@ -88,11 +88,13 @@ after(async () => {
     } else { server.kill('SIGTERM'); }
   }
   await prisma?.$disconnect();
-  // Preserve the synthetic PostgreSQL schema for inspection; never clean databases.
+  const { prisma: globalPrisma } = await import('../src/lib/db/prisma');
+  await globalPrisma.$disconnect();
+  await rm(directory, { recursive: true, force: true });
 });
 
-test('database configuration requires PostgreSQL and rejects local/unsupported sources', () => {
-  assert.throws(() => databaseUrl({ DATABASE_URL: 'file:./custom.db' }));
+test('database configuration supports SQLite and rejects unsupported sources', () => {
+  assert.equal(databaseUrl({ DATABASE_URL: 'file:./custom.db' }), 'file:./custom.db');
   assert.throws(() => databaseUrl({ NODE_ENV: 'production' }));
   assert.equal(databaseUrl({ DATABASE_URL: 'postgresql://user:pass@db.example/store?sslmode=require' }), 'postgresql://user:pass@db.example/store?sslmode=require');
   assert.equal(databaseUrl({ DATABASE_URL: 'postgres://user:pass@db.example/store' }), 'postgres://user:pass@db.example/store');

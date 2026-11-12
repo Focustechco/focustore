@@ -270,7 +270,6 @@ export function HeroCarousel({
   };
 
   const slide = slides[currentSlide] || slides[0];
-  const isFocusLabSlide = currentSlide === 2;
   const isAcademyHero = slide.imageUrl.includes("hero-focus-academy-banner-2026");
 
   return (
@@ -310,7 +309,7 @@ export function HeroCarousel({
             sizes="(min-width: 640px) 100vw, 1px"
             className={`hidden object-cover ${
               slide.imageUrl.includes('hero-focus-academy')
-                ? 'object-[center_30%]'
+                ? 'object-[center_0%]'
                 : slide.imageUrl.includes('banner-camisas-dev')
                   ? 'object-[center_50%]'
                   : 'object-[center_45%] sm:object-right md:object-center'
@@ -323,18 +322,18 @@ export function HeroCarousel({
 
         {/* 2. Conteúdo Editorial (No Desktop: layout padrão centralizado na vertical à esquerda; No Mobile: ancorado no rodapé) */}
         <div className="absolute left-5 right-5 bottom-[96px] z-20 max-w-xl space-y-2 sm:relative sm:left-auto sm:right-auto sm:bottom-auto sm:w-full sm:space-y-3.5 sm:mt-auto sm:my-auto">
-          {(isFocusLabSlide || slide.tagline) && (
+          {slide.tagline && (
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF6500] drop-shadow-sm sm:text-xs">
-              {isFocusLabSlide ? "COLEÇÃO EM DESTAQUE" : slide.tagline}
+              {slide.tagline}
             </p>
           )}
           <h1
             className={`${currentSlide < 3 ? "font-banner-brigends" : "font-banner-display"} text-left text-white uppercase leading-[0.98] drop-shadow-md`}
           >
             <span ref={titleLine1Ref} className="block w-fit whitespace-nowrap text-[1.5rem] leading-[0.9] sm:text-[2rem] lg:text-[2.25rem]">
-              {isFocusLabSlide ? "FOCUS LAB" : slide.titleLine1}
+              {slide.titleLine1}
             </span>
-            {!isFocusLabSlide && slide.titleLine2 && (
+            {slide.titleLine2 && (
               <>
                 <span ref={titleLine2Ref} className="block w-fit whitespace-nowrap text-[1.5rem] leading-[0.9] text-[#FF6500] sm:text-[2.25rem] lg:text-[2.75rem]">
                   {slide.titleLine2}
@@ -344,19 +343,17 @@ export function HeroCarousel({
           </h1>
 
           <p className="text-zinc-300 text-base sm:text-sm lg:text-base leading-snug sm:leading-relaxed max-w-md font-normal drop-shadow-sm line-clamp-3 sm:line-clamp-none">
-            {isFocusLabSlide
-              ? "Tecnologia, design e minimalismo em uma coleção exclusiva."
-              : slide.subtitle}
+            {slide.subtitle}
           </p>
 
           <div className="hidden sm:flex pt-1 sm:pt-2 flex-wrap items-center gap-2 sm:gap-3">
             <Link href={slide.primaryButtonHref}>
               <button className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-[#FF6500] hover:bg-[#FF7A1A] text-white text-[11px] sm:text-sm font-bold uppercase tracking-wider transition-all inline-flex items-center gap-1.5 sm:gap-2 shadow-xl shadow-[#FF6500]/30 hover:scale-[1.02] active:scale-95">
-                {isFocusLabSlide ? "CONHEÇA A COLEÇÃO" : slide.primaryButtonText}{" "}
+                {slide.primaryButtonText}{" "}
                 <ArrowRight size={14} className="sm:w-4 sm:h-4" />
               </button>
             </Link>
-            {!isFocusLabSlide && slide.secondaryButtonText && (
+            {slide.secondaryButtonText && (
               <Link href={slide.secondaryButtonHref}>
                 <button className="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl bg-black/60 backdrop-blur-md border border-white/20 hover:border-white/40 text-white text-[11px] sm:text-sm font-semibold uppercase tracking-wider transition-all hover:bg-black/80 active:scale-95">
                   {slide.secondaryButtonText}
@@ -386,10 +383,10 @@ export function HeroCarousel({
         <div className="absolute inset-x-0 bottom-[18px] z-30 flex items-center justify-end gap-1.5 pr-5 sm:hidden">
           <Link href={slide.primaryButtonHref}>
             <button className="whitespace-nowrap px-3 py-2 rounded-lg bg-[#FF6500] hover:bg-[#FF7A1A] text-white text-xs font-bold uppercase tracking-wide transition-all inline-flex items-center gap-1 shadow-xl shadow-[#FF6500]/30 hover:scale-[1.02] active:scale-95">
-              {isFocusLabSlide ? "CONHEÇA A COLEÇÃO" : slide.primaryButtonText} <ArrowRight size={12} />
+              {slide.primaryButtonText} <ArrowRight size={12} />
             </button>
           </Link>
-          {!isFocusLabSlide && slide.secondaryButtonText && (
+          {slide.secondaryButtonText && (
             <Link href={slide.secondaryButtonHref}>
               <button className="whitespace-nowrap px-3 py-2 rounded-lg bg-black/60 backdrop-blur-md border border-white/20 hover:border-white/40 text-white text-xs font-semibold uppercase tracking-wide transition-all hover:bg-black/80 active:scale-95">
                 {slide.secondaryButtonText}

@@ -293,7 +293,7 @@ async function HomePageContent() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#FF6500] sm:text-xs">
               {collectionBanner?.subtitle || 'Coleção em destaque'}
             </p>
-            <h2 className="font-collection-display text-4xl uppercase text-white sm:text-6xl">
+            <h2 className="font-banner-brigends text-4xl uppercase text-white sm:text-6xl">
               {collectionBanner?.title || 'Focus Lab'}
             </h2>
             <span className="inline-flex items-center gap-2 rounded-md bg-[#FF6500] px-4 py-3 text-[10px] font-bold uppercase tracking-wide text-white transition-colors group-hover:bg-[#ff7a1a]">

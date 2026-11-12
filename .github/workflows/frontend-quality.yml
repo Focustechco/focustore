@@ -16,7 +16,6 @@ jobs:
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: '1'
-      DATABASE_URL: file:${{ runner.temp }}/focusstore-frontend-ci.db
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,6 +25,9 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
+      - name: Configure disposable SQLite URL
+        shell: bash
+        run: echo "DATABASE_URL=file:${RUNNER_TEMP}/focusstore-frontend-ci.db" >> "$GITHUB_ENV"
       - name: Generate Prisma client
         run: npm run db:generate
       - name: TypeScript

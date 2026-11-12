@@ -1,4 +1,5 @@
 from decimal import Decimal
+from uuid import UUID
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -32,3 +33,5 @@ def test_catalog_relationships_and_constraints_on_disposable_sqlite():
         assert loaded.images[0].url == '/images/product.jpg'
         assert loaded.variants[0].inventory.quantity_available == 4
         assert db.scalar(select(ProductCategory).where(ProductCategory.product_id == loaded.id)) is not None
+        assert isinstance(loaded.public_id, UUID)
+        assert isinstance(loaded.variants[0].public_id, UUID)

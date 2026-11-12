@@ -37,10 +37,12 @@ def _table(name: str) -> sa.Table:
 def _backfill(name: str) -> None:
     bind = op.get_bind()
     table = _table(name)
-    identifiers = bind.execute(
-        sa.select(table.c.id).where(table.c.public_id.is_(None))
-    ).scalars().all()
-    if identifiers:
+    while True:
+        identifiers = bind.execute(
+            sa.select(table.c.id).where(table.c.public_id.is_(None)).limit(1000)
+        ).scalars().all()
+        if not identifiers:
+            break
         bind.execute(
             table.update().where(table.c.id == sa.bindparam('identifier')).values(
                 public_id=sa.bindparam('public_id')

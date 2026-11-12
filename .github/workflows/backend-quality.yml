@@ -5,7 +5,7 @@ on:
     branches: [back-end]
 
   pull_request:
-    branches: [back-end]
+    branches: [back-end, main]
 
   workflow_dispatch:
 permissions:

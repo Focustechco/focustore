@@ -1,5 +1,6 @@
 """Public read contract. External IDs never refer to PostgreSQL integer IDs."""
 from decimal import Decimal
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -24,6 +25,7 @@ class CatalogCategory(BaseModel):
 
 class CatalogVariant(BaseModel):
     id: str
+    public_id: UUID | None = None
     sku: str
     name: str
     color: str | None
@@ -41,6 +43,7 @@ class CatalogVariant(BaseModel):
 
 class CatalogProduct(BaseModel):
     id: str
+    public_id: UUID | None = None
     name: str
     slug: str
     sku: str

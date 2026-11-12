@@ -1,4 +1,5 @@
 import sqlite3
+from uuid import UUID
 import pytest
 
 
@@ -43,8 +44,33 @@ def test_management_lifecycle_and_integrity(admin_client):
     assert client.delete(f'/categories/{second}').status_code == 204
 
 
+def test_postgresql_catalog_contract_keeps_internal_id_and_adds_public_id(admin_client, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setenv('CATALOG_SOURCE', 'postgresql')
+    get_settings.cache_clear()
+    try:
+        category_id = category(admin_client, 'public-catalog')
+        created = admin_client.post('/products', json={
+            'name': 'Public keyboard', 'price': '19.90', 'stock': 3, 'category_id': category_id,
+        })
+        assert created.status_code == 201
+        created_data = created.json()
+        assert isinstance(created_data['id'], int)
+        assert UUID(created_data['public_id'])
+
+        response = admin_client.get('/api/v1/catalog/products')
+        assert response.status_code == 200
+        catalog_product = response.json()['items'][0]
+        assert catalog_product['id'] == str(created_data['id'])
+        assert catalog_product['public_id'] == created_data['public_id']
+    finally:
+        get_settings.cache_clear()
+
+
 @pytest.mark.parametrize('body', [{}, {'name': '  '}, {'price': None}, {'price': '0'},
-    {'price': 'NaN'}, {'stock': True}, {'stock': 1.5}, {'stock': -1}, {'name': 'x', 'id': 2}])
+    {'price': 'NaN'}, {'stock': True}, {'stock': 1.5}, {'stock': -1}, {'name': 'x', 'id': 2},
+    {'public_id': 'd0f39b09-2a31-4c8b-9222-517d4979d8e9'}])
 def test_invalid_product_patch(admin_client, body):
     identifier = product(admin_client, category(admin_client))
     assert admin_client.patch(f'/products/{identifier}', json=body).status_code == 422

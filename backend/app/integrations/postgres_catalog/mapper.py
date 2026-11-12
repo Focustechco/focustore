@@ -19,6 +19,7 @@ def variant_schema(variant: ProductVariant) -> CatalogVariantSchema:
     available = inventory is not None and inventory.quantity_available > 0
     return CatalogVariantSchema(
         id=str(variant.id),
+        public_id=variant.public_id,
         sku=variant.sku,
         name=variant.name,
         color=variant.color,
@@ -53,6 +54,7 @@ def product_schema(product: Product) -> CatalogProduct:
     variants = [variant_schema(variant) for variant in product.variants if variant.is_active]
     return CatalogProduct(
         id=str(product.id),
+        public_id=product.public_id,
         name=product.name,
         slug=product.slug or f'legacy-product-{product.id}',
         sku=product.sku or f'LEGACY-{product.id}',

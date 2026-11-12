@@ -41,6 +41,18 @@ logs, revisão e esquema, corrigir a causa e repetir `alembic upgrade head`.
 Não fazer `stamp` para contornar uma falha. UUIDs de uma transação abortada
 podem ser gerados novamente porque nunca foram publicados.
 
+O backfill percorre a PK inteira em ordem, usando o último ID de cada lote como
+limite inferior do próximo. Isso evita reler o prefixo já preenchido a cada
+consulta. IDs negativos e lacunas são suportados. Os lotes não fazem commits
+intermediários: o lock ACCESS EXCLUSIVE obtido pelo ALTER TABLE permanece até
+o commit e pode bloquear inclusive leituras. A atomicidade não torna a execução
+online; uma implantação futura exige janela de manutenção, medição prévia e
+limites de espera/duração configurados pela operação.
+
+Repetir `alembic upgrade head` após sucesso é um no-op pelo controle de revisão,
+preservando UUIDs. A função `upgrade()` isolada não é idempotente e não deve ser
+executada diretamente, nem reaplicada após manipulação de `alembic_version`.
+
 Antes de qualquer execução, conferir host, porta, nome e caminho do cluster:
 
 ```sql
@@ -109,3 +121,21 @@ integridade, snapshot OpenAPI e `pip check` passaram.
 Usar `--basetemp=../.tmp/<nome-exclusivo>` no pytest deste ambiente evita erros
 de acesso ao diretório temporário padrão do sandbox. Há aviso de depreciação
 Starlette/httpx pré-existente; dependências não foram alteradas nesta fase.
+
+## Revisão para publicação
+
+A feature foi rebaseada sobre `origin/main` em `9eb70a1`, preservando o conteúdo
+dos quatro commits iniciais. A revisão corrigiu o percurso repetido do backfill
+por paginação pela PK, sem alterar geração de UUID ou arquitetura. Testes
+adicionais cobrem 2.005 registros por tabela com preservação de todas as colunas
+anteriores, reaplicação do upgrade, SQL direto com/sem UUID e atualização que
+mantém a identidade. A suíte passou com 134 testes e um aviso de depreciação.
+Upgrade Alembic, check de modelos, integridade PostgreSQL, OpenAPI e pip check
+foram repetidos no cluster descartável `review1a_test`, loopback porta 55444,
+data directory `.tmp/review1a-pg`, confirmado por SQL antes do primeiro upgrade.
+
+Não há dependência de pgcrypto ou uuid-ossp: UUIDs são gerados pelo Python;
+triggers usam PL/pgSQL disponível na instalação padrão. Não foi introduzido
+novo escritor nem contrato de escrita. O agente de integridade atual verifica
+categorias e revisão Alembic; as garantias de identidade de produtos e variantes
+são verificadas pelos testes PostgreSQL específicos, não por esse agente.

@@ -102,3 +102,64 @@ def test_failed_upgrade_rolls_back_and_can_be_retried(postgres):
     with engine.connect() as connection:
         assert isinstance(connection.execute(text('SELECT public_id FROM products WHERE id = 1')).scalar_one(), UUID)
         assert connection.execute(text('SELECT stock FROM products WHERE id = 1')).scalar_one() == 7
+
+
+def test_multibatch_backfill_preserves_rows_and_upgrade_is_repeatable(postgres):
+    engine, _ = postgres
+    config = Config(str(Path(__file__).resolve().parents[1] / 'alembic.ini'))
+    command.downgrade(config, 'a7b8c9d0e1f2')
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO categories (id, name, slug) VALUES (1, 'Legacy', 'legacy')"))
+        connection.execute(text("""
+            INSERT INTO products (id, name, price, stock, category_id)
+            SELECT n * 3 - 4000, 'Legacy ' || n, 12.34, n, 1
+            FROM generate_series(1, 2005) AS n
+        """))
+        connection.execute(text("""
+            INSERT INTO product_variants (id, product_id, sku, name, price)
+            SELECT id, id, 'SKU-' || id, name, price FROM products
+        """))
+        before = {
+            table: connection.execute(text(f'SELECT * FROM {table} ORDER BY id')).mappings().all()
+            for table in ('products', 'product_variants')
+        }
+
+    command.upgrade(config, 'head')
+    with engine.connect() as connection:
+        identities = {}
+        for table in before:
+            after = connection.execute(text(f'SELECT * FROM {table} ORDER BY id')).mappings().all()
+            assert [{k: v for k, v in row.items() if k != 'public_id'} for row in after] == before[table]
+            identities[table] = [row['public_id'] for row in after]
+            assert len(set(identities[table])) == 2005
+            assert all(isinstance(value, UUID) for value in identities[table])
+
+    command.upgrade(config, 'head')  # Alembic revision tracking makes this a no-op.
+    with engine.connect() as connection:
+        for table in before:
+            assert connection.execute(text(f'SELECT public_id FROM {table} ORDER BY id')).scalars().all() == identities[table]
+
+
+@pytest.mark.parametrize('table', ['products', 'product_variants'])
+def test_direct_sql_requires_uuid_and_allows_unchanged_identity(postgres, table):
+    engine, _ = postgres
+    product_uuid, variant_uuid = uuid4(), uuid4()
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO categories (id, name, slug) VALUES (1, 'SQL', 'sql')"))
+        connection.execute(text("INSERT INTO products (id, name, price, stock, category_id, public_id) "
+                                "VALUES (1, 'SQL', 10, 0, 1, :uuid)"), {'uuid': product_uuid})
+        connection.execute(text("INSERT INTO product_variants (id, product_id, sku, name, price, public_id) "
+                                "VALUES (1, 1, 'SQL', 'SQL', 10, :uuid)"), {'uuid': variant_uuid})
+        connection.execute(text(f'UPDATE {table} SET public_id = public_id, name = :name'), {'name': 'Updated'})
+    insert = (
+        "INSERT INTO products (name, price, stock, category_id) VALUES ('Missing', 10, 0, 1)"
+        if table == 'products' else
+        "INSERT INTO product_variants (product_id, sku, name, price) VALUES (1, 'Missing', 'Missing', 10)"
+    )
+    with engine.begin() as connection:
+        with connection.begin_nested() as savepoint:
+            with pytest.raises(DBAPIError) as error:
+                connection.execute(text(insert))
+            assert error.value.orig.sqlstate == '23502'  # NOT NULL, rather than another constraint.
+            savepoint.rollback()
+        assert connection.execute(text(f'SELECT name FROM {table} WHERE id = 1')).scalar_one() == 'Updated'

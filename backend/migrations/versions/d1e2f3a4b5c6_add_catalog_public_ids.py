@@ -37,10 +37,12 @@ def _table(name: str) -> sa.Table:
 def _backfill(name: str) -> None:
     bind = op.get_bind()
     table = _table(name)
+    last_id = None
     while True:
-        identifiers = bind.execute(
-            sa.select(table.c.id).where(table.c.public_id.is_(None)).limit(1000)
-        ).scalars().all()
+        query = sa.select(table.c.id).where(table.c.public_id.is_(None))
+        if last_id is not None:
+            query = query.where(table.c.id > last_id)
+        identifiers = bind.execute(query.order_by(table.c.id).limit(1000)).scalars().all()
         if not identifiers:
             break
         bind.execute(
@@ -49,6 +51,7 @@ def _backfill(name: str) -> None:
             ),
             [{'identifier': identifier, 'public_id': uuid4()} for identifier in identifiers],
         )
+        last_id = identifiers[-1]
 
 
 def _enforce_column(name: str, constraint: str) -> None:

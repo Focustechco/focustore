@@ -171,6 +171,7 @@ test('saved cart retains an explicit FastAPI source marker without accepting unk
   const [restored] = restoredCart([item]);
   assert.equal(restored.catalogSource, 'fastapi');
   assert.equal(isFastApiCatalogItem(restored), true);
+  assert.equal(isFastApiCatalogItem({ ...item, catalogSource: undefined }), true);
   assert.deepEqual(restoredCart([{ ...item, catalogSource: 'unknown' }]), []);
 });
 

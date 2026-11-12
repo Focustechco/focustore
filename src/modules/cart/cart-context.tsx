@@ -66,7 +66,11 @@ export function resolveProductImage(imageUrl?: string | null, name?: string): st
 }
 
 export function isFastApiCatalogItem(item: CartItem): boolean {
-  return item.catalogSource === 'fastapi';
+  return item.catalogSource === 'fastapi' || !isPrismaVariantId(item.variantId);
+}
+
+function isPrismaVariantId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function normalizeCartItem(item: CartItem): CartItem {

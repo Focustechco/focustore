@@ -262,7 +262,7 @@ Vista seu código. Expresse sua linguagem.`,
           position: 2,
         },
         {
-          url: "/images/camisas/Retrato%20minimalista%20com%20camiseta%20Python%20branca.png",
+          url: "/images/camisas/frente-camisa-py-branca.png",
           isPrimary: false,
           altText: "Camisa Python - Branco - Frente",
           position: 3,

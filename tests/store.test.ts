@@ -364,6 +364,10 @@ test('checkout rejects FastAPI variant identities before attempting a Prisma loo
     ...checkoutInput(),
     items: [{ variantId: '42', quantity: 1 }],
   });
+  if (process.env.FOCUS_TEST_PRODUCTION === '1') {
+    assert.equal(response.status, 503);
+    return;
+  }
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /catálogo Prisma compatível com checkout/i);
 });

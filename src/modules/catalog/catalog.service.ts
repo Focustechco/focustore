@@ -1,6 +1,43 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/prisma';
+import { FocusApiClient } from '@/lib/api/focus-api';
+import {
+  adaptCatalogCategory,
+  adaptCatalogProduct,
+  type StorefrontCategory,
+  type StorefrontProduct,
+} from './catalog-api.adapter';
 import { HIDDEN_PRODUCT_SLUGS } from './catalog-policy';
+
+type ProductFilters = {
+  categorySlug?: string;
+  search?: string;
+  sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'newest';
+  minPrice?: number;
+  maxPrice?: number;
+};
+
+function catalogReadSource(): 'prisma' | 'fastapi' {
+  const value = process.env.CATALOG_READ_SOURCE ?? 'prisma';
+  if (value === 'prisma' || value === 'fastapi') return value;
+  throw new Error('CATALOG_READ_SOURCE must be either "prisma" or "fastapi".');
+}
+
+function filterFastApiProducts(products: StorefrontProduct[], params: ProductFilters = {}): StorefrontProduct[] {
+  const { categorySlug, search, sortBy, minPrice, maxPrice } = params;
+  const query = search?.trim().toLocaleLowerCase();
+  const filtered = products.filter(product => {
+    if (HIDDEN_PRODUCT_SLUGS.includes(product.slug)) return false;
+    if (categorySlug && categorySlug !== 'todos' && !product.categories.some(({ category }) => category.slug === categorySlug)) return false;
+    if (query && ![product.name, product.description, product.brand].some(value => value.toLocaleLowerCase().includes(query))) return false;
+    if (minPrice !== undefined && product.basePrice < minPrice) return false;
+    return maxPrice === undefined || product.basePrice <= maxPrice;
+  });
+  if (sortBy === 'price_asc') return filtered.sort((a, b) => a.basePrice - b.basePrice);
+  if (sortBy === 'price_desc') return filtered.sort((a, b) => b.basePrice - a.basePrice);
+  // FastAPI deliberately omits createdAt, so its stable API order is retained for relevance/newest.
+  return filtered;
+}
 
 export class CatalogService {
   static async getCollections() {
@@ -89,7 +126,10 @@ export class CatalogService {
     }
   }
 
-  static async getCategories() {
+  static async getCategories(): Promise<StorefrontCategory[]> {
+    if (catalogReadSource() === 'fastapi') {
+      return this.allFastApiPages((client, offset) => client.listCategories(offset)).then(page => page.map(adaptCatalogCategory));
+    }
     try {
       return await prisma.category.findMany({
         where: { isActive: true },
@@ -115,7 +155,11 @@ export class CatalogService {
     }
   }
 
-  static async getCategoryBySlug(slug: string) {
+  static async getCategoryBySlug(slug: string): Promise<StorefrontCategory | null> {
+    if (catalogReadSource() === 'fastapi') {
+      const category = await new FocusApiClient().getCategory(slug);
+      return category ? adaptCatalogCategory(category) : null;
+    }
     try {
       return await prisma.category.findUnique({
         where: { slug, isActive: true },
@@ -179,13 +223,16 @@ export class CatalogService {
     }
   }
 
-  static async getAllProducts(params?: {
-    categorySlug?: string;
-    search?: string;
-    sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'newest';
-    minPrice?: number;
-    maxPrice?: number;
-  }) {
+  static async getAllProducts(params?: ProductFilters): Promise<StorefrontProduct[]> {
+    if (catalogReadSource() === 'fastapi') {
+      const products = await this.allFastApiPages((client, offset) => client.listProducts(offset));
+      return filterFastApiProducts(products.map(adaptCatalogProduct), params);
+    }
+    return this.getAllProductsFromPrisma(params);
+  }
+
+  /** Prisma-only read for collection pages; FastAPI does not expose collections yet. */
+  static async getAllProductsFromPrisma(params?: ProductFilters) {
     try {
       const { categorySlug, search, sortBy, minPrice, maxPrice } = params || {};
 
@@ -242,7 +289,11 @@ export class CatalogService {
     }
   }
 
-  static async getProductBySlug(slug: string) {
+  static async getProductBySlug(slug: string): Promise<StorefrontProduct | null> {
+    if (catalogReadSource() === 'fastapi') {
+      const product = await new FocusApiClient().getProduct(slug);
+      return product ? adaptCatalogProduct(product) : null;
+    }
     try {
       const product = await prisma.product.findUnique({
         where: {
@@ -273,7 +324,14 @@ export class CatalogService {
     }
   }
 
-  static async getRelatedProducts(productId: string, categoryId?: string) {
+  static async getRelatedProducts(productId: string, categoryId?: string): Promise<StorefrontProduct[]> {
+    if (catalogReadSource() === 'fastapi') {
+      const products = await this.allFastApiPages((client, offset) => client.listProducts(offset));
+      return products.map(adaptCatalogProduct)
+        .filter(product => product.id !== productId && !HIDDEN_PRODUCT_SLUGS.includes(product.slug))
+        .filter(product => !categoryId || product.categories.some(category => category.categoryId === categoryId))
+        .slice(0, 4);
+    }
     try {
       return await prisma.product.findMany({
         where: {
@@ -315,5 +373,18 @@ export class CatalogService {
       console.error(`Error fetching banners for placement ${placement}:`, error);
       throw error;
     }
+  }
+
+  private static async allFastApiPages<T>(readPage: (client: FocusApiClient, offset: number) => Promise<{ items: T[]; total: number; offset: number; limit: number }>): Promise<T[]> {
+    const client = new FocusApiClient();
+    const items: T[] = [];
+    let offset = 0;
+    do {
+      const page = await readPage(client, offset);
+      items.push(...page.items);
+      offset += page.items.length;
+      if (page.items.length === 0 || offset >= page.total) break;
+    } while (true);
+    return items;
   }
 }

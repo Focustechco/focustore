@@ -29,6 +29,7 @@ interface ProductCardProps {
     }[];
     categories?: { category: { name: string; slug: string } }[];
     _count?: { reviews: number };
+    catalogSource?: 'fastapi' | 'prisma';
   };
   variant?: 'light' | 'dark';
 }
@@ -37,6 +38,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [added, setAdded] = useState(false);
+  const isReadOnlyCatalog = product.catalogSource === 'fastapi';
 
   const isFocusCap = product.slug === 'bone-focus-lab';
   const isKeychainProduct = product.slug === 'chaveiro-focus';
@@ -159,7 +161,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!selectedVariant) return;
+    if (isReadOnlyCatalog || !selectedVariant) return;
     const selectedPromotionalPrice = selectedVariant.promotionalPrice ?? product.promotionalPrice;
 
     addItem({
@@ -180,6 +182,7 @@ export function ProductCard({ product }: ProductCardProps) {
       quantity: 1,
       size: selectedVariant.size,
       color: isFocusCap ? (currentImageIndex === 1 ? 'Branco' : 'Preto') : selectedVariant.color,
+      catalogSource: product.catalogSource,
     });
 
     setAdded(true);
@@ -200,6 +203,7 @@ export function ProductCard({ product }: ProductCardProps) {
       categories: product.categories,
       variants: product.variants,
       images: product.images,
+      catalogSource: product.catalogSource,
     });
   };
 
@@ -304,12 +308,14 @@ export function ProductCard({ product }: ProductCardProps) {
           {/* Botão Quadrado/Arredondado Laranja de Carrinho */}
           <button
             onClick={handleAddToCart}
+            disabled={isReadOnlyCatalog}
             className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 shadow-md cursor-pointer flex-shrink-0 ${
               added
                 ? 'bg-emerald-600 text-white scale-95 shadow-emerald-500/30'
                 : 'bg-[#FF6500] hover:bg-[#FF7A1A] text-white shadow-[#FF6500]/25 hover:scale-105 active:scale-95'
-            }`}
-            aria-label="Adicionar ao carrinho"
+            } ${isReadOnlyCatalog ? 'cursor-not-allowed opacity-50 hover:bg-[#FF6500] hover:scale-100' : ''}`}
+            aria-label={isReadOnlyCatalog ? 'Compra indisponível para o catálogo FastAPI experimental' : 'Adicionar ao carrinho'}
+            title={isReadOnlyCatalog ? 'Catálogo FastAPI disponível somente para consulta.' : undefined}
           >
             {added ? <Check size={14} /> : <ShoppingCart size={15} className="stroke-[2.2]" />}
           </button>

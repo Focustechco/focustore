@@ -42,7 +42,7 @@ export default async function ProductDetailPage({ params }: Props) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-16">
       {/* 55% Galeria / 45% Detalhes (Client Interativo) */}
-      <ProductClientView product={product} />
+      <ProductClientView product={product} catalogReadOnly={product.catalogSource === 'fastapi'} />
 
       {/* Produtos Relacionados */}
       {relatedProducts.length > 0 && (

@@ -78,7 +78,7 @@ function parseProductDescription(description: string) {
   };
 }
 
-export function ProductClientView({ product }: { product: any }) {
+export function ProductClientView({ product, catalogReadOnly = false }: { product: any; catalogReadOnly?: boolean }) {
   const router = useRouter();
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -343,7 +343,7 @@ export function ProductClientView({ product }: { product: any }) {
   };
 
   const handleAddToCart = () => {
-    if (!selectedVariant) return;
+    if (catalogReadOnly || !selectedVariant) return;
 
     const keychainTotal = Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0);
     if (isKeychainProduct && keychainTotal === 0) return;
@@ -366,6 +366,7 @@ export function ProductClientView({ product }: { product: any }) {
         sku: selectedVariant.sku,
         quantity: totalQuantity,
         size: selectedTypes,
+        catalogSource: product.catalogSource,
       });
       setAdded(true);
       setTimeout(() => setAdded(false), 2000);
@@ -393,6 +394,7 @@ export function ProductClientView({ product }: { product: any }) {
       quantity,
       size: selectedSize,
       color: selectedColor,
+      catalogSource: product.catalogSource,
     });
 
     setAdded(true);
@@ -400,6 +402,7 @@ export function ProductClientView({ product }: { product: any }) {
   };
 
   const handleBuyNow = () => {
+    if (catalogReadOnly) return;
     handleAddToCart();
     router.push('/checkout');
   };
@@ -686,7 +689,7 @@ export function ProductClientView({ product }: { product: any }) {
               onClick={handleAddToCart}
               fullWidth
               size="lg"
-              disabled={availableStock <= 0 || (isKeychainProduct && Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0) <= 0)}
+              disabled={catalogReadOnly || availableStock <= 0 || (isKeychainProduct && Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0) <= 0)}
               className="gap-2 bg-[#FF6500] hover:bg-[#FF7A1A] font-black uppercase text-white shadow-lg shadow-[#FF6500]/25"
             >
               {added ? (
@@ -706,7 +709,7 @@ export function ProductClientView({ product }: { product: any }) {
                 variant="secondary"
                 fullWidth
                 size="md"
-                disabled={availableStock <= 0 || (isKeychainProduct && Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0) <= 0)}
+                disabled={catalogReadOnly || availableStock <= 0 || (isKeychainProduct && Object.values(keychainQuantities).reduce((sum, amount) => sum + amount, 0) <= 0)}
                 className="font-bold border border-white/15 hover:border-white/30"
               >
                 COMPRAR AGORA
@@ -725,6 +728,7 @@ export function ProductClientView({ product }: { product: any }) {
                     categories: product.categories,
                     variants: product.variants,
                     images: product.images,
+                    catalogSource: product.catalogSource,
                   })
                 }
                 className={`p-3 rounded-lg border flex items-center justify-center transition-colors cursor-pointer ${
@@ -737,6 +741,11 @@ export function ProductClientView({ product }: { product: any }) {
                 <Heart size={20} className={favorited ? 'fill-[#FF6500] text-[#FF6500]' : ''} />
               </button>
             </div>
+            {catalogReadOnly && (
+              <p role="status" className="text-xs text-amber-300">
+                Este catálogo FastAPI é experimental e está disponível somente para consulta. A compra continua disponível no catálogo Prisma.
+              </p>
+            )}
           </div>
 
           {/* Calculadora de Frete CEP */}

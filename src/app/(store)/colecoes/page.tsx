@@ -15,14 +15,14 @@ export const metadata = {
 
 export default async function CollectionsPage() {
   let collections: Awaited<ReturnType<typeof CatalogService.getCollections>> = [];
-  let allProducts: Awaited<ReturnType<typeof CatalogService.getAllProducts>> = [];
+  let allProducts: Awaited<ReturnType<typeof CatalogService.getAllProductsFromPrisma>> = [];
   try {
     collections = await CatalogService.getCollections();
   } catch {
     collections = [];
   }
   try {
-    allProducts = await CatalogService.getAllProducts();
+    allProducts = await CatalogService.getAllProductsFromPrisma();
   } catch {
     allProducts = [];
   }

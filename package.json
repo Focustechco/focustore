@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "npm run typecheck",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test --test-concurrency=1 tests/social.test.ts tests/store.test.ts",
+    "test": "tsx --test --test-concurrency=1 tests/social.test.ts tests/store.test.ts tests/catalog-api.test.ts",
     "test:fullstack": "tsx --test --test-concurrency=1 tests/fullstack.test.ts",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",

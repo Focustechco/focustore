@@ -14,6 +14,7 @@ export default function FavoritosPage() {
   const { addItem, setIsCartOpen } = useCart();
 
   const handleAddToCart = (product: any) => {
+    if (product.catalogSource === 'fastapi') return;
     const defaultVariant = product.variants?.[0];
     addItem({
       variantId: defaultVariant?.id || product.id,
@@ -25,6 +26,7 @@ export default function FavoritosPage() {
       imageUrl: product.imageUrl,
       sku: defaultVariant?.sku || 'FS-FAV',
       quantity: 1,
+      catalogSource: product.catalogSource,
       size: defaultVariant?.size || 'Único',
       color: defaultVariant?.color || 'Padrão',
     });
@@ -169,12 +171,13 @@ export default function FavoritosPage() {
 
                       <Button
                         onClick={() => handleAddToCart(product)}
+                        disabled={product.catalogSource === 'fastapi'}
                         size="sm"
                         fullWidth
                         className="bg-[#FF6500] hover:bg-[#FF6500]/90 text-white font-bold text-[11px] h-8.5 shadow-md shadow-[#FF6500]/20 gap-1"
                       >
                         <ShoppingBag size={12} />
-                        <span>Comprar</span>
+                        <span>{product.catalogSource === 'fastapi' ? 'Somente leitura' : 'Comprar'}</span>
                       </Button>
                     </div>
                   </div>

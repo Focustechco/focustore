@@ -1259,6 +1259,54 @@
         ]
       }
     },
+    "/api/v1/catalog/categories/{slug}": {
+      "get": {
+        "operationId": "get_catalog_category_api_v1_catalog_categories__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogCategory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Category not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "Catalog source unavailable"
+          }
+        },
+        "summary": "Get Catalog Category",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
     "/api/v1/catalog/products": {
       "get": {
         "operationId": "list_catalog_products_api_v1_catalog_products_get",

@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
@@ -49,7 +50,6 @@ class CheckoutCreate(BaseModel):
 class OrderItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    variant_id: UUID
     variant_public_id: UUID
     product_name: str
     variant_name: str
@@ -79,8 +79,8 @@ class OrderResponse(BaseModel):
     shipping_amount: Decimal
     total: Decimal
     shipping_option: str
-    created_at: object
-    updated_at: object
+    created_at: datetime
+    updated_at: datetime
     items: list[OrderItemResponse]
     payments: list[PaymentResponse]
 

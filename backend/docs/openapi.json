@@ -816,11 +816,6 @@
             "title": "Unit Price",
             "type": "string"
           },
-          "variant_id": {
-            "format": "uuid",
-            "title": "Variant Id",
-            "type": "string"
-          },
           "variant_name": {
             "title": "Variant Name",
             "type": "string"
@@ -832,7 +827,6 @@
           }
         },
         "required": [
-          "variant_id",
           "variant_public_id",
           "product_name",
           "variant_name",
@@ -908,7 +902,9 @@
       "OrderResponse": {
         "properties": {
           "created_at": {
-            "title": "Created At"
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
           },
           "currency": {
             "title": "Currency",
@@ -958,7 +954,9 @@
             "type": "string"
           },
           "updated_at": {
-            "title": "Updated At"
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
           }
         },
         "required": [

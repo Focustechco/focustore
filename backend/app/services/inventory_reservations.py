@@ -150,8 +150,9 @@ class InventoryReservationService:
             return self._result(reservation)
 
     def get(self, reservation_id: UUID) -> ReservationResult | None:
-        reservation = self.db.scalar(select(StockReservation).where(StockReservation.public_id == reservation_id))
-        return None if reservation is None else self._result(reservation)
+        with self.db.begin():
+            reservation = self.db.scalar(select(StockReservation).where(StockReservation.public_id == reservation_id))
+            return None if reservation is None else self._result(reservation)
 
     def _transition(self, reservation_id: UUID, target: str) -> ReservationResult:
         with self.db.begin():

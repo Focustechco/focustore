@@ -618,6 +618,66 @@
         "title": "CategoryUpdate",
         "type": "object"
       },
+      "CheckoutCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "idempotencyKey": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Idempotencykey",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CheckoutLineInput"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "paymentMethod": {
+            "$ref": "#/components/schemas/PaymentMethod"
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/ShippingAddressInput"
+          },
+          "shippingOption": {
+            "$ref": "#/components/schemas/ShippingOptionInput"
+          }
+        },
+        "required": [
+          "items",
+          "shippingAddress",
+          "shippingOption",
+          "paymentMethod",
+          "idempotencyKey"
+        ],
+        "title": "CheckoutCreate",
+        "type": "object"
+      },
+      "CheckoutLineInput": {
+        "additionalProperties": false,
+        "properties": {
+          "quantity": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 999.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "variantId": {
+            "format": "uuid",
+            "title": "Variantid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "variantId",
+          "quantity"
+        ],
+        "title": "CheckoutLineInput",
+        "type": "object"
+      },
       "CurrentUser": {
         "properties": {
           "email": {
@@ -734,6 +794,56 @@
         "title": "OrderDetail",
         "type": "object"
       },
+      "OrderItemResponse": {
+        "properties": {
+          "line_total": {
+            "title": "Line Total",
+            "type": "string"
+          },
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "unit_price": {
+            "title": "Unit Price",
+            "type": "string"
+          },
+          "variant_id": {
+            "format": "uuid",
+            "title": "Variant Id",
+            "type": "string"
+          },
+          "variant_name": {
+            "title": "Variant Name",
+            "type": "string"
+          },
+          "variant_public_id": {
+            "format": "uuid",
+            "title": "Variant Public Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "variant_id",
+          "variant_public_id",
+          "product_name",
+          "variant_name",
+          "sku",
+          "unit_price",
+          "quantity",
+          "line_total"
+        ],
+        "title": "OrderItemResponse",
+        "type": "object"
+      },
       "OrderLine": {
         "properties": {
           "id": {
@@ -795,35 +905,77 @@
         "title": "OrderLine",
         "type": "object"
       },
-      "OrderPage": {
+      "OrderResponse": {
         "properties": {
+          "created_at": {
+            "title": "Created At"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "discount_amount": {
+            "title": "Discount Amount",
+            "type": "string"
+          },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/OrderSummary"
+              "$ref": "#/components/schemas/OrderItemResponse"
             },
             "title": "Items",
             "type": "array"
           },
-          "limit": {
-            "title": "Limit",
-            "type": "integer"
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentResponse"
+            },
+            "title": "Payments",
+            "type": "array"
           },
-          "offset": {
-            "title": "Offset",
-            "type": "integer"
+          "public_id": {
+            "format": "uuid",
+            "title": "Public Id",
+            "type": "string"
+          },
+          "shipping_amount": {
+            "title": "Shipping Amount",
+            "type": "string"
+          },
+          "shipping_option": {
+            "title": "Shipping Option",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "subtotal": {
+            "title": "Subtotal",
+            "type": "string"
           },
           "total": {
             "title": "Total",
-            "type": "integer"
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At"
           }
         },
         "required": [
-          "items",
+          "public_id",
+          "status",
+          "currency",
+          "subtotal",
+          "discount_amount",
+          "shipping_amount",
           "total",
-          "offset",
-          "limit"
+          "shipping_option",
+          "created_at",
+          "updated_at",
+          "items",
+          "payments"
         ],
-        "title": "OrderPage",
+        "title": "OrderResponse",
         "type": "object"
       },
       "OrderSummary": {
@@ -879,6 +1031,57 @@
           "updated_at"
         ],
         "title": "OrderSummary",
+        "type": "object"
+      },
+      "PaymentMethod": {
+        "enum": [
+          "PIX",
+          "CREDIT_CARD"
+        ],
+        "title": "PaymentMethod",
+        "type": "string"
+      },
+      "PaymentResponse": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "method",
+          "status",
+          "amount"
+        ],
+        "title": "PaymentResponse",
+        "type": "object"
+      },
+      "PaymentSimulationInput": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "pattern": "^(paid|failed)$",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "PaymentSimulationInput",
         "type": "object"
       },
       "ProductCreate": {
@@ -1109,6 +1312,92 @@
         "title": "QuotedLine",
         "type": "object"
       },
+      "ShippingAddressInput": {
+        "additionalProperties": false,
+        "properties": {
+          "city": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "City",
+            "type": "string"
+          },
+          "complement": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complement"
+          },
+          "neighborhood": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Neighborhood",
+            "type": "string"
+          },
+          "number": {
+            "maxLength": 30,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          },
+          "postalCode": {
+            "maxLength": 10,
+            "minLength": 8,
+            "title": "Postalcode",
+            "type": "string"
+          },
+          "state": {
+            "maxLength": 2,
+            "minLength": 2,
+            "title": "State",
+            "type": "string"
+          },
+          "street": {
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Street",
+            "type": "string"
+          }
+        },
+        "required": [
+          "street",
+          "number",
+          "neighborhood",
+          "city",
+          "state",
+          "postalCode"
+        ],
+        "title": "ShippingAddressInput",
+        "type": "object"
+      },
+      "ShippingOptionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "carrier": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Carrier",
+            "type": "string"
+          },
+          "serviceName": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Servicename",
+            "type": "string"
+          }
+        },
+        "required": [
+          "carrier",
+          "serviceName"
+        ],
+        "title": "ShippingOptionInput",
+        "type": "object"
+      },
       "StockAdjustment": {
         "additionalProperties": false,
         "properties": {
@@ -1163,6 +1452,68 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "app__schemas__checkout__OrderPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "OrderPage",
+        "type": "object"
+      },
+      "app__schemas__orders__OrderPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "OrderPage",
         "type": "object"
       }
     },
@@ -1584,6 +1935,307 @@
         ]
       }
     },
+    "/api/v1/checkout/orders": {
+      "get": {
+        "operationId": "list_checkout_orders_api_v1_checkout_orders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__checkout__OrderPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Checkout disabled"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "List Checkout Orders",
+        "tags": [
+          "FastAPI checkout (opt-in)"
+        ]
+      },
+      "post": {
+        "operationId": "create_order_api_v1_checkout_orders_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Checkout disabled"
+          },
+          "409": {
+            "description": "Stock or idempotency conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "503": {
+            "description": "Provider unavailable"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Create Order",
+        "tags": [
+          "FastAPI checkout (opt-in)"
+        ]
+      }
+    },
+    "/api/v1/checkout/orders/{order_id}": {
+      "get": {
+        "operationId": "get_checkout_order_api_v1_checkout_orders__order_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Own order not found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Get Checkout Order",
+        "tags": [
+          "FastAPI checkout (opt-in)"
+        ]
+      }
+    },
+    "/api/v1/checkout/orders/{order_id}/cancel": {
+      "post": {
+        "operationId": "cancel_checkout_order_api_v1_checkout_orders__order_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Own order not found"
+          },
+          "409": {
+            "description": "Invalid order state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Cancel Checkout Order",
+        "tags": [
+          "FastAPI checkout (opt-in)"
+        ]
+      }
+    },
+    "/api/v1/checkout/orders/{order_id}/payment-simulation": {
+      "post": {
+        "operationId": "simulate_payment_api_v1_checkout_orders__order_id__payment_simulation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentSimulationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Simulator unavailable"
+          },
+          "409": {
+            "description": "Invalid order state"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "APIKeyCookie": []
+          }
+        ],
+        "summary": "Simulate Payment",
+        "tags": [
+          "FastAPI checkout (opt-in)"
+        ]
+      }
+    },
     "/api/v1/orders": {
       "get": {
         "operationId": "list_orders_api_v1_orders_get",
@@ -1617,7 +2269,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderPage"
+                  "$ref": "#/components/schemas/app__schemas__orders__OrderPage"
                 }
               }
             },

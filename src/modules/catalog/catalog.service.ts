@@ -225,7 +225,7 @@ export class CatalogService {
 
   static async getAllProducts(params?: ProductFilters): Promise<StorefrontProduct[]> {
     if (catalogReadSource() === 'fastapi') {
-      const products = await this.allFastApiPages((client, offset) => client.listProducts(offset));
+      const products = await this.allFastApiPages((client, offset) => client.listProducts(offset, 100, params));
       return filterFastApiProducts(products.map(adaptCatalogProduct), params);
     }
     return this.getAllProductsFromPrisma(params);

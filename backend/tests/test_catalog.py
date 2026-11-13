@@ -68,6 +68,33 @@ def test_pagination_no_join_duplicates_and_fresh_queries(client, legacy):
     assert client.get('/api/v1/catalog/products?offset=2').json()['items'] == []
 
 
+def test_product_filters_are_applied_before_pagination_and_ordered_deterministically(client, legacy):
+    path, ids = legacy
+    new_id = str(uuid4())
+    with sqlite3.connect(path) as connection:
+        connection.execute('''
+            INSERT INTO products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (new_id, 'Mouse wireless', 'mouse-wireless', 'MOUSE-1',
+              'Wireless accessory', None, 'Nova', 'ACTIVE', 49.90, None))
+
+    price_asc = client.get('/api/v1/catalog/products?sort=price_asc&limit=1').json()
+    assert price_asc['total'] == 2
+    assert [item['id'] for item in price_asc['items']] == [new_id]
+    assert client.get('/api/v1/catalog/products?sort=price_desc').json()['items'][0]['id'] == ids['product']
+    assert client.get('/api/v1/catalog/products?search=wireless').json()['items'][0]['id'] == new_id
+    assert client.get('/api/v1/catalog/products?category_slug=second_category').json()['items'][0]['id'] == ids['product']
+    assert client.get('/api/v1/catalog/products?min_price=100&max_price=200').json()['items'][0]['id'] == ids['product']
+
+
+@pytest.mark.parametrize('query', [
+    'sort=unsupported',
+    'min_price=20&max_price=10',
+    'search=' + ('x' * 121),
+])
+def test_invalid_product_filters_are_rejected(client, legacy, query):
+    assert client.get(f'/api/v1/catalog/products?{query}').status_code == 422
+
+
 def test_active_filters_and_categories_pagination(client, legacy):
     path, ids = legacy
     with sqlite3.connect(path) as connection:

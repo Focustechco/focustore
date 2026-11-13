@@ -1,9 +1,11 @@
+from decimal import Decimal
+
 from sqlalchemy import and_, cast, func, or_, select, String
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.category import Category
 from app.models.product import Product, ProductVariant
-from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct
+from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct, CatalogSort
 from app.integrations.postgres_catalog.mapper import category_schema, product_schema
 
 
@@ -21,10 +23,46 @@ class PostgresCatalogRepository:
             joinedload(Product.category),
         )
 
-    def products(self, offset: int, limit: int) -> CatalogPage[CatalogProduct]:
+    def products(
+        self,
+        offset: int,
+        limit: int,
+        *,
+        search: str | None = None,
+        category_slug: str | None = None,
+        sort: CatalogSort = 'relevance',
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
+    ) -> CatalogPage[CatalogProduct]:
         base = select(Product).where(Product.status == 'ACTIVE')
+        if search:
+            escaped = search.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+            pattern = f'%{escaped}%'
+            base = base.where(or_(
+                Product.name.ilike(pattern, escape='\\'),
+                Product.description.ilike(pattern, escape='\\'),
+                Product.brand.ilike(pattern, escape='\\'),
+            ))
+        if category_slug and category_slug != 'todos':
+            base = base.where(Product.categories.any(and_(
+                Category.slug == category_slug,
+                Category.is_active.is_(True),
+            )))
+        price = func.coalesce(Product.base_price, Product.price)
+        if min_price is not None:
+            base = base.where(price >= min_price)
+        if max_price is not None:
+            base = base.where(price <= max_price)
         total = self.db.scalar(select(func.count()).select_from(base.subquery())) or 0
-        statement = base.options(*self._product_options()).order_by(Product.slug, Product.id).offset(offset).limit(limit)
+        if sort == 'price_asc':
+            ordering = (price.asc(), Product.slug, Product.id)
+        elif sort == 'price_desc':
+            ordering = (price.desc(), Product.slug, Product.id)
+        elif sort == 'newest':
+            ordering = (Product.created_at.desc(), Product.id.desc())
+        else:
+            ordering = (Product.slug, Product.id)
+        statement = base.options(*self._product_options()).order_by(*ordering).offset(offset).limit(limit)
         items = [product_schema(product) for product in self.db.scalars(statement).unique().all()]
         return CatalogPage(items=items, total=total, offset=offset, limit=limit)
 

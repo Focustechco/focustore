@@ -1,8 +1,12 @@
 """Public read contract. External IDs never refer to PostgreSQL integer IDs."""
 from decimal import Decimal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
+
+
+CatalogSort = Literal['relevance', 'price_asc', 'price_desc', 'newest']
 
 
 class CatalogImage(BaseModel):

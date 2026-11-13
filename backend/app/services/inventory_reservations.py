@@ -15,7 +15,7 @@ from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.product import Inventory, InventoryMovement, ProductVariant, StockReservation, StockReservationItem
 
@@ -71,17 +71,18 @@ class InventoryReservationService:
                 return self._create_once(idempotency_key, lines, ttl_seconds=ttl_seconds)
             except IntegrityError:
                 self.db.rollback()
-                existing = self.db.scalar(
-                    select(StockReservation).where(
-                        StockReservation.idempotency_scope == self.idempotency_scope,
-                        StockReservation.idempotency_key == idempotency_key,
+                with self.db.begin():
+                    existing = self.db.scalar(
+                        select(StockReservation).where(
+                            StockReservation.idempotency_scope == self.idempotency_scope,
+                            StockReservation.idempotency_key == idempotency_key,
+                        )
                     )
-                )
-                if existing is not None:
-                    canonical = self._canonical_lines(lines)
-                    if existing.request_hash != self._request_hash(canonical, ttl_seconds):
-                        raise ReservationError('Idempotency key was already used with a different payload.')
-                    return self._result(existing)
+                    if existing is not None:
+                        canonical = self._canonical_lines(lines)
+                        if existing.request_hash != self._request_hash(canonical, ttl_seconds):
+                            raise ReservationError('Idempotency key was already used with a different payload.')
+                        return self._result(existing)
                 if attempt == 0:
                     continue
                 raise ReservationError('Reservation could not be committed safely.')
@@ -109,11 +110,26 @@ class InventoryReservationService:
 
             variant_ids = [line.variant_public_id for line in canonical]
             variants = self.db.scalars(
-                select(ProductVariant).where(ProductVariant.public_id.in_(variant_ids)).order_by(ProductVariant.id)
+                select(ProductVariant).where(ProductVariant.public_id.in_(variant_ids))
+                .options(joinedload(ProductVariant.product))
+                .order_by(ProductVariant.id)
             ).all()
             by_public_id = {variant.public_id: variant for variant in variants}
             if len(by_public_id) != len(canonical) or any(not variant.is_active or variant.product.status != 'ACTIVE' for variant in variants):
                 raise ReservationError('One or more variants do not exist or are inactive.')
+
+            # Claim the idempotency key before waiting on inventory rows. A
+            # concurrent identical request then waits on this unique insert and
+            # replays the committed reservation instead of racing into an
+            # insufficient-stock failure.
+            reservation = StockReservation(
+                idempotency_scope=self.idempotency_scope,
+                idempotency_key=idempotency_key,
+                request_hash=request_hash,
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds),
+            )
+            self.db.add(reservation)
+            self.db.flush()
 
             inventory_by_variant: dict[int, Inventory] = {}
             for variant in variants:
@@ -124,14 +140,6 @@ class InventoryReservationService:
                     raise ReservationError(f'No inventory exists for variant {variant.public_id}.')
                 inventory_by_variant[variant.id] = inventory
 
-            reservation = StockReservation(
-                idempotency_scope=self.idempotency_scope,
-                idempotency_key=idempotency_key,
-                request_hash=request_hash,
-                expires_at=datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds),
-            )
-            self.db.add(reservation)
-            self.db.flush()
             for line in canonical:
                 variant = by_public_id[line.variant_public_id]
                 inventory = inventory_by_variant[variant.id]

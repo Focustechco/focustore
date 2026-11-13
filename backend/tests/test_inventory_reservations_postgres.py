@@ -97,16 +97,21 @@ def test_same_idempotency_key_replays_one_persisted_reservation(postgres):
 
     results = run_concurrently(
         url, 10,
-        lambda db, _index: InventoryReservationService(db).create(
-            'same-idempotency-key', [ReservationLine(variant_id, 1)]
-        ),
+        lambda db, _index: _create_and_read_same_key(db, variant_id),
     )
     assert all(not isinstance(result, Exception) for result in results), results
-    assert len({result.reservation_id for result in results}) == 1
+    assert len({result[0].reservation_id for result in results}) == 1
+    assert all(result[1].reservation_id == result[0].reservation_id for result in results)
     available, movements, reservations = inventory_snapshot(url)
     assert available == [(0, 1)]
     assert movements == [('reserve', 1)]
     assert len(reservations) == 1
+
+
+def _create_and_read_same_key(db, variant_id):
+    service = InventoryReservationService(db)
+    result = service.create('same-idempotency-key', [ReservationLine(variant_id, 1)])
+    return result, service.get(result.reservation_id)
 
 
 def test_same_key_with_different_payload_is_a_conflict(postgres):

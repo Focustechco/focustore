@@ -74,7 +74,10 @@ export function ProductCard({ product }: ProductCardProps) {
   const hoverImage =
     academyFemaleImage ||
     (isWhiteSelected ? whiteFrontImage : blackFrontImage || frontImage);
-  const canPreviewFront = Boolean(hoverImage);
+  const keepsImageOnHover =
+    ['caderno-focus', 'camisa-focus-lab', 'moletom-focus-hoodie', 'moletom-focus-lab'].includes(product.slug) ||
+    product.slug.startsWith('bone-');
+  const canPreviewFront = !keepsImageOnHover && Boolean(hoverImage);
   const defaultVariant = product.variants[0];
   const price = defaultVariant?.price ?? product.basePrice;
   const promotionalPrice = defaultVariant?.promotionalPrice ?? product.promotionalPrice;

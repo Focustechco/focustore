@@ -90,6 +90,7 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [keychainQuantities, setKeychainQuantities] = useState<Record<string, number>>({});
   const isFocusCap = product.slug === 'bone-focus-lab';
+  const isSignatureCap = product.slug === 'bone-focus-signature';
   const devCollectionShirtSlugs = [
     'tshirt-focus-collection',
     'polo-focus-collection',
@@ -108,8 +109,8 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
     },
     {
       id: 'bone-focus-white',
-      url: '/images/products/bone-focus-white.png',
-      altText: 'Boné Focus Lab - Branco',
+      url: '/images/products/placeholder.svg',
+      altText: 'Boné Focus Lab branco - foto correspondente indisponível',
     },
   ];
   const isKeychainProduct =
@@ -140,6 +141,7 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
 
     return url || '/images/products/Camiseta-focus.png';
   };
+  const getProductImageAlt = (image?: any) => image?.altText || product.name;
 
   // Simulação de frete
   const [cep, setCep] = useState('');
@@ -203,6 +205,13 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
   );
   const galleryImages = isFocusCap
     ? capImages.map((image, index) => ({ image, index }))
+    : isSignatureCap
+    // Match the reviewed color labels; gallery ordering does not identify color.
+    ? product.images
+        .map((image: any, index: number) => ({ image, index }))
+        .filter(({ image }: { image: any }) =>
+          (image.altText || '').toLowerCase().includes(` - ${selectedColor.toLowerCase()} - `)
+        )
     : isDevCollectionShirt || isColorSeparatedHoodie
     ? product.images
         .map((image: any, index: number) => ({ image, index }))
@@ -221,6 +230,8 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
     : product.images.map((image: any, index: number) => ({ image, index }));
   const selectedProductImage = isFocusCap
     ? capImages[selectedImage]
+    : isSignatureCap
+    ? product.images[selectedImage]
     : product.images[selectedImage] || product.images[0];
 
   // Variação selecionada com base na Cor + Tamanho
@@ -270,6 +281,13 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
       return;
     }
 
+    if (isSignatureCap) {
+      setSelectedImage(product.images.findIndex((image: any) =>
+        (image.altText || '').toLowerCase().includes(` - ${colorName.toLowerCase()} - `)
+      ));
+      return;
+    }
+
     // Dynamic Image Switch: Find image matching selected color
     const colorLower = colorName.toLowerCase();
     const isOrange = colorLower.includes('laranja') || colorLower.includes('orange');
@@ -310,6 +328,13 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
 
   const handleImageSelect = (idx: number) => {
     setSelectedImage(idx);
+    if (isSignatureCap) {
+      const label = (product.images[idx]?.altText || '').toLowerCase();
+      const color = availableColors.find(c => label.includes(` - ${c.name.toLowerCase()} - `));
+      if (color) setSelectedColor(color.name);
+      return;
+    }
+
     const img = isFocusCap ? capImages[idx] : product.images?.[idx];
     if (img) {
       const altOrUrl = `${img.altText || ''} ${img.url || ''}`.toLowerCase();
@@ -450,7 +475,7 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
                 >
                   <Image
                     src={getProductImageUrl(img.url)}
-                    alt={img.altText || product.name}
+                    alt={getProductImageAlt(img)}
                     fill
                     sizes="80px"
                     quality={img.url.includes('/images/camisas/') ? 90 : undefined}
@@ -465,7 +490,7 @@ export function ProductClientView({ product, catalogReadOnly = false }: { produc
           <div className="relative flex-1 aspect-square rounded-2xl overflow-hidden bg-[#121212] border border-white/10 group">
             <Image
               src={getProductImageUrl(selectedProductImage?.url)}
-              alt={product.name}
+              alt={getProductImageAlt(selectedProductImage)}
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 55vw"

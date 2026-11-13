@@ -63,6 +63,13 @@ class InventoryReservationService:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         return ReservationResult(reservation.public_id, reservation.status, expires_at)
 
+    @staticmethod
+    def _is_expired(reservation: StockReservation) -> bool:
+        expires_at = reservation.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) >= expires_at
+
     def create(self, idempotency_key: str, lines: Iterable[ReservationLine], *, ttl_seconds: int = 900) -> ReservationResult:
         """Create or replay a reservation, including concurrent same-key callers."""
         lines = list(lines)
@@ -174,6 +181,10 @@ class InventoryReservationService:
                 return self._result(reservation)
             if reservation.status != 'pending' or target not in {'confirmed', 'released', 'expired'}:
                 raise ReservationError(f'Invalid reservation transition: {reservation.status} -> {target}.')
+            if target == 'confirmed' and self._is_expired(reservation):
+                raise ReservationError('Reservation has expired and cannot be confirmed.')
+            if target == 'expired' and not self._is_expired(reservation):
+                raise ReservationError('Reservation cannot expire before its deadline.')
 
             for item in sorted(reservation.items, key=lambda item: item.variant_id):
                 inventory = self.db.scalar(select(Inventory).where(Inventory.variant_id == item.variant_id).with_for_update())

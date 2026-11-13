@@ -1,10 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from threading import Barrier
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import create_engine, event, select
+from sqlalchemy import create_engine, event, select, update
 from sqlalchemy.orm import Session
 
 from app.models.category import Category
@@ -131,6 +132,86 @@ def test_same_key_with_different_payload_is_a_conflict(postgres):
         worker_engine.dispose()
 
 
+def test_confirmation_before_deadline_succeeds(postgres):
+    engine, url = postgres
+    variant_id = seed_variants(url, [1])[0]
+    setup_engine = create_engine(url, hide_parameters=True)
+    with Session(setup_engine) as db:
+        reservation = InventoryReservationService(db).create(
+            'before-deadline-key', [ReservationLine(variant_id, 1)], ttl_seconds=60
+        )
+    setup_engine.dispose()
+
+    with Session(engine) as db:
+        result = InventoryReservationService(db).confirm(reservation.reservation_id)
+        assert result.status == 'confirmed'
+    engine.dispose()
+
+
+def test_confirmation_after_deadline_is_rejected_until_expiration(postgres):
+    engine, url = postgres
+    variant_id = seed_variants(url, [1])[0]
+    setup_engine = create_engine(url, hide_parameters=True)
+    with Session(setup_engine) as db:
+        reservation = InventoryReservationService(db).create(
+            'after-deadline-key', [ReservationLine(variant_id, 1)]
+        )
+        db.execute(update(StockReservation).where(StockReservation.public_id == reservation.reservation_id).values(
+            expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)
+        ))
+        db.commit()
+    setup_engine.dispose()
+
+    with Session(engine) as db:
+        service = InventoryReservationService(db)
+        with pytest.raises(ReservationError, match='expired'):
+            service.confirm(reservation.reservation_id)
+        assert service.get(reservation.reservation_id).status == 'pending'
+        assert service.expire(reservation.reservation_id).status == 'expired'
+    available, movements, _reservations = inventory_snapshot(url)
+    assert available == [(1, 0)]
+    assert movements == [('reserve', 1), ('expire', 1)]
+    engine.dispose()
+
+
+def test_expiration_before_deadline_is_rejected(postgres):
+    engine, url = postgres
+    variant_id = seed_variants(url, [1])[0]
+    with Session(engine) as db:
+        reservation = InventoryReservationService(db).create(
+            'early-expiration-key', [ReservationLine(variant_id, 1)], ttl_seconds=60
+        )
+        service = InventoryReservationService(db)
+        with pytest.raises(ReservationError, match='before its deadline'):
+            service.expire(reservation.reservation_id)
+        assert service.get(reservation.reservation_id).status == 'pending'
+    engine.dispose()
+
+
+def test_expiration_after_deadline_is_allowed_and_idempotent(postgres):
+    engine, url = postgres
+    variant_id = seed_variants(url, [1])[0]
+    setup_engine = create_engine(url, hide_parameters=True)
+    with Session(setup_engine) as db:
+        reservation = InventoryReservationService(db).create(
+            'expiration-key', [ReservationLine(variant_id, 1)]
+        )
+        db.execute(update(StockReservation).where(StockReservation.public_id == reservation.reservation_id).values(
+            expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)
+        ))
+        db.commit()
+    setup_engine.dispose()
+
+    with Session(engine) as db:
+        service = InventoryReservationService(db)
+        assert service.expire(reservation.reservation_id).status == 'expired'
+        assert service.expire(reservation.reservation_id).status == 'expired'
+    available, movements, _reservations = inventory_snapshot(url)
+    assert available == [(1, 0)]
+    assert movements == [('reserve', 1), ('expire', 1)]
+    engine.dispose()
+
+
 @pytest.mark.parametrize('operation_name', ['confirm', 'release'])
 def test_terminal_transition_is_serialized_and_idempotent(postgres, operation_name):
     engine, url = postgres
@@ -160,6 +241,10 @@ def test_confirmation_and_expiration_have_one_winner(postgres):
         reservation = InventoryReservationService(db).create(
             'race-key', [ReservationLine(variant_id, 1)]
         )
+        db.execute(update(StockReservation).where(StockReservation.public_id == reservation.reservation_id).values(
+            expires_at=datetime.now(timezone.utc) - timedelta(seconds=1)
+        ))
+        db.commit()
     setup_engine.dispose()
     results = run_concurrently(
         url, 2,
@@ -171,9 +256,38 @@ def test_confirmation_and_expiration_have_one_winner(postgres):
     assert sum(not isinstance(result, Exception) for result in results) == 1
     assert sum(isinstance(result, ReservationError) for result in results) == 1
     available, movements, reservations = inventory_snapshot(url)
-    assert available in ([(0, 0)], [(1, 0)])
-    assert len([movement for movement in movements if movement[0] in {'confirm', 'expire'}]) == 1
-    assert reservations[0][0] in {'confirmed', 'expired'}
+    assert available == [(1, 0)]
+    assert movements == [('reserve', 1), ('expire', 1)]
+    assert reservations[0][0] == 'expired'
+
+
+def test_deadline_race_serializes_confirmation_and_expiration(postgres):
+    engine, url = postgres
+    variant_id = seed_variants(url, [1])[0]
+    setup_engine = create_engine(url, hide_parameters=True)
+    with Session(setup_engine) as db:
+        reservation = InventoryReservationService(db).create(
+            'deadline-race-key', [ReservationLine(variant_id, 1)]
+        )
+        db.execute(update(StockReservation).where(StockReservation.public_id == reservation.reservation_id).values(
+            expires_at=datetime.now(timezone.utc)
+        ))
+        db.commit()
+    setup_engine.dispose()
+
+    results = run_concurrently(
+        url, 2,
+        lambda db, index: (
+            InventoryReservationService(db).confirm(reservation.reservation_id)
+            if index == 0 else InventoryReservationService(db).expire(reservation.reservation_id)
+        ),
+    )
+    assert sum(not isinstance(result, Exception) for result in results) == 1
+    assert sum(isinstance(result, ReservationError) for result in results) == 1
+    available, movements, reservations = inventory_snapshot(url)
+    assert available == [(1, 0)]
+    assert movements == [('reserve', 1), ('expire', 1)]
+    assert reservations[0][0] == 'expired'
 
 
 def test_movement_failure_rolls_back_locked_inventory(postgres):

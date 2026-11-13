@@ -15,6 +15,11 @@ class Settings(BaseSettings):
     catalog_source: Literal['legacy_sqlite', 'postgresql'] = Field(
         default='legacy_sqlite', validation_alias='CATALOG_SOURCE'
     )
+    fastapi_checkout_enabled: bool = Field(default=False, validation_alias='FASTAPI_CHECKOUT_ENABLED')
+    fastapi_payment_simulator_enabled: bool = Field(
+        default=False, validation_alias='FASTAPI_PAYMENT_SIMULATOR_ENABLED'
+    )
+    reservation_ttl_seconds: int = Field(default=900, validation_alias='RESERVATION_TTL_SECONDS', ge=1, le=86400)
 
     frontend_origin: str | None = None
 

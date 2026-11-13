@@ -16,6 +16,12 @@ class Settings(BaseSettings):
         default='legacy_sqlite', validation_alias='CATALOG_SOURCE'
     )
     fastapi_checkout_enabled: bool = Field(default=False, validation_alias='FASTAPI_CHECKOUT_ENABLED')
+    checkout_write_authority: Literal['prisma', 'fastapi'] = Field(
+        default='prisma', validation_alias='CHECKOUT_WRITE_AUTHORITY'
+    )
+    migration_mode: Literal['observe', 'shadow', 'cutover'] = Field(
+        default='observe', validation_alias='MIGRATION_MODE'
+    )
     fastapi_payment_simulator_enabled: bool = Field(
         default=False, validation_alias='FASTAPI_PAYMENT_SIMULATOR_ENABLED'
     )

@@ -52,7 +52,8 @@ class CheckoutOrderService:
         return sorted(data.items, key=lambda line: str(line.variant_id))
 
     def _ensure_enabled(self) -> None:
-        if not self.settings.fastapi_checkout_enabled or self.settings.catalog_source != 'postgresql':
+        if (not self.settings.fastapi_checkout_enabled or self.settings.checkout_write_authority != 'fastapi'
+                or self.settings.catalog_source != 'postgresql'):
             raise DomainError(404, 'Checkout FastAPI indisponível nesta implantação.')
         if not self.settings.fastapi_payment_simulator_enabled:
             raise DomainError(503, 'Nenhum provedor de pagamento FastAPI foi configurado.')

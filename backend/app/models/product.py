@@ -152,3 +152,65 @@ class Inventory(Base):
     updated_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now(), onupdate=func.now())
 
     variant: Mapped[ProductVariant] = relationship('ProductVariant', back_populates='inventory')
+
+
+class StockReservation(Base):
+    __tablename__ = 'stock_reservations'
+    __table_args__ = (
+        UniqueConstraint('idempotency_scope', 'idempotency_key', name='uq_stock_reservation_idempotency'),
+        CheckConstraint("status IN ('pending', 'confirmed', 'released', 'expired')", name='ck_stock_reservation_status'),
+        CheckConstraint('length(trim(idempotency_scope)) > 0', name='ck_stock_reservation_scope'),
+        CheckConstraint('length(trim(idempotency_key)) > 0', name='ck_stock_reservation_key'),
+        Index('ix_stock_reservation_status_expiry', 'status', 'expires_at'),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    public_id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), nullable=False, default=uuid4, unique=True)
+    idempotency_scope: Mapped[str] = mapped_column(String(120), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    request_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default='pending', server_default='pending')
+    expires_at: Mapped[datetime] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now(), onupdate=func.now())
+
+    items: Mapped[list['StockReservationItem']] = relationship(
+        'StockReservationItem', back_populates='reservation', cascade='all, delete-orphan', order_by='StockReservationItem.id'
+    )
+
+
+class StockReservationItem(Base):
+    __tablename__ = 'stock_reservation_items'
+    __table_args__ = (
+        UniqueConstraint('reservation_id', 'variant_id', name='uq_stock_reservation_item_variant'),
+        CheckConstraint('quantity > 0', name='ck_stock_reservation_item_quantity_positive'),
+        Index('ix_stock_reservation_items_variant', 'variant_id'),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    reservation_id: Mapped[int] = mapped_column(ForeignKey('stock_reservations.id', ondelete='RESTRICT'), nullable=False)
+    variant_id: Mapped[int] = mapped_column(ForeignKey('product_variants.id', ondelete='RESTRICT'), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    reservation: Mapped[StockReservation] = relationship('StockReservation', back_populates='items')
+    variant: Mapped[ProductVariant] = relationship('ProductVariant')
+
+
+class InventoryMovement(Base):
+    __tablename__ = 'inventory_movements'
+    __table_args__ = (
+        UniqueConstraint('reservation_id', 'variant_id', 'operation', name='uq_inventory_movement_operation'),
+        CheckConstraint("operation IN ('reserve', 'confirm', 'release', 'expire')", name='ck_inventory_movement_operation'),
+        CheckConstraint('quantity > 0', name='ck_inventory_movement_quantity_positive'),
+        Index('ix_inventory_movements_variant_time', 'variant_id', 'occurred_at'),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    inventory_id: Mapped[int] = mapped_column(ForeignKey('inventory.id', ondelete='RESTRICT'), nullable=False)
+    reservation_id: Mapped[int] = mapped_column(ForeignKey('stock_reservations.id', ondelete='RESTRICT'), nullable=False)
+    variant_id: Mapped[int] = mapped_column(ForeignKey('product_variants.id', ondelete='RESTRICT'), nullable=False)
+    operation: Mapped[str] = mapped_column(String(20), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    source: Mapped[str] = mapped_column(String(120), nullable=False)
+    transaction_reference: Mapped[str] = mapped_column(String(200), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now())

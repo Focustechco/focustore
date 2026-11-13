@@ -12,7 +12,8 @@ Prisma existente; não há fallback ou união entre as duas fontes.
 Ativação exige simultaneamente `FASTAPI_CHECKOUT_ENABLED=true`,
 `CATALOG_SOURCE=postgresql` e um provedor aprovado. Nesta entrega, o único
 provedor é o simulador de testes (`FASTAPI_PAYMENT_SIMULATOR_ENABLED=true`),
-que só pode ser usado com `FOCUS_DEBUG=true`. Portanto, a entrega não afirma
+que só pode ser usado com `FOCUS_DEBUG=true`; fora de debug o checkout falha
+fechado. Portanto, a entrega não afirma
 pagamento real nem autoriza cutover.
 
 ## Transação e invariantes

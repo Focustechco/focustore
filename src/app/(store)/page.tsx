@@ -256,7 +256,11 @@ async function HomePageContent() {
                   alt={category.title}
                   fill
                   sizes="(max-width: 639px) 50vw, (max-width: 1023px) 25vw, 320px"
-                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                  className={`object-cover ${
+                    category.title === 'Camisetas' || category.title === 'Moletons'
+                      ? 'object-top sm:object-center'
+                      : ''
+                  } transition-transform duration-700 ease-out group-hover:scale-105`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-3 sm:p-5">

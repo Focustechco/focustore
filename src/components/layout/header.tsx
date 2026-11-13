@@ -179,8 +179,28 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-[#080808]/95 text-white backdrop-blur-md">
       <div className="relative mx-auto flex h-[64px] max-w-[1800px] items-center justify-between gap-3 px-4 sm:px-6 lg:h-[72px] lg:px-10">
+        <div className="flex shrink-0 items-center gap-1 sm:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={mobileMenuOpen}
+            className="flex h-9 w-9 items-center justify-center hover:text-[#FF5500]"
+          >
+            <Menu size={22} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+            aria-label={isSearchOpen ? 'Fechar busca' : 'Buscar produtos'}
+            aria-expanded={isSearchOpen}
+            className="flex h-9 w-9 items-center justify-center hover:text-[#FF5500]"
+          >
+            <Search size={22} strokeWidth={2.2} />
+          </button>
+        </div>
         {/* LOGO FOCUS STORE OFICIAL */}
-        <Link href="/" className="flex items-center flex-shrink-0 relative overflow-visible -ml-1 sm:ml-0">
+        <Link href="/" className="absolute left-1/2 flex -translate-x-1/2 items-center flex-shrink-0 overflow-visible max-sm:max-w-[calc(100%-184px)] sm:relative sm:left-auto sm:translate-x-0 sm:ml-0">
           <FocusLogo size="xl" mobileSize="md" />
         </Link>
 
@@ -211,8 +231,8 @@ export function Header() {
         </nav>
 
         {/* AÇÕES À DIREITA */}
-        <div className="flex flex-shrink-0 items-center gap-3 text-white sm:gap-5">
-          <div className="relative h-8 w-8 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center gap-1 text-white sm:gap-5">
+          <div className="relative hidden h-8 w-8 flex-shrink-0 sm:block">
             {!isSearchOpen ? (
               <button
                 type="button"
@@ -282,7 +302,7 @@ export function Header() {
 
           <Link
             href="/conta/favoritos"
-            className="group relative flex items-center justify-center p-1 text-white transition-colors hover:text-[#FF5500] focus:outline-none"
+            className="group relative flex items-center justify-center p-1 max-sm:h-9 max-sm:w-9 text-white transition-colors hover:text-[#FF5500] focus:outline-none"
             aria-label="Ver favoritos"
           >
             <Heart
@@ -302,7 +322,7 @@ export function Header() {
 
           <button
             onClick={() => setIsCartOpen(true)}
-            className="group relative flex items-center justify-center p-1 text-white transition-colors hover:text-[#FF5500] focus:outline-none"
+            className="group relative flex items-center justify-center p-1 max-sm:h-9 max-sm:w-9 text-white transition-colors hover:text-[#FF5500] focus:outline-none"
             aria-label="Abrir carrinho"
           >
             <ShoppingBag size={22} strokeWidth={1.9} />
@@ -317,12 +337,32 @@ export function Header() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
-            className="relative z-[60] p-2 text-white transition-colors hover:text-[#FF5500] xl:hidden"
+            className="relative z-[60] hidden p-2 text-white transition-colors hover:text-[#FF5500] sm:block xl:hidden"
           >
             {!mobileMenuOpen && <Menu size={22} />}
           </button>
         </div>
       </div>
+
+      {isSearchOpen && (
+        <form onSubmit={handleSearch} className="flex items-center gap-2 border-t border-white/10 px-4 py-3 sm:hidden">
+          <input
+            autoFocus
+            type="search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Buscar produtos..."
+            aria-label="Buscar produtos"
+            className="min-w-0 flex-1 rounded-lg border border-white/15 bg-[#121212] px-3 py-2 text-base text-white outline-none focus:border-[#FF5500]"
+          />
+          <button type="submit" aria-label="Pesquisar" className="flex h-10 w-10 items-center justify-center">
+            <Search size={22} />
+          </button>
+          <button type="button" onClick={() => setIsSearchOpen(false)} aria-label="Fechar busca" className="flex h-10 w-10 items-center justify-center">
+            <X size={22} />
+          </button>
+        </form>
+      )}
 
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex xl:hidden">

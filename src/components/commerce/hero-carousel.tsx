@@ -29,7 +29,7 @@ const DEFAULT_SLIDES = [
     secondaryButtonText: "",
     secondaryButtonHref: "",
     imageUrl: "/images/banners/banner-camisas-dev.png",
-    mobileImageUrl: "/images/hero-mobile/hero-dev-mobile.png",
+    mobileImageUrl: "/images/hero-mobile/hero-dev-mobile-v2.png",
     imageAlt: "Dev Collection da Focus Academy",
   },
   {
@@ -59,7 +59,7 @@ const DEFAULT_SLIDES = [
     secondaryButtonText: "Focus Tech",
     secondaryButtonHref: "/colecao/focus-tech",
     imageUrl: "/images/hero/hero-movimento-streetwear.png",
-    mobileImageUrl: "/images/hero-mobile/hero-streetwear-mobile.png?v=20261103-1",
+    mobileImageUrl: "/images/hero-mobile/hero-streetwear-mobile-v2.png",
     imageAlt: "Trio Streetwear Focus - Faça Parte do Movimento",
   },
 ];
@@ -92,9 +92,9 @@ export function HeroCarousel({
             imageUrl === "/images/hero/hero-focus-academy-banner-2026.png"
               ? "/images/hero-mobile/hero-academy-mobile.png"
               : imageUrl === "/images/banners/banner-camisas-dev.png"
-                ? "/images/hero-mobile/hero-dev-mobile.png"
+                ? "/images/hero-mobile/hero-dev-mobile-v2.png"
                 : imageUrl === "/images/hero/hero-movimento-streetwear.png"
-                  ? "/images/hero-mobile/hero-streetwear-mobile.png?v=20261103-1"
+                  ? "/images/hero-mobile/hero-streetwear-mobile-v2.png"
                   : DEFAULT_SLIDES[idx]?.mobileImageUrl;
           return {
             id: b.id,
@@ -297,7 +297,9 @@ export function HeroCarousel({
             className={`object-cover ${
               slide.imageUrl === "/images/banners/banner-camisas-dev.png"
                 ? "object-[center_45%]"
-                : "object-[center_35%]"
+                : slide.mobileImageUrl?.includes("hero-streetwear-mobile-v2.png")
+                  ? "object-[center_55%]"
+                  : "object-[center_35%]"
             } sm:hidden`}
           />
           <Image

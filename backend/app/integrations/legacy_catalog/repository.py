@@ -1,10 +1,11 @@
 """Explicit, read-only queries against the Prisma SQLite catalog only."""
 from pathlib import Path
 import sqlite3
+from decimal import Decimal
 
 from app.integrations.prisma_sqlite import readonly_connection
 from app.integrations.legacy_catalog.mapper import map_category, map_product
-from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct
+from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct, CatalogSort
 
 
 PRODUCT_COLUMNS = '''
@@ -44,15 +45,73 @@ class LegacyCatalogRepository:
         ''', (row['id'],)).fetchall()
         return map_product(row, images, categories, variants)
 
-    def products(self, offset: int, limit: int) -> CatalogPage[CatalogProduct]:
+    @staticmethod
+    def _like_value(value: str) -> str:
+        return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+
+    @staticmethod
+    def _has_created_at(connection: sqlite3.Connection) -> bool:
+        return any(row['name'] == 'created_at' for row in connection.execute('PRAGMA table_info(products)'))
+
+    def _product_filter(
+        self,
+        *,
+        search: str | None,
+        category_slug: str | None,
+        min_price: Decimal | None,
+        max_price: Decimal | None,
+    ) -> tuple[str, list[str]]:
+        clauses = ["p.status = 'ACTIVE'"]
+        parameters: list[str] = []
+        if search:
+            pattern = f"%{self._like_value(search)}%"
+            clauses.append("(LOWER(p.name) LIKE LOWER(?) ESCAPE '\\' OR LOWER(p.description) LIKE LOWER(?) ESCAPE '\\' OR LOWER(p.brand) LIKE LOWER(?) ESCAPE '\\')")
+            parameters.extend([pattern, pattern, pattern])
+        if category_slug and category_slug != 'todos':
+            clauses.append("EXISTS (SELECT 1 FROM product_categories pc JOIN categories c ON c.id = pc.category_id WHERE pc.product_id = p.id AND c.slug = ? AND c.is_active = 1)")
+            parameters.append(category_slug)
+        if min_price is not None:
+            clauses.append('p.base_price >= ?')
+            parameters.append(str(min_price))
+        if max_price is not None:
+            clauses.append('p.base_price <= ?')
+            parameters.append(str(max_price))
+        return ' AND '.join(clauses), parameters
+
+    def products(
+        self,
+        offset: int,
+        limit: int,
+        *,
+        search: str | None = None,
+        category_slug: str | None = None,
+        sort: CatalogSort = 'relevance',
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
+    ) -> CatalogPage[CatalogProduct]:
         with self.connection() as connection:
+            where, parameters = self._product_filter(
+                search=search,
+                category_slug=category_slug,
+                min_price=min_price,
+                max_price=max_price,
+            )
             total = connection.execute(
-                "SELECT count(*) FROM products WHERE status = 'ACTIVE'"
+                f'SELECT count(*) FROM products p WHERE {where}', parameters
             ).fetchone()[0]
+            if sort == 'price_asc':
+                ordering = 'p.base_price ASC, p.slug ASC, p.id ASC'
+            elif sort == 'price_desc':
+                ordering = 'p.base_price DESC, p.slug ASC, p.id ASC'
+            elif sort == 'newest':
+                # Synthetic/older Prisma fixtures may not have created_at.
+                ordering = 'p.created_at DESC, p.id DESC' if self._has_created_at(connection) else 'p.id DESC'
+            else:
+                ordering = 'p.slug ASC, p.id ASC'
             rows = connection.execute(f'''
-                SELECT {PRODUCT_COLUMNS} FROM products WHERE status = 'ACTIVE'
-                ORDER BY slug, id LIMIT ? OFFSET ?
-            ''', (limit, offset)).fetchall()
+                SELECT {PRODUCT_COLUMNS} FROM products p WHERE {where}
+                ORDER BY {ordering} LIMIT ? OFFSET ?
+            ''', [*parameters, limit, offset]).fetchall()
             return CatalogPage(items=[self._product(connection, row) for row in rows],
                                total=total, offset=offset, limit=limit)
 

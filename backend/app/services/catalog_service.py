@@ -1,16 +1,26 @@
 """Read catalog use cases; keep storage failures out of HTTP responses."""
-from decimal import InvalidOperation
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from sqlite3 import Error as SQLiteError
 from typing import Protocol
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct
+from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct, CatalogSort
 
 
 class CatalogRepository(Protocol):
-    def products(self, offset: int, limit: int) -> CatalogPage[CatalogProduct]: ...
+    def products(
+        self,
+        offset: int,
+        limit: int,
+        *,
+        search: str | None = None,
+        category_slug: str | None = None,
+        sort: CatalogSort = 'relevance',
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
+    ) -> CatalogPage[CatalogProduct]: ...
     def product(self, slug: str) -> CatalogProduct | None: ...
     def categories(self, offset: int, limit: int) -> CatalogPage[CatalogCategory]: ...
     def category(self, slug: str) -> CatalogCategory | None: ...
@@ -44,9 +54,27 @@ class CatalogService:
             return cls(PostgresCatalogRepository(db))
         raise CatalogUnavailable
 
-    def products(self, offset: int, limit: int) -> CatalogPage[CatalogProduct]:
+    def products(
+        self,
+        offset: int,
+        limit: int,
+        *,
+        search: str | None = None,
+        category_slug: str | None = None,
+        sort: CatalogSort = 'relevance',
+        min_price: Decimal | None = None,
+        max_price: Decimal | None = None,
+    ) -> CatalogPage[CatalogProduct]:
         try:
-            return self.repository.products(offset, limit)
+            return self.repository.products(
+                offset,
+                limit,
+                search=search,
+                category_slug=category_slug,
+                sort=sort,
+                min_price=min_price,
+                max_price=max_price,
+            )
         except (SQLiteError, OSError, ValueError, InvalidOperation, SQLAlchemyError) as exc:
             raise CatalogUnavailable from exc
 

@@ -5,26 +5,28 @@ import { adaptCatalogCategory, adaptCatalogPage, adaptCatalogProduct } from '../
 
 function productFixture(): CatalogProductResponse {
   return {
-    id: 'product-1', name: 'Focus bottle', slug: 'focus-bottle', sku: 'BOTTLE-1', description: 'Synthetic product', short_description: null, brand: 'Focus', status: 'ACTIVE', base_price: '129.90', promotional_price: '99.90', available: true,
+    id: 'product-1', public_id: 'public-product-1', name: 'Focus bottle', slug: 'focus-bottle', sku: 'BOTTLE-1', description: 'Synthetic product', short_description: null, brand: 'Focus', status: 'ACTIVE', base_price: '129.90', promotional_price: '99.90', available: true,
     primary_image: { id: 'image-2', url: '/two.png', alt_text: null, position: 2, is_primary: true },
     images: [
       { id: 'image-2', url: '/two.png', alt_text: null, position: 2, is_primary: true },
       { id: 'image-1', url: '/one.png', alt_text: 'Front', position: 1, is_primary: false },
     ],
     categories: [{ id: 'category-1', name: 'Accessories', slug: 'accessories', description: null, image_url: null, parent_id: null, position: 3 }],
-    variants: [{ id: 'variant-1', sku: 'BOTTLE-1-BLACK', name: 'Black', color: 'Black', color_hex: '#000000', size: null, model: null, price: '129.90', promotional_price: null, image_url: null, position: 1, quantity_available: 3, quantity_reserved: 1, available: true }],
+    variants: [{ id: 'variant-1', public_id: 'public-variant-1', sku: 'BOTTLE-1-BLACK', name: 'Black', color: 'Black', color_hex: '#000000', size: null, model: null, price: '129.90', promotional_price: null, image_url: null, position: 1, quantity_available: 3, quantity_reserved: 1, available: true }],
   };
 }
 
 test('adapter converts FastAPI product fields, relations, images and inventory', () => {
   const product = adaptCatalogProduct(productFixture());
   assert.equal(product.catalogSource, 'fastapi');
+  assert.equal(product.publicId, 'public-product-1');
   assert.equal(product.basePrice, 129.90);
   assert.equal(product.promotionalPrice, 99.90);
   assert.deepEqual(product.images.map(image => image.id), ['image-1', 'image-2']);
   assert.equal(product.categories[0].categoryId, 'category-1');
   assert.equal(product.categories[0].category.slug, 'accessories');
   assert.deepEqual(product.variants[0].inventory, { quantityAvailable: 3, quantityReserved: 1 });
+  assert.equal(product.variants[0].publicId, 'public-variant-1');
 });
 
 test('adapter preserves null optional fields and paginated metadata', () => {
@@ -55,4 +57,24 @@ test('FastAPI client encodes product slugs and returns null only for HTTP 404 de
   const client = new FocusApiClient({ baseUrl: 'http://catalog.test', fetch: async input => { requested = String(input); return new Response('', { status: 404 }); } });
   assert.equal(await client.getProduct('space / slash'), null);
   assert.match(requested, /space%20%2F%20slash$/);
+});
+
+test('FastAPI client sends catalog filters to the server before pagination', async () => {
+  let requested = '';
+  const client = new FocusApiClient({
+    baseUrl: 'http://catalog.test',
+    fetch: async input => {
+      requested = String(input);
+      return new Response(JSON.stringify({ items: [], total: 0, offset: 20, limit: 10 }), { status: 200 });
+    },
+  });
+  await client.listProducts(20, 10, { categorySlug: 'accessories', search: ' bottle ', sortBy: 'price_desc', minPrice: 10, maxPrice: 200 });
+  const url = new URL(requested);
+  assert.equal(url.searchParams.get('category_slug'), 'accessories');
+  assert.equal(url.searchParams.get('search'), 'bottle');
+  assert.equal(url.searchParams.get('sort'), 'price_desc');
+  assert.equal(url.searchParams.get('min_price'), '10');
+  assert.equal(url.searchParams.get('max_price'), '200');
+  assert.equal(url.searchParams.get('offset'), '20');
+  assert.equal(url.searchParams.get('limit'), '10');
 });

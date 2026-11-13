@@ -27,7 +27,8 @@ autorizar uma compra.
 
 `CHECKOUT_WRITE_AUTHORITY` é `prisma` por padrão; `MIGRATION_MODE` é
 `observe` por padrão. O caminho FastAPI exige explicitamente autoridade
-`fastapi`, catálogo PostgreSQL e a flag do checkout, além do provedor aprovado.
+`fastapi`, `MIGRATION_MODE=cutover`, catálogo PostgreSQL e a flag do checkout,
+além do provedor aprovado; `observe` e `shadow` nunca autorizam compras.
 Nenhum código desta fase executa cutover, dual-write, importação ou migration
 de dados. Um cutover futuro exigirá snapshot/delta, reconciliação de contagens,
 FKs, totais monetários, sessões, mídia e rollback ensaiado em ambiente isolado.

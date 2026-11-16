@@ -41,6 +41,7 @@ function filterFastApiProducts(products: StorefrontProduct[], params: ProductFil
 
 export class CatalogService {
   static async getCollections() {
+    /** Collections remain Prisma-only until the FastAPI read contract exposes them. */
     try {
       return await prisma.collection.findMany({
         where: { isActive: true },
@@ -194,6 +195,7 @@ export class CatalogService {
   }
 
   static async getFeaturedProducts() {
+    /** Featured products remain Prisma-only because FastAPI does not expose isFeatured/createdAt. */
     try {
       return await prisma.product.findMany({
         where: {

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Search, ChevronRight } from 'lucide-react';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { ProductCard } from '@/components/commerce/product-card';
+import { CatalogErrorState } from '@/components/commerce/catalog-error-state';
 
 interface Props {
   searchParams: Promise<{ q?: string }>;
@@ -13,11 +14,12 @@ export default async function SearchPage({ searchParams }: Props) {
   const query = q?.trim() || '';
 
   let products: Awaited<ReturnType<typeof CatalogService.getAllProducts>> = [];
+  let catalogUnavailable = false;
   if (query) {
     try {
       products = await CatalogService.getAllProducts({ search: query });
     } catch {
-      products = [];
+      catalogUnavailable = true;
     }
   }
 
@@ -39,7 +41,9 @@ export default async function SearchPage({ searchParams }: Props) {
         </p>
       </div>
 
-      {products.length === 0 ? (
+      {catalogUnavailable ? (
+        <CatalogErrorState />
+      ) : products.length === 0 ? (
         <div className="py-20 text-center space-y-3 bg-surface rounded-2xl border border-white/5">
           <h3 className="text-lg font-bold text-white uppercase">Nenhum resultado para sua busca</h3>
           <p className="text-xs text-muted">Tente buscar por camisa, moletom, garrafa, boné ou chaveiro.</p>

@@ -44,7 +44,7 @@ def create_app() -> FastAPI:
     @application.middleware('http')
     async def private_response_headers(request: Request, call_next):
         response = await call_next(request)
-        if request.url.path.startswith(('/api/v1/users', '/api/v1/orders')):
+        if request.url.path.startswith(('/api/v1/users', '/api/v1/orders', '/api/v1/checkout')):
             response.headers['Cache-Control'] = 'no-store'
             vary = response.headers.get('Vary')
             response.headers['Vary'] = f'{vary}, Cookie' if vary else 'Cookie'

@@ -38,6 +38,20 @@ def current_user(focus_session: Annotated[str | None, Depends(session_cookie)]) 
 User = Annotated[CurrentUser, Depends(current_user)]
 
 
+def require_write_origin(request: Request, user: User) -> CurrentUser:
+    """Require an explicit same-site/trusted origin for cookie-authenticated writes."""
+    allowed = {str(request.base_url).rstrip('/')}
+    if get_settings().frontend_origin:
+        allowed.add(get_settings().frontend_origin)
+    origin = request.headers.get('origin')
+    if origin not in allowed or request.headers.get('sec-fetch-site') == 'cross-site':
+        raise HTTPException(403, 'Origem não autorizada.')
+    return user
+
+
+WriteUser = Annotated[CurrentUser, Depends(require_write_origin)]
+
+
 def require_admin(request: Request, user: User) -> CurrentUser:
     if user.role not in {'ADMIN', 'MANAGER'}:
         raise HTTPException(403, 'Acesso não autorizado.')

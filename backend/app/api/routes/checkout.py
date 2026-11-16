@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db.dependencies import get_db
 from app.schemas.checkout import CheckoutCreate, OrderPage, OrderResponse, PaymentSimulationInput
-from app.security.session import User
+from app.security.session import User, WriteUser
 from app.services.checkout_orders import CheckoutOrderService
 
 
@@ -25,7 +25,7 @@ Service = Annotated[CheckoutOrderService, Depends(service)]
 @router.post('/orders', response_model=OrderResponse, status_code=201,
              responses={401: {'description': 'Session required'}, 404: {'description': 'Checkout disabled'},
                         409: {'description': 'Stock or idempotency conflict'}, 503: {'description': 'Provider unavailable'}})
-def create_order(data: CheckoutCreate, user: User, checkout: Service):
+def create_order(data: CheckoutCreate, user: WriteUser, checkout: Service):
     return checkout.create(user.id, data)
 
 
@@ -47,12 +47,12 @@ def get_checkout_order(order_id: UUID, user: User, checkout: Service):
 @router.post('/orders/{order_id}/cancel', response_model=OrderResponse,
              responses={401: {'description': 'Session required'}, 404: {'description': 'Own order not found'},
                         409: {'description': 'Invalid order state'}})
-def cancel_checkout_order(order_id: UUID, user: User, checkout: Service):
+def cancel_checkout_order(order_id: UUID, user: WriteUser, checkout: Service):
     return checkout.cancel(user.id, order_id)
 
 
 @router.post('/orders/{order_id}/payment-simulation', response_model=OrderResponse,
              responses={401: {'description': 'Session required'}, 404: {'description': 'Simulator unavailable'},
                         409: {'description': 'Invalid order state'}})
-def simulate_payment(order_id: UUID, data: PaymentSimulationInput, user: User, checkout: Service):
+def simulate_payment(order_id: UUID, data: PaymentSimulationInput, user: WriteUser, checkout: Service):
     return checkout.transition_payment(user.id, order_id, data.status)

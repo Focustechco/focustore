@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { CatalogRetryButton } from './catalog-retry-button';
 
 export function CatalogErrorState() {
   return (
@@ -7,9 +8,12 @@ export function CatalogErrorState() {
       <p className="mx-auto mt-3 max-w-lg text-sm text-zinc-400">
         Não foi possível consultar o catálogo agora. Tente novamente em instantes.
       </p>
-      <Link href="/" className="mt-6 inline-block text-xs font-bold uppercase text-focus hover:underline">
-        Voltar para o início
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <CatalogRetryButton />
+        <Link href="/" className="mt-6 inline-block text-xs font-bold uppercase text-focus hover:underline">
+          Voltar para o início
+        </Link>
+      </div>
     </div>
   );
 }

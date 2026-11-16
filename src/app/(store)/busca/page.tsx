@@ -4,6 +4,7 @@ import { Search, ChevronRight } from 'lucide-react';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { ProductCard } from '@/components/commerce/product-card';
 import { CatalogErrorState } from '@/components/commerce/catalog-error-state';
+import { catalogCountLabel, settleCatalogResult } from '@/modules/catalog/catalog-load-state';
 
 interface Props {
   searchParams: Promise<{ q?: string }>;
@@ -13,15 +14,15 @@ export default async function SearchPage({ searchParams }: Props) {
   const { q } = await searchParams;
   const query = q?.trim() || '';
 
-  let products: Awaited<ReturnType<typeof CatalogService.getAllProducts>> = [];
-  let catalogUnavailable = false;
-  if (query) {
-    try {
-      products = await CatalogService.getAllProducts({ search: query });
-    } catch {
-      catalogUnavailable = true;
-    }
-  }
+  const result = query
+    ? await Promise.resolve(CatalogService.getAllProducts({ search: query })).then(
+        value => ({ status: 'fulfilled', value } as const),
+        reason => ({ status: 'rejected', reason } as const),
+      )
+    : ({ status: 'fulfilled', value: [] as Awaited<ReturnType<typeof CatalogService.getAllProducts>> } as const);
+  const state = settleCatalogResult(result);
+  const catalogUnavailable = state.status === 'unavailable';
+  const products = catalogUnavailable ? [] : state.value;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -37,7 +38,7 @@ export default async function SearchPage({ searchParams }: Props) {
           Resultados para &ldquo;{query}&rdquo;
         </h1>
         <p className="text-xs text-muted uppercase tracking-wider font-semibold">
-          {products.length} {products.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
+          {catalogCountLabel(products.length, state)}
         </p>
       </div>
 

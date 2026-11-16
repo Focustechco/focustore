@@ -27,6 +27,15 @@ autenticação continuam sob a autoridade Prisma/Next.js. Coleções, reviews,
 `isFeatured` e `createdAt` permanecem explicitamente Prisma-only; não há
 fallback silencioso para Prisma quando o FastAPI é a fonte configurada.
 
+As páginas de home, busca e categoria distinguem três estados: catálogo com
+itens, catálogo vazio com resposta HTTP válida e catálogo indisponível por
+HTTP/timeout/rede. O último estado mostra mensagem explícita, não publica uma
+contagem falsa de zero e oferece tentativa de recuperação. O detalhe de produto
+propaga falhas de leitura para o boundary do Next.js.
+
+Os testes `tests/catalog-load-state.test.ts` cobrem HTTP 503, timeout, erro de
+rede, resposta vazia legítima e recuperação após uma falha.
+
 Na validação de 2026-11-16, a instância foi PostgreSQL 18.6 local,
 `127.0.0.1:55452`, banco `catalog_demo_test`, role `catalog_test`, em diretório
 `.tmp/catalog-pg-*`. Foram exercitados os endpoints de health, produtos,

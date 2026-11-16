@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-react';
 import { CatalogService } from '@/modules/catalog/catalog.service';
 import { ProductCard } from '@/components/commerce/product-card';
 import { CatalogErrorState } from '@/components/commerce/catalog-error-state';
+import { catalogCountLabel, settleCatalogResult } from '@/modules/catalog/catalog-load-state';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -36,6 +37,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     catalogUnavailable = true;
   }
 
+  const state = catalogUnavailable
+    ? { status: 'unavailable', error: new Error('catalog unavailable') } as const
+    : settleCatalogResult({ status: 'fulfilled', value: products } as const);
+
   const title = slug === 'todos' ? 'Todos os Produtos' : category?.name || slug;
   const description = category?.description || 'Explore a linha completa de tecnologia, streetwear e design.';
 
@@ -57,7 +62,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             {title}
           </h1>
           <span className="text-xs text-muted font-semibold uppercase tracking-wider">
-            {products.length} {products.length === 1 ? 'produto encontrado' : 'produtos encontrados'}
+            {catalogCountLabel(products.length, state)}
           </span>
         </div>
         <p className="text-sm text-muted max-w-2xl">{description}</p>

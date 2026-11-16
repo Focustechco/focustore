@@ -9,6 +9,7 @@ import { MobileProductsCarousel } from '@/components/commerce/mobile-products-ca
 import { CommunityInstagramGallery } from '@/components/commerce/community-instagram-gallery';
 import { FAQAccordion } from '@/components/commerce/faq-accordion';
 import { FeaturedBannerTitle } from '@/components/commerce/featured-banner-title';
+import { CatalogErrorState } from '@/components/commerce/catalog-error-state';
 import { Button } from '@/components/ui/button';
 import { Suspense } from "react";
 
@@ -44,6 +45,9 @@ async function HomePageContent() {
     CatalogService.getBanners('home_collection'),
   ]);
   const products = productsResult.status === 'fulfilled' ? productsResult.value : [];
+  if (productsResult.status === 'rejected' && process.env.CATALOG_READ_SOURCE === 'fastapi') {
+    return <CatalogErrorState />;
+  }
   const heroBanners = heroBannersResult.status === 'fulfilled' ? heroBannersResult.value : [];
   const featuredBanners = featuredBannersResult.status === 'fulfilled' ? featuredBannersResult.value : [];
   const realLifeBanners = realLifeBannersResult.status === 'fulfilled' ? realLifeBannersResult.value : [];

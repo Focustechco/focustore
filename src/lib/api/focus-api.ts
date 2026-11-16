@@ -1,4 +1,5 @@
 /** Server-side client for FocusStore's public FastAPI catalog contract. */
+import type { ApiErrorBody, HttpStatus } from './contracts';
 
 export type CatalogImageResponse = { id: string; url: string; alt_text: string | null; position: number; is_primary: boolean };
 export type CatalogCategoryResponse = { id: string; name: string; slug: string; description: string | null; image_url: string | null; parent_id: string | null; position: number };
@@ -21,9 +22,26 @@ export type CatalogProductQuery = {
   maxPrice?: number;
 };
 
+export type FocusApiErrorCategory = 'authentication' | 'forbidden' | 'not_found' | 'conflict' | 'validation' | 'rate_limit' | 'unavailable' | 'unknown';
+
+function errorCategory(status: number | undefined): FocusApiErrorCategory {
+  if (status === 401) return 'authentication';
+  if (status === 403) return 'forbidden';
+  if (status === 404) return 'not_found';
+  if (status === 409) return 'conflict';
+  if (status === 422) return 'validation';
+  if (status === 429) return 'rate_limit';
+  if (status === 503) return 'unavailable';
+  return 'unknown';
+}
+
 export class FocusApiError extends Error {
-  constructor(message: string, readonly kind: 'configuration' | 'http' | 'network' | 'timeout' | 'response', readonly status?: number) {
+  readonly category: FocusApiErrorCategory;
+  readonly retryable: boolean;
+  constructor(message: string, readonly kind: 'configuration' | 'http' | 'network' | 'timeout' | 'response', readonly status?: number, readonly retryAfterSeconds?: number) {
     super(message); this.name = 'FocusApiError';
+    this.category = errorCategory(status);
+    this.retryable = kind === 'network' || kind === 'timeout' || status === 429 || status === 503;
   }
 }
 
@@ -46,6 +64,11 @@ function money(value: unknown, label: string): string | number {
   throw new FocusApiError(`Unexpected FastAPI response: ${label} must be a non-negative decimal.`, 'response');
 }
 function nullableMoney(value: unknown, label: string): string | number | null { return value === null ? null : money(value, label); }
+function paginationNumber(value: unknown, label: string): number {
+  const result = number(value, label);
+  if (!Number.isInteger(result) || result < 0) throw new FocusApiError(`Unexpected FastAPI response: ${label} must be a non-negative integer.`, 'response');
+  return result;
+}
 
 export function parseCatalogImage(value: unknown): CatalogImageResponse {
   const item = record(value, 'image');
@@ -66,7 +89,7 @@ export function parseCatalogProduct(value: unknown): CatalogProductResponse {
 }
 export function parseCatalogPage<T>(value: unknown, parseItem: (item: unknown) => T): CatalogPageResponse<T> {
   const page = record(value, 'page'); if (!Array.isArray(page.items)) throw new FocusApiError('Unexpected FastAPI response: page.items must be an array.', 'response');
-  return { items: page.items.map(parseItem), total: number(page.total, 'page.total'), offset: number(page.offset, 'page.offset'), limit: number(page.limit, 'page.limit') };
+  return { items: page.items.map(parseItem), total: paginationNumber(page.total, 'page.total'), offset: paginationNumber(page.offset, 'page.offset'), limit: paginationNumber(page.limit, 'page.limit') };
 }
 function configuredBaseUrl(value: string | undefined): string {
   if (!value) throw new FocusApiError('FOCUS_API_BASE_URL is required when CATALOG_READ_SOURCE=fastapi.', 'configuration');
@@ -99,10 +122,20 @@ export class FocusApiClient {
     const controller = new AbortController(); const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       let response: Response;
-      try { response = await this.fetchImpl(`${this.baseUrl}${path}`, { method: 'GET', headers: { accept: 'application/json' }, cache: 'no-store', signal: controller.signal }); }
+      try { response = await this.fetchImpl(`${this.baseUrl}${path}`, { method: 'GET', headers: { accept: 'application/json' }, credentials: 'omit', cache: 'no-store', signal: controller.signal }); }
       catch { if (controller.signal.aborted) throw new FocusApiError(`FastAPI catalog timed out after ${this.timeoutMs}ms.`, 'timeout'); throw new FocusApiError('FastAPI catalog network request failed.', 'network'); }
       if (nullableNotFound && response.status === 404) return null;
-      if (!response.ok) { const detail = (await response.text()).slice(0, 512); throw new FocusApiError(`FastAPI catalog returned HTTP ${response.status}${detail ? `: ${detail}` : ''}.`, 'http', response.status); }
+      if (!response.ok) {
+        const raw = (await response.text()).slice(0, 512);
+        let detail = raw;
+        try {
+          const parsed = JSON.parse(raw) as ApiErrorBody;
+          if (typeof parsed.detail === 'string') detail = parsed.detail.slice(0, 256);
+        } catch { /* preserve a bounded non-JSON error body */ }
+        const retryAfter = Number(response.headers.get('retry-after'));
+        const retryAfterSeconds = Number.isFinite(retryAfter) && retryAfter >= 0 ? Math.min(retryAfter, 3600) : undefined;
+        throw new FocusApiError(`FastAPI catalog returned HTTP ${response.status}${detail ? `: ${detail}` : ''}.`, 'http', response.status as HttpStatus, retryAfterSeconds);
+      }
       let body: unknown; try { body = await response.json(); } catch { throw new FocusApiError('FastAPI catalog returned invalid JSON.', 'response'); }
       return parse(body);
     } finally { clearTimeout(timeout); }

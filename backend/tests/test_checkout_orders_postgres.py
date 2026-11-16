@@ -44,6 +44,8 @@ def request(variant_id: UUID, key: str, quantity: int = 1) -> CheckoutCreate:
 def settings() -> Settings:
     return Settings(database_url='postgresql+psycopg://unused:unused@127.0.0.1/test', FOCUS_DEBUG=True,
                      catalog_source='postgresql', fastapi_checkout_enabled=True,
+                     checkout_write_authority='fastapi',
+                     migration_mode='cutover',
                      fastapi_payment_simulator_enabled=True)
 
 

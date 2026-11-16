@@ -1,5 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from threading import Barrier
 from uuid import UUID, uuid4
 
@@ -15,14 +16,15 @@ from app.services.management import DomainError
 from test_integrity_agent import postgres  # noqa: F401
 
 
-def seed(url: str, quantity: int = 1):
+def seed(url: str, quantity: int = 1, promotional_price=None):
     engine = create_engine(url, hide_parameters=True)
     with Session(engine) as db:
         suffix = uuid4().hex[:10]
         product = Product(name='Checkout product', slug=f'checkout-{suffix}', sku=f'CHECKOUT-{suffix}',
                           price='20.00', stock=quantity, category=Category(name='Checkout', slug=f'checkout-{suffix}'),
                           status='ACTIVE')
-        variant = ProductVariant(product=product, sku=f'CHECKOUT-V-{suffix}', name='Default', price='20.00')
+        variant = ProductVariant(product=product, sku=f'CHECKOUT-V-{suffix}', name='Default', price='20.00',
+                                 promotional_price=promotional_price)
         variant.inventory = Inventory(quantity_available=quantity, quantity_reserved=0)
         db.add(product)
         db.commit()
@@ -149,4 +151,18 @@ def test_order_expiration_respects_reservation_deadline(postgres):
     with Session(engine) as db:
         assert CheckoutOrderService(db, settings()).expire(order_id).status == 'expired'
     assert snapshot(url, variant_id)[:2] == (1, 0)
+    engine.dispose()
+
+
+def test_zero_promotional_price_is_used_in_order_snapshot(postgres):
+    _engine, url = postgres
+    variant_id = seed(url, promotional_price='0.00')
+    engine = create_engine(url, hide_parameters=True)
+    with Session(engine) as db:
+        order = CheckoutOrderService(db, settings()).create('customer-zero-promo', request(variant_id, 'zero-promo'))
+        assert order.subtotal == 0
+        assert order.shipping_amount == Decimal('12.90')
+        assert order.total == Decimal('12.90')
+        assert order.items[0].unit_price == 0
+        assert order.items[0].line_total == 0
     engine.dispose()

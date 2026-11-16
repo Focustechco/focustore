@@ -60,6 +60,28 @@ def test_trusted_frontend_origin_can_write(admin_client, monkeypatch):
     assert response.status_code == 201
 
 
+def test_cookie_authenticated_checkout_write_requires_trusted_origin(client, identity_source):
+    client.cookies.set('focus_session', 'customer-token')
+    payload = {
+        'items': [{'variantId': '00000000-0000-0000-0000-000000000001', 'quantity': 1}],
+        'shippingAddress': {'street': 'Rua A', 'number': '1', 'neighborhood': 'Centro',
+                            'city': 'Sao Paulo', 'state': 'SP', 'postalCode': '01000000'},
+        'shippingOption': {'carrier': 'Focus Express', 'serviceName': 'Standard SP'},
+        'paymentMethod': 'PIX', 'idempotencyKey': 'csrf-check',
+    }
+    for headers in ({}, {'origin': 'https://evil.test'},
+                    {'origin': 'https://evil.test', 'sec-fetch-site': 'cross-site'}):
+        assert client.post('/api/v1/checkout/orders', headers=headers, json=payload).status_code == 403
+
+
+def test_private_checkout_responses_are_not_cacheable(client, identity_source):
+    client.cookies.set('focus_session', 'customer-token')
+    response = client.get('/api/v1/checkout/orders')
+    assert response.status_code == 200
+    assert response.headers['cache-control'] == 'no-store'
+    assert response.headers['vary'] == 'Cookie'
+
+
 def test_sql_errors_are_sanitized(admin_client, monkeypatch):
     from sqlalchemy.exc import OperationalError
     from app.services import management

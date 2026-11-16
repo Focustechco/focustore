@@ -95,7 +95,11 @@ class CheckoutOrderService:
                     reservation_lines = []
                     for line in lines:
                         variant = by_public_id[line.variant_id]
-                        unit_price = money(variant.promotional_price or variant.price)
+                        unit_price = money(
+                            variant.promotional_price
+                            if variant.promotional_price is not None
+                            else variant.price
+                        )
                         line_total = money(unit_price * line.quantity)
                         subtotal += line_total
                         reservation_lines.append(ReservationLine(variant.public_id, line.quantity))

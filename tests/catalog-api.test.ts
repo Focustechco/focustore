@@ -38,6 +38,15 @@ test('adapter preserves null optional fields and paginated metadata', () => {
   assert.equal(page.items.length, 1);
 });
 
+test('adapter preserves a zero promotional price instead of treating it as absent', () => {
+  const product = productFixture();
+  product.promotional_price = '0.00';
+  product.variants[0].promotional_price = '0.00';
+  const adapted = adaptCatalogProduct(product);
+  assert.equal(adapted.promotionalPrice, 0);
+  assert.equal(adapted.variants[0].promotionalPrice, 0);
+});
+
 test('FastAPI client reports HTTP, network, timeout and invalid-response failures explicitly', async () => {
   const http = new FocusApiClient({ baseUrl: 'http://catalog.test', fetch: async () => new Response('unavailable', { status: 503 }) });
   await assert.rejects(http.listProducts(), (error: unknown) => error instanceof FocusApiError && error.kind === 'http' && error.status === 503);
@@ -50,6 +59,29 @@ test('FastAPI client reports HTTP, network, timeout and invalid-response failure
 
   const invalid = new FocusApiClient({ baseUrl: 'http://catalog.test', fetch: async () => new Response(JSON.stringify({ items: 'wrong' }), { status: 200, headers: { 'content-type': 'application/json' } }) });
   await assert.rejects(invalid.listProducts(), (error: unknown) => error instanceof FocusApiError && error.kind === 'response');
+});
+
+test('FastAPI client classifies protected, conflict, rate-limit and unavailable responses', async () => {
+  for (const [status, category] of [[401, 'authentication'], [403, 'forbidden'], [409, 'conflict'], [422, 'validation'], [429, 'rate_limit'], [503, 'unavailable']] as const) {
+    const client = new FocusApiClient({
+      baseUrl: 'http://catalog.test',
+      fetch: async () => new Response(JSON.stringify({ detail: 'bounded error' }), { status, headers: { 'retry-after': '12' } }),
+    });
+    await assert.rejects(client.listProducts(), (error: unknown) => error instanceof FocusApiError && error.category === category && error.status === status && (status === 429 ? error.retryAfterSeconds === 12 : true));
+  }
+});
+
+test('FastAPI catalog requests omit browser credentials', async () => {
+  let requestInit: RequestInit | undefined;
+  const client = new FocusApiClient({
+    baseUrl: 'http://catalog.test',
+    fetch: async (_input, init) => {
+      requestInit = init;
+      return new Response(JSON.stringify({ items: [], total: 0, offset: 0, limit: 100 }), { status: 200 });
+    },
+  });
+  await client.listProducts();
+  assert.equal(requestInit?.credentials, 'omit');
 });
 
 test('FastAPI client encodes product slugs and returns null only for HTTP 404 details', async () => {

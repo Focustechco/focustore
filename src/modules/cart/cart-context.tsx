@@ -3,6 +3,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { restoredCart } from './cart-validation';
 
+const MAX_CART_QUANTITY = 999;
+
+function validQuantity(quantity: number): boolean {
+  return Number.isSafeInteger(quantity) && quantity > 0 && quantity <= MAX_CART_QUANTITY;
+}
+
 export interface CartItem {
   variantId: string;
   productId: string;
@@ -109,16 +115,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, mounted]);
 
   const addItem = (rawItem: CartItem) => {
-    if (isFastApiCatalogItem(rawItem)) return;
+    if (isFastApiCatalogItem(rawItem) || !validQuantity(rawItem.quantity)) return;
     const newItem = normalizeCartItem(rawItem);
     setItems((prev) => {
       const existing = prev.find((i) => i.variantId === newItem.variantId);
       if (existing) {
+        const quantity = Math.min(MAX_CART_QUANTITY, existing.quantity + newItem.quantity);
         return prev.map((i) =>
           i.variantId === newItem.variantId
             ? {
                 ...newItem,
-                quantity: i.quantity + newItem.quantity,
+                quantity,
               }
             : i
         );
@@ -133,10 +140,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQuantity = (variantId: string, quantity: number) => {
-    if (quantity <= 0) {
+    if (quantity <= 0 || !Number.isSafeInteger(quantity)) {
       removeItem(variantId);
       return;
     }
+    quantity = Math.min(MAX_CART_QUANTITY, quantity);
     setItems((prev) =>
       prev.map((i) => (i.variantId === variantId ? { ...i, quantity } : i))
     );

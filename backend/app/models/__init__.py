@@ -6,6 +6,7 @@ from app.models.product import (
     StockReservation, StockReservationItem,
 )
 from app.models.catalog_mapping import CatalogMappingEvent, CatalogVariantMapping
+from app.models.order import Order, OrderItem, OrderOutboxEvent, OrderStatusHistory, PaymentAttempt
 
 __all__ = [
     "CatalogMappingEvent",
@@ -19,4 +20,9 @@ __all__ = [
     "ProductVariant",
     "StockReservation",
     "StockReservationItem",
+    "Order",
+    "OrderItem",
+    "OrderOutboxEvent",
+    "OrderStatusHistory",
+    "PaymentAttempt",
 ]

@@ -75,7 +75,8 @@ class InventoryReservationService:
         lines = list(lines)
         for attempt in range(2):
             try:
-                return self._create_once(idempotency_key, lines, ttl_seconds=ttl_seconds)
+                with self.db.begin():
+                    return self._create_in_transaction(idempotency_key, lines, ttl_seconds=ttl_seconds)
             except IntegrityError:
                 self.db.rollback()
                 with self.db.begin():
@@ -95,7 +96,15 @@ class InventoryReservationService:
                 raise ReservationError('Reservation could not be committed safely.')
         raise ReservationError('Reservation could not be committed safely.')
 
-    def _create_once(self, idempotency_key: str, lines: Iterable[ReservationLine], *, ttl_seconds: int = 900) -> ReservationResult:
+    def create_in_transaction(
+        self, idempotency_key: str, lines: Iterable[ReservationLine], *, ttl_seconds: int = 900
+    ) -> ReservationResult:
+        """Create or replay using the caller's already-open transaction."""
+        if not self.db.in_transaction():
+            raise ReservationError('An active transaction is required.')
+        return self._create_in_transaction(idempotency_key, lines, ttl_seconds=ttl_seconds)
+
+    def _create_in_transaction(self, idempotency_key: str, lines: Iterable[ReservationLine], *, ttl_seconds: int = 900) -> ReservationResult:
         if not idempotency_key.strip() or len(idempotency_key) > 200:
             raise ReservationError('A valid idempotency key is required.')
         if not 1 <= ttl_seconds <= 86400:
@@ -103,66 +112,65 @@ class InventoryReservationService:
         canonical = self._canonical_lines(lines)
         request_hash = self._request_hash(canonical, ttl_seconds)
 
-        with self.db.begin():
-            existing = self.db.scalar(
-                select(StockReservation).where(
-                    StockReservation.idempotency_scope == self.idempotency_scope,
-                    StockReservation.idempotency_key == idempotency_key,
-                ).options(selectinload(StockReservation.items))
+        existing = self.db.scalar(
+            select(StockReservation).where(
+                StockReservation.idempotency_scope == self.idempotency_scope,
+                StockReservation.idempotency_key == idempotency_key,
+            ).options(selectinload(StockReservation.items))
+        )
+        if existing is not None:
+            if existing.request_hash != request_hash:
+                raise ReservationError('Idempotency key was already used with a different payload.')
+            return self._result(existing)
+
+        variant_ids = [line.variant_public_id for line in canonical]
+        variants = self.db.scalars(
+            select(ProductVariant).where(ProductVariant.public_id.in_(variant_ids))
+            .options(joinedload(ProductVariant.product))
+            .order_by(ProductVariant.id)
+        ).all()
+        by_public_id = {variant.public_id: variant for variant in variants}
+        if len(by_public_id) != len(canonical) or any(not variant.is_active or variant.product.status != 'ACTIVE' for variant in variants):
+            raise ReservationError('One or more variants do not exist or are inactive.')
+
+        # Claim the idempotency key before waiting on inventory rows. A
+        # concurrent identical request then waits on this unique insert and
+        # replays the committed reservation instead of racing into an
+        # insufficient-stock failure.
+        reservation = StockReservation(
+            idempotency_scope=self.idempotency_scope,
+            idempotency_key=idempotency_key,
+            request_hash=request_hash,
+            expires_at=datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds),
+        )
+        self.db.add(reservation)
+        self.db.flush()
+
+        inventory_by_variant: dict[int, Inventory] = {}
+        for variant in variants:
+            inventory = self.db.scalar(
+                select(Inventory).where(Inventory.variant_id == variant.id).with_for_update()
             )
-            if existing is not None:
-                if existing.request_hash != request_hash:
-                    raise ReservationError('Idempotency key was already used with a different payload.')
-                return self._result(existing)
+            if inventory is None:
+                raise ReservationError(f'No inventory exists for variant {variant.public_id}.')
+            inventory_by_variant[variant.id] = inventory
 
-            variant_ids = [line.variant_public_id for line in canonical]
-            variants = self.db.scalars(
-                select(ProductVariant).where(ProductVariant.public_id.in_(variant_ids))
-                .options(joinedload(ProductVariant.product))
-                .order_by(ProductVariant.id)
-            ).all()
-            by_public_id = {variant.public_id: variant for variant in variants}
-            if len(by_public_id) != len(canonical) or any(not variant.is_active or variant.product.status != 'ACTIVE' for variant in variants):
-                raise ReservationError('One or more variants do not exist or are inactive.')
-
-            # Claim the idempotency key before waiting on inventory rows. A
-            # concurrent identical request then waits on this unique insert and
-            # replays the committed reservation instead of racing into an
-            # insufficient-stock failure.
-            reservation = StockReservation(
-                idempotency_scope=self.idempotency_scope,
-                idempotency_key=idempotency_key,
-                request_hash=request_hash,
-                expires_at=datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds),
-            )
-            self.db.add(reservation)
-            self.db.flush()
-
-            inventory_by_variant: dict[int, Inventory] = {}
-            for variant in variants:
-                inventory = self.db.scalar(
-                    select(Inventory).where(Inventory.variant_id == variant.id).with_for_update()
-                )
-                if inventory is None:
-                    raise ReservationError(f'No inventory exists for variant {variant.public_id}.')
-                inventory_by_variant[variant.id] = inventory
-
-            for line in canonical:
-                variant = by_public_id[line.variant_public_id]
-                inventory = inventory_by_variant[variant.id]
-                if inventory.quantity_available < line.quantity:
-                    raise ReservationError(f'Insufficient inventory for variant {line.variant_public_id}.')
-                inventory.quantity_available -= line.quantity
-                inventory.quantity_reserved += line.quantity
-                item = StockReservationItem(reservation_id=reservation.id, variant_id=variant.id, quantity=line.quantity)
-                self.db.add(item)
-                self.db.add(InventoryMovement(
-                    inventory_id=inventory.id, reservation_id=reservation.id, variant_id=variant.id,
-                    operation='reserve', quantity=line.quantity, source=self.source,
-                    transaction_reference=idempotency_key,
-                ))
-            self.db.flush()
-            return self._result(reservation)
+        for line in canonical:
+            variant = by_public_id[line.variant_public_id]
+            inventory = inventory_by_variant[variant.id]
+            if inventory.quantity_available < line.quantity:
+                raise ReservationError(f'Insufficient inventory for variant {line.variant_public_id}.')
+            inventory.quantity_available -= line.quantity
+            inventory.quantity_reserved += line.quantity
+            item = StockReservationItem(reservation_id=reservation.id, variant_id=variant.id, quantity=line.quantity)
+            self.db.add(item)
+            self.db.add(InventoryMovement(
+                inventory_id=inventory.id, reservation_id=reservation.id, variant_id=variant.id,
+                operation='reserve', quantity=line.quantity, source=self.source,
+                transaction_reference=idempotency_key,
+            ))
+        self.db.flush()
+        return self._result(reservation)
 
     def get(self, reservation_id: UUID) -> ReservationResult | None:
         with self.db.begin():
@@ -171,37 +179,46 @@ class InventoryReservationService:
 
     def _transition(self, reservation_id: UUID, target: str) -> ReservationResult:
         with self.db.begin():
-            reservation = self.db.scalar(
-                select(StockReservation).where(StockReservation.public_id == reservation_id)
-                .options(selectinload(StockReservation.items)).with_for_update()
-            )
-            if reservation is None:
-                raise ReservationError('Reservation not found.')
-            if reservation.status == target:
-                return self._result(reservation)
-            if reservation.status != 'pending' or target not in {'confirmed', 'released', 'expired'}:
-                raise ReservationError(f'Invalid reservation transition: {reservation.status} -> {target}.')
-            if target == 'confirmed' and self._is_expired(reservation):
-                raise ReservationError('Reservation has expired and cannot be confirmed.')
-            if target == 'expired' and not self._is_expired(reservation):
-                raise ReservationError('Reservation cannot expire before its deadline.')
+            return self._transition_in_transaction(reservation_id, target)
 
-            for item in sorted(reservation.items, key=lambda item: item.variant_id):
-                inventory = self.db.scalar(select(Inventory).where(Inventory.variant_id == item.variant_id).with_for_update())
-                if inventory is None or inventory.quantity_reserved < item.quantity:
-                    raise ReservationError('Reserved inventory invariant was violated.')
-                inventory.quantity_reserved -= item.quantity
-                if target != 'confirmed':
-                    inventory.quantity_available += item.quantity
-                self.db.add(InventoryMovement(
-                    inventory_id=inventory.id, reservation_id=reservation.id, variant_id=item.variant_id,
-                    operation={'confirmed': 'confirm', 'released': 'release', 'expired': 'expire'}[target],
-                    quantity=item.quantity,
-                    source=self.source, transaction_reference=str(reservation.public_id),
-                ))
-            reservation.status = target
-            self.db.flush()
+    def transition_in_transaction(self, reservation_id: UUID, target: str) -> ReservationResult:
+        if not self.db.in_transaction():
+            raise ReservationError('An active transaction is required.')
+        return self._transition_in_transaction(reservation_id, target)
+
+    def _transition_in_transaction(self, reservation_id: UUID, target: str) -> ReservationResult:
+        reservation = self.db.scalar(
+            select(StockReservation).where(StockReservation.public_id == reservation_id)
+            .options(selectinload(StockReservation.items)).with_for_update()
+        )
+        if reservation is None:
+            raise ReservationError('Reservation not found.')
+        if reservation.status == target:
             return self._result(reservation)
+        if reservation.status != 'pending' or target not in {'confirmed', 'released', 'expired'}:
+            raise ReservationError(f'Invalid reservation transition: {reservation.status} -> {target}.')
+        if target == 'confirmed' and self._is_expired(reservation):
+            raise ReservationError('Reservation has expired and cannot be confirmed.')
+        if target == 'expired' and not self._is_expired(reservation):
+            raise ReservationError('Reservation cannot expire before its deadline.')
+
+        for item in sorted(reservation.items, key=lambda item: item.variant_id):
+            inventory = self.db.scalar(
+                select(Inventory).where(Inventory.variant_id == item.variant_id).with_for_update()
+            )
+            if inventory is None or inventory.quantity_reserved < item.quantity:
+                raise ReservationError('Reserved inventory invariant was violated.')
+            inventory.quantity_reserved -= item.quantity
+            if target != 'confirmed':
+                inventory.quantity_available += item.quantity
+            self.db.add(InventoryMovement(
+                inventory_id=inventory.id, reservation_id=reservation.id, variant_id=item.variant_id,
+                operation={'confirmed': 'confirm', 'released': 'release', 'expired': 'expire'}[target],
+                quantity=item.quantity, source=self.source, transaction_reference=str(reservation.public_id),
+            ))
+        reservation.status = target
+        self.db.flush()
+        return self._result(reservation)
 
     def confirm(self, reservation_id: UUID) -> ReservationResult:
         return self._transition(reservation_id, 'confirmed')

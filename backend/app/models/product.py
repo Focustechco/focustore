@@ -177,6 +177,7 @@ class StockReservation(Base):
     items: Mapped[list['StockReservationItem']] = relationship(
         'StockReservationItem', back_populates='reservation', cascade='all, delete-orphan', order_by='StockReservationItem.id'
     )
+    order: Mapped['Order | None'] = relationship('Order', back_populates='reservation', uselist=False)
 
 
 class StockReservationItem(Base):

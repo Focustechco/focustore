@@ -143,7 +143,8 @@ test('renders deterministic PostgreSQL catalog data through FastAPI and Next.js'
     assert.match(html, /Homolog Shirt/);
     assert.doesNotMatch(html, /Homolog Inactive/);
   }
-  assert.match(home, /89,90|89\.90/);
+  assert.match(home, /Homolog Bottle\s+R\$\s*0,00/);
+  assert.match(home, /Homolog Shirt\s+R\$\s*99,90/);
   assert.match(detail, /Homolog Shirt/);
   assert.match(detail, /99,90|99\.90/);
   assert.match(detail, /esgotado|Esgotado|sem estoque/i);
@@ -163,6 +164,7 @@ test('FastAPI exposes the same synthetic records and supports catalog filters', 
   const data = await response.json();
   assert.equal(data.total, 2);
   assert.deepEqual(data.items.map((item: { slug: string }) => item.slug), ['homolog-bottle', 'homolog-shirt']);
+  assert.equal(data.items[0].base_price, '89.90');
   assert.equal(data.items[0].promotional_price, '0.00');
   assert.equal(data.items[0].variants[0].quantity_available, 5);
   assert.equal(data.items[1].available, false);

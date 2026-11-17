@@ -33,5 +33,8 @@ def test_seed_requires_exact_run_owned_database():
     with pytest.raises(ValueError):
         safety.validate_owned_url('postgresql+psycopg://user@localhost:5432/catalog_test', RUN_ID)
     expected = safety.owned_name(RUN_ID)
+    with pytest.raises(ValueError):
+        safety.validate_owned_url(
+            f'postgresql+psycopg://user@localhost:5432/{expected}', 'b' * 32)
     assert safety.validate_owned_url(
         f'postgresql+psycopg://user@localhost:5432/{expected}', RUN_ID).database == expected

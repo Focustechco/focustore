@@ -207,6 +207,7 @@ test('search and category filters exclude unrelated records and preserve empty r
   assert.match(search, /Homolog Bottle/);
   assert.doesNotMatch(search, /Homolog Shirt/);
   const empty = await page('/busca?q=NoSuchHomologProduct');
+  assert.match(empty, /Nenhum resultado para sua busca/);
   assert.doesNotMatch(empty, /Homolog Bottle|Homolog Shirt|temporariamente indisponível/);
   for (const query of ['category_slug=no-such-category', 'search=NoSuchHomologProduct']) {
     const response = await fetch(`${backend}/api/v1/catalog/products?${query}`, { signal: AbortSignal.timeout(5000) });

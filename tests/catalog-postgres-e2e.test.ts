@@ -1,0 +1,164 @@
+import { after, before, test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { createServer } from 'node:net';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
+import path from 'node:path';
+import { once } from 'node:events';
+import { randomUUID } from 'node:crypto';
+import { sqliteTestUrl } from './helpers/test-database';
+
+const databaseUrl = process.env.FOCUS_E2E_DATABASE_URL ?? process.env.TEST_DATABASE_URL;
+const python = process.env.FOCUS_PYTHON_EXECUTABLE ?? (process.platform === 'win32' ? 'python' : 'python3');
+const root = process.cwd();
+let temporaryDirectory = '';
+let frontendDatabaseUrl = '';
+let frontend = '';
+let backend = '';
+let fastApi: ChildProcess | undefined;
+let next: ChildProcess | undefined;
+let logs = '';
+
+function assertDisposableDatabase(url: string) {
+  const parsed = new URL(url.replace(/^postgresql\+psycopg:/, 'postgresql:'));
+  assert.equal(parsed.protocol, 'postgresql:');
+  assert.ok(parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost', 'E2E database must be loopback-only');
+  assert.ok(parsed.pathname.endsWith('_test'), 'E2E database name must end in _test');
+  assert.ok(parsed.username, 'E2E database user is required');
+  assert.ok(parsed.port, 'E2E database port is required');
+}
+
+async function freePort() {
+  const listener = createServer();
+  listener.listen(0, '127.0.0.1');
+  await once(listener, 'listening');
+  const address = listener.address();
+  assert(address && typeof address !== 'string');
+  await new Promise<void>(resolve => listener.close(() => resolve()));
+  return address.port;
+}
+
+function runPython(args: string[]) {
+  return execFileSync(python, args, {
+    cwd: path.join(root, 'backend'),
+    env: { ...process.env, DATABASE_URL: databaseUrl },
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+function start(command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv) {
+  const child = spawn(command, args, { cwd, env, detached: process.platform !== 'win32', windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  child.stdout?.on('data', value => { logs = (logs + value).slice(-16000); });
+  child.stderr?.on('data', value => { logs = (logs + value).slice(-16000); });
+  child.once('error', error => { logs += `\n${error.message}`; });
+  return child;
+}
+
+async function waitReady(url: string) {
+  const deadline = Date.now() + 90000;
+  while (Date.now() < deadline) {
+    if (fastApi?.exitCode !== null && fastApi?.exitCode !== undefined) throw new Error(`FastAPI exited: ${logs}`);
+    if (next?.exitCode !== null && next?.exitCode !== undefined) throw new Error(`Next.js exited: ${logs}`);
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      if (response.status === 200) return;
+    } catch { /* Service is still starting. */ }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error(`Timed out waiting for ${url}: ${logs}`);
+}
+
+async function stop(child: ChildProcess | undefined) {
+  if (!child || child.exitCode !== null || !child.pid) return;
+  if (process.platform === 'win32') execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+  else process.kill(-child.pid, 'SIGTERM');
+  await once(child, 'exit');
+}
+
+before(async () => {
+  assert.ok(databaseUrl, 'Set FOCUS_E2E_DATABASE_URL to a disposable PostgreSQL *_test database');
+  assertDisposableDatabase(databaseUrl);
+  temporaryDirectory = await mkdtemp(path.join(process.env.RUNNER_TEMP ?? process.env.TEMP ?? root, 'focusstore-catalog-e2e-'));
+  frontendDatabaseUrl = sqliteTestUrl(temporaryDirectory, 'frontend');
+  execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'], {
+    cwd: root, env: { ...process.env, DATABASE_URL: frontendDatabaseUrl }, stdio: 'pipe',
+  });
+  runPython(['-m', 'alembic', 'upgrade', 'head']);
+  runPython(['-m', 'alembic', 'check']);
+  runPython([path.join(root, 'scripts', 'seed_catalog_e2e.py')]);
+
+  const backendPort = await freePort();
+  const frontendPort = await freePort();
+  backend = `http://127.0.0.1:${backendPort}`;
+  frontend = `http://127.0.0.1:${frontendPort}`;
+  const backendEnv = {
+    ...process.env, DATABASE_URL: databaseUrl, CATALOG_SOURCE: 'postgresql',
+    FASTAPI_CHECKOUT_ENABLED: 'false', CHECKOUT_WRITE_AUTHORITY: 'prisma',
+    MIGRATION_MODE: 'observe', FASTAPI_PAYMENT_SIMULATOR_ENABLED: 'false',
+    FOCUS_DEBUG: 'false',
+  };
+  fastApi = start(python, ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)], path.join(root, 'backend'), backendEnv);
+  next = start(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', String(frontendPort)], root, {
+    ...process.env, NODE_ENV: 'development', DATABASE_URL: frontendDatabaseUrl,
+    CATALOG_READ_SOURCE: 'fastapi', FOCUS_API_BASE_URL: backend,
+    NEXTAUTH_SECRET: randomUUID(), NEXT_TELEMETRY_DISABLED: '1',
+  });
+  await waitReady(`${backend}/health`);
+  await waitReady(`${frontend}/api/auth/session`);
+}, { timeout: 180000 });
+
+after(async () => {
+  await stop(next);
+  await stop(fastApi);
+  if (temporaryDirectory) await rm(temporaryDirectory, { recursive: true, force: true });
+});
+
+async function page(pathname: string) {
+  const response = await fetch(frontend + pathname);
+  assert.equal(response.status, 200, `${pathname} returned ${response.status}`);
+  return response.text();
+}
+
+test('renders deterministic PostgreSQL catalog data through FastAPI and Next.js', async () => {
+  const [home, search, category, detail] = await Promise.all([
+    page('/'),
+    page('/busca?q=Homolog'),
+    page('/categoria/homolog-catalog'),
+    page('/produto/homolog-shirt'),
+  ]);
+  for (const html of [home, search, category]) {
+    assert.match(html, /Homolog Bottle/);
+    assert.match(html, /Homolog Shirt/);
+    assert.doesNotMatch(html, /Homolog Inactive/);
+  }
+  assert.match(home, /89,90|89\.90/);
+  assert.match(detail, /Homolog Shirt/);
+  assert.match(detail, /99,90|99\.90/);
+  assert.match(detail, /esgotado|Esgotado|sem estoque/i);
+  assert.doesNotMatch(detail, /Homolog Inactive/);
+});
+
+test('FastAPI exposes the same synthetic records and supports catalog filters', async () => {
+  const response = await fetch(`${backend}/api/v1/catalog/products?search=Homolog&category_slug=homolog-catalog&sort=price_asc`);
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.total, 2);
+  assert.deepEqual(data.items.map((item: { slug: string }) => item.slug), ['homolog-bottle', 'homolog-shirt']);
+  assert.equal(data.items[0].promotional_price, '0.00');
+  assert.equal(data.items[0].variants[0].quantity_available, 5);
+  assert.equal(data.items[1].available, false);
+  assert.equal((await fetch(`${backend}/api/v1/catalog/products/homolog-inactive`)).status, 404);
+  assert.equal((await fetch(`${backend}/api/v1/catalog/products/missing-product`)).status, 404);
+  assert.equal((await fetch(`${backend}/api/v1/catalog/categories/homolog-catalog`)).status, 200);
+});
+
+test('does not silently fall back to Prisma when FastAPI becomes unavailable', async () => {
+  await stop(fastApi);
+  fastApi = undefined;
+  const response = await fetch(frontend + '/busca?q=Homolog');
+  assert.ok([200, 503].includes(response.status));
+  const html = await response.text();
+  assert.doesNotMatch(html, /Homolog Bottle/);
+  assert.match(html, /indispon|Unavailable|erro|error/i);
+});

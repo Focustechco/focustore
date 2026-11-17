@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test --test-concurrency=1 tests/social.test.ts tests/store.test.ts tests/catalog-api.test.ts tests/catalog-load-state.test.ts",
     "test:fullstack": "tsx --test --test-concurrency=1 tests/fullstack.test.ts",
+    "test:catalog:e2e": "tsx --test --test-concurrency=1 tests/catalog-postgres-e2e.test.ts",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:generate": "prisma generate"

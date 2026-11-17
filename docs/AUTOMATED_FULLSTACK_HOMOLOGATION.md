@@ -46,3 +46,86 @@ dependências Python do backend e executa `npm run test:catalog:e2e` com
 O teste não determina a causa do problema anterior do Prisma Schema Engine no
 Windows. A execução recomendada é Ubuntu/Node 22, que já demonstrou executar a
 suíte Prisma existente corretamente.
+
+## Execução auditada em 17/11/2026
+
+A primeira rodada aprovada corresponde ao commit
+`1d07e6b04c9c1bbbe021410ffbb574decb02ecbe`:
+
+- [Frontend, run 44143097214](https://github.com/Focustechco/focustore/actions/runs/44143097214):
+  48 testes frontend, 5 fullstack, 4 E2E PostgreSQL e 48 testes após build,
+  todos aprovados, sem falhas ou skips. TypeScript, Prisma generate, instalação
+  com `npm ci`, build Next.js e `pip check` também passaram.
+- [Backend, run 44143102235](https://github.com/Focustechco/focustore/actions/runs/44143102235):
+  206 testes aprovados, migrations, `alembic check`, integridade PostgreSQL,
+  contrato OpenAPI e `pip check` aprovados.
+
+Esses links são evidência da versão identificada acima. Para commits posteriores,
+confira sempre `head_sha` das novas execuções; não reutilize uma execução antiga
+como aprovação de código novo.
+
+### Correções encontradas na execução e revisão
+
+- O seed executado por caminho absoluto precisava de `PYTHONPATH` apontando para
+  `backend`; apenas mudar o diretório de trabalho não resolve o import de `app`.
+- O resumo do seed é capturado antes do commit para evitar acessar atributos ORM
+  expirados após fechar a sessão SQLAlchemy.
+- A home exibe o preço promocional `R$ 0,00`, enquanto `89.90` é o preço base
+  retornado pela API. A suíte confere os dois nos respectivos contratos.
+- As assertions de páginas removem scripts, estilos e metadados antes de conferir
+  nomes, preços e estoque. Dados presentes apenas no payload RSC não bastam.
+- O detalhe da garrafa confere `R$ 0,00` e cinco unidades disponíveis; o da camisa
+  confere `99,90` e estoque esgotado. A indisponibilidade exige a mensagem explícita
+  de catálogo indisponível após parar o FastAPI.
+- A revisão posterior à primeira aprovação adiciona limites aos comandos de setup
+  e ao encerramento de processos, além de tentar encerrar ambos os serviços mesmo
+  quando um deles falha. Falhas de limpeza continuam sendo reportadas.
+
+### Isolamento e integrações
+
+O PostgreSQL 18 pertence ao container do job e não possui volume persistente.
+O SQLite do frontend é temporário; ele atende recursos Prisma e não substitui
+o catálogo PostgreSQL. Os cinco testes `test:fullstack` existentes exercitam
+persistência Prisma/SQLite e a fronteira legada; os testes de cliente/adapter
+incluídos em `npm test` são testes de contrato. A nova suíte é a evidência separada
+da cadeia Next.js → FastAPI → SQLAlchemy → PostgreSQL.
+
+Os workflows têm permissão `contents: read`, checkout sem credenciais persistidas
+e nenhum passo de deploy. O `vercel.json` desabilita deploy automático somente de
+`feature/automated-fullstack-homologation`, conforme a
+[configuração Git da Vercel](https://vercel.com/docs/project-configuration/git-configuration).
+As consultas ao GitHub após a publicação não mostraram deployments no SHA
+`504a2093a101fe446359ab39c3acfc4fe75377b7`; o check Supabase Preview informou que a
+branch não está associada a um banco Supabase. A API de hooks não estava acessível
+com a credencial disponível (HTTP 404); não houve alteração de hooks ou permissões.
+
+Nenhum código comercial, autenticação, pedidos, pagamentos ou controle de acesso
+foi modificado. Checkout FastAPI e simulador de pagamentos permanecem desabilitados
+no processo E2E. Não há execução de navegador nem validação visual; as páginas
+verificadas são `/`, `/busca?q=Homolog`, `/categoria/homolog-catalog`,
+`/produto/homolog-shirt` e `/produto/homolog-bottle`.
+
+### Reprodução no GitHub Actions
+
+Com GitHub CLI autenticado, publique normalmente apenas esta branch e execute:
+
+```sh
+gh workflow run frontend-quality.yml --ref feature/automated-fullstack-homologation
+gh workflow run backend-quality.yml --ref feature/automated-fullstack-homologation
+gh run list --branch feature/automated-fullstack-homologation --event workflow_dispatch
+gh run view RUN_ID --log
+```
+
+Confira o SHA de ambos os runs contra o HEAD remoto e as contagens TAP do passo
+`Automated PostgreSQL catalog homologation`: quatro testes, quatro aprovados,
+zero falhas e zero skips. O E2E usa Next.js em desenvolvimento; a regressão HTTP
+com build de produção é executada separadamente por `npm test`.
+
+### Avisos observados
+
+Avisos não bloqueantes: `punycode` e `url.parse()` em actions, actions antigas com
+runtime Node 20 forçado para Node 24 pelo runner, tipo de módulo não declarado em
+`tailwind.config.ts` e depreciação do uso de `httpx` pelo Starlette TestClient.
+O Node da aplicação permanece 22. O `npm ci` reportou zero vulnerabilidades e os
+dois `pip check` não encontraram dependências incompatíveis. Atualizar esses
+componentes exige validação própria; nenhum aviso foi ocultado nesta homologação.

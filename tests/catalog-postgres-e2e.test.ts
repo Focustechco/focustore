@@ -44,6 +44,7 @@ function runPython(args: string[]) {
     env: { ...process.env, DATABASE_URL: databaseUrl, PYTHONPATH: path.join(root, 'backend') },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    timeout: 60000,
   });
 }
 
@@ -70,10 +71,20 @@ async function waitReady(url: string) {
 }
 
 async function stop(child: ChildProcess | undefined) {
-  if (!child || child.exitCode !== null || !child.pid) return;
-  if (process.platform === 'win32') execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
-  else process.kill(-child.pid, 'SIGTERM');
-  await once(child, 'exit');
+  if (!child || child.exitCode !== null || child.signalCode !== null || !child.pid) return;
+  if (process.platform === 'win32') {
+    execFileSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore', timeout: 10000 });
+    await once(child, 'exit', { signal: AbortSignal.timeout(5000) });
+    return;
+  }
+  process.kill(-child.pid, 'SIGTERM');
+  try {
+    await once(child, 'exit', { signal: AbortSignal.timeout(10000) });
+  } catch (error) {
+    if (!(error instanceof Error) || error.name !== 'AbortError') throw error;
+    process.kill(-child.pid, 'SIGKILL');
+    await once(child, 'exit', { signal: AbortSignal.timeout(5000) });
+  }
 }
 
 before(async () => {
@@ -82,7 +93,7 @@ before(async () => {
   temporaryDirectory = await mkdtemp(path.join(process.env.RUNNER_TEMP ?? process.env.TEMP ?? root, 'focusstore-catalog-e2e-'));
   frontendDatabaseUrl = sqliteTestUrl(temporaryDirectory, 'frontend');
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'], {
-    cwd: root, env: { ...process.env, DATABASE_URL: frontendDatabaseUrl }, stdio: 'pipe',
+    cwd: root, env: { ...process.env, DATABASE_URL: frontendDatabaseUrl }, stdio: 'pipe', timeout: 60000,
   });
   runPython(['-m', 'alembic', 'upgrade', 'head']);
   runPython(['-m', 'alembic', 'check']);
@@ -109,9 +120,10 @@ before(async () => {
 }, { timeout: 180000 });
 
 after(async () => {
-  await stop(next);
-  await stop(fastApi);
+  const results = await Promise.allSettled([stop(next), stop(fastApi)]);
   if (temporaryDirectory) await rm(temporaryDirectory, { recursive: true, force: true });
+  const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+  if (errors.length) throw new AggregateError(errors, 'E2E service cleanup failed');
 });
 
 async function page(pathname: string) {

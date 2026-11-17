@@ -98,13 +98,14 @@ def main() -> None:
             Inventory(variant_id=bottle_variant.id, quantity_available=5, quantity_reserved=0),
             Inventory(variant_id=shirt_variant.id, quantity_available=0, quantity_reserved=0),
         ])
+        summary = {
+            "category": category.slug,
+            "active": [bottle.slug, shirt.slug],
+            "inactive": inactive.slug,
+        }
         session.commit()
 
-    print(json.dumps({
-        "category": category.slug,
-        "active": [bottle.slug, shirt.slug],
-        "inactive": inactive.slug,
-    }))
+    print(json.dumps(summary))
 
 
 if __name__ == "__main__":

@@ -55,6 +55,8 @@ jobs:
           cache-dependency-path: backend/requirements.txt
       - name: Install FastAPI integration dependencies
         run: python -m pip install -r backend/requirements.txt
+      - name: Check Python dependency compatibility
+        run: python -m pip check
       - name: Cross-service persistence and catalog tests
         env:
           FOCUS_PYTHON_EXECUTABLE: python

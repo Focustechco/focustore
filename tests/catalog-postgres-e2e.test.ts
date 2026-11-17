@@ -41,7 +41,7 @@ async function freePort() {
 function runPython(args: string[]) {
   return execFileSync(python, args, {
     cwd: path.join(root, 'backend'),
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+    env: { ...process.env, DATABASE_URL: databaseUrl, PYTHONPATH: path.join(root, 'backend') },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -115,9 +115,20 @@ after(async () => {
 });
 
 async function page(pathname: string) {
-  const response = await fetch(frontend + pathname);
+  const response = await fetch(frontend + pathname, { signal: AbortSignal.timeout(60000) });
   assert.equal(response.status, 200, `${pathname} returned ${response.status}`);
-  return response.text();
+  return renderedText(await response.text());
+}
+
+function renderedText(html: string) {
+  // RSC payloads and metadata alone do not prove that product content rendered.
+  return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;/g, ' ')
+    .replace(/\s+/g, ' ');
 }
 
 test('renders deterministic PostgreSQL catalog data through FastAPI and Next.js', async () => {
@@ -139,6 +150,13 @@ test('renders deterministic PostgreSQL catalog data through FastAPI and Next.js'
   assert.doesNotMatch(detail, /Homolog Inactive/);
 });
 
+test('renders zero promotional price and available stock in the product body', async () => {
+  const detail = await page('/produto/homolog-bottle');
+  assert.match(detail, /Homolog Bottle/);
+  assert.match(detail, /R\$\s*0,00/);
+  assert.match(detail, /5\s+unidades em estoque/);
+});
+
 test('FastAPI exposes the same synthetic records and supports catalog filters', async () => {
   const response = await fetch(`${backend}/api/v1/catalog/products?search=Homolog&category_slug=homolog-catalog&sort=price_asc`);
   assert.equal(response.status, 200);
@@ -156,9 +174,9 @@ test('FastAPI exposes the same synthetic records and supports catalog filters', 
 test('does not silently fall back to Prisma when FastAPI becomes unavailable', async () => {
   await stop(fastApi);
   fastApi = undefined;
-  const response = await fetch(frontend + '/busca?q=Homolog');
+  const response = await fetch(frontend + '/busca?q=Homolog', { signal: AbortSignal.timeout(60000) });
   assert.ok([200, 503].includes(response.status));
-  const html = await response.text();
+  const html = renderedText(await response.text());
   assert.doesNotMatch(html, /Homolog Bottle/);
-  assert.match(html, /indispon|Unavailable|erro|error/i);
+  assert.match(html, /Catálogo temporariamente indisponível/);
 });

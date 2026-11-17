@@ -9,7 +9,8 @@ pagamentos ou escrita comercial; a autoridade de checkout continua no Prisma.
 - Node.js 22.
 - Python 3.13 com `backend/requirements.txt` instalado.
 - PostgreSQL descartável, local e em loopback.
-- Um banco exclusivo cujo nome termine em `_test`.
+- Um servidor PostgreSQL descartável com banco de conexão terminado em `_test`
+  e usuário autorizado a criar/remover bancos temporários.
 
 Defina apenas para a execução atual:
 
@@ -20,9 +21,14 @@ npm run test:catalog:e2e
 ```
 
 O teste rejeita hosts não locais, bancos sem sufixo `_test`, portas ausentes e
-usuários ausentes. Ele aplica Alembic, verifica `alembic check`, insere somente
-fixtures sintéticas, inicia FastAPI e Next.js em portas livres e remove o
-SQLite temporário do Next.js ao terminar.
+usuários ausentes e opções de conexão em query string. Ele cria um banco novo
+`focusstore_e2e_<UUID da execução>_test`; migrations e seed rodam somente nesse
+banco. A seed exige identidade compatível em `FOCUS_E2E_RUN_ID` e rejeita um banco
+genérico mesmo se estiver vazio. Não execute a seed isoladamente. O teste aplica
+Alembic, verifica `alembic check`, insere fixtures sintéticas, inicia FastAPI e
+Next.js e remove o banco criado e o SQLite temporário ao terminar. Nunca aponte
+o banco de conexão para um servidor persistente; o isolamento de execução não
+substitui essa exigência operacional.
 
 ## Evidências verificadas
 
@@ -117,7 +123,7 @@ gh run view RUN_ID --log
 ```
 
 Confira o SHA de ambos os runs contra o HEAD remoto e as contagens TAP do passo
-`Automated PostgreSQL catalog homologation`: quatro testes, quatro aprovados,
+`Automated PostgreSQL catalog homologation`: sete testes, sete aprovados,
 zero falhas e zero skips. O E2E usa Next.js em desenvolvimento; a regressão HTTP
 com build de produção é executada separadamente por `npm test`.
 
@@ -129,3 +135,13 @@ runtime Node 20 forçado para Node 24 pelo runner, tipo de módulo não declarad
 O Node da aplicação permanece 22. O `npm ci` reportou zero vulnerabilidades e os
 dois `pip check` não encontraram dependências incompatíveis. Atualizar esses
 componentes exige validação própria; nenhum aviso foi ocultado nesta homologação.
+
+## Reforços da auditoria de engenharia
+
+A suíte atual também valida busca seletiva, filtros com resultado vazio,
+alteração de estoque via SQL comprometida no PostgreSQL refletida na API e no
+HTML, e recuperação após reiniciar o FastAPI. O teardown descarta apenas o nome
+aleatório criado com sucesso nesta execução. Dez testes backend verificam a
+rejeição de URLs inseguras e identidades ausentes/incorretas sem conectar a bancos.
+Os números históricos acima continuam associados aos respectivos SHAs, não aos
+reforços posteriores. Consulte também `FINAL_ENGINEERING_AUDIT.md`.

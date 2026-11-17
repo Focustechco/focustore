@@ -7,13 +7,14 @@ from decimal import Decimal
 
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.orm import Session
+from catalog_e2e_database import validate_owned_url
 
 from app.models.category import Category
 from app.models.product import Inventory, Product, ProductCategory, ProductImage, ProductVariant
 
 
 def main() -> None:
-    database_url = os.environ["DATABASE_URL"]
+    database_url = validate_owned_url(os.environ["DATABASE_URL"], os.environ.get("FOCUS_E2E_RUN_ID", ""))
     engine = create_engine(database_url, pool_pre_ping=True, hide_parameters=True)
     category = Category(
         name="Homologação Catálogo",
@@ -67,6 +68,13 @@ def main() -> None:
         is_featured=False,
     )
 
+    try:
+        seed(engine, category, bottle, shirt, inactive)
+    finally:
+        engine.dispose()
+
+
+def seed(engine, category, bottle, shirt, inactive) -> None:
     with Session(engine) as session:
         existing_products = session.scalar(select(func.count()).select_from(Product)) or 0
         existing_categories = session.scalar(select(func.count()).select_from(Category)) or 0
@@ -112,5 +120,5 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as exc:
-        print(f"catalog E2E seed failed: {exc}", file=sys.stderr)
-        raise
+        print(f"catalog E2E seed failed ({type(exc).__name__})", file=sys.stderr)
+        raise SystemExit(1)

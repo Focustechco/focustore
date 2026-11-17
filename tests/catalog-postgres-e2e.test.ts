@@ -9,6 +9,9 @@ import { randomUUID } from 'node:crypto';
 import { sqliteTestUrl } from './helpers/test-database';
 
 const databaseUrl = process.env.FOCUS_E2E_DATABASE_URL ?? process.env.TEST_DATABASE_URL;
+const runId = randomUUID().replaceAll('-', '');
+let ownedDatabaseUrl = '';
+let databaseCreated = false;
 const python = process.env.FOCUS_PYTHON_EXECUTABLE ?? (process.platform === 'win32' ? 'python' : 'python3');
 const root = process.cwd();
 let temporaryDirectory = '';
@@ -41,7 +44,9 @@ async function freePort() {
 function runPython(args: string[]) {
   return execFileSync(python, args, {
     cwd: path.join(root, 'backend'),
-    env: { ...process.env, DATABASE_URL: databaseUrl, PYTHONPATH: path.join(root, 'backend') },
+    env: { ...process.env, DATABASE_URL: ownedDatabaseUrl || databaseUrl,
+      FOCUS_E2E_DATABASE_URL: databaseUrl, FOCUS_E2E_RUN_ID: runId,
+      PYTHONPATH: path.join(root, 'backend') },
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: 60000,
@@ -90,6 +95,11 @@ async function stop(child: ChildProcess | undefined) {
 before(async () => {
   assert.ok(databaseUrl, 'Set FOCUS_E2E_DATABASE_URL to a disposable PostgreSQL *_test database');
   assertDisposableDatabase(databaseUrl);
+  console.info(runPython([path.join(root, 'scripts', 'catalog_e2e_database.py'), 'create']).trim());
+  databaseCreated = true;
+  const ownedUrl = new URL(databaseUrl);
+  ownedUrl.pathname = `/focusstore_e2e_${runId}_test`;
+  ownedDatabaseUrl = ownedUrl.toString();
   temporaryDirectory = await mkdtemp(path.join(process.env.RUNNER_TEMP ?? process.env.TEMP ?? root, 'focusstore-catalog-e2e-'));
   frontendDatabaseUrl = sqliteTestUrl(temporaryDirectory, 'frontend');
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'], {
@@ -103,13 +113,7 @@ before(async () => {
   const frontendPort = await freePort();
   backend = `http://127.0.0.1:${backendPort}`;
   frontend = `http://127.0.0.1:${frontendPort}`;
-  const backendEnv = {
-    ...process.env, DATABASE_URL: databaseUrl, CATALOG_SOURCE: 'postgresql',
-    FASTAPI_CHECKOUT_ENABLED: 'false', CHECKOUT_WRITE_AUTHORITY: 'prisma',
-    MIGRATION_MODE: 'observe', FASTAPI_PAYMENT_SIMULATOR_ENABLED: 'false',
-    FOCUS_DEBUG: 'false',
-  };
-  fastApi = start(python, ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)], path.join(root, 'backend'), backendEnv);
+  fastApi = startBackend();
   next = start(process.execPath, ['node_modules/next/dist/bin/next', 'dev', '--hostname', '127.0.0.1', '--port', String(frontendPort)], root, {
     ...process.env, NODE_ENV: 'development', DATABASE_URL: frontendDatabaseUrl,
     CATALOG_READ_SOURCE: 'fastapi', FOCUS_API_BASE_URL: backend,
@@ -119,10 +123,23 @@ before(async () => {
   await waitReady(`${frontend}/api/auth/session`);
 }, { timeout: 180000 });
 
+function startBackend() {
+  const backendEnv = {
+    ...process.env, DATABASE_URL: ownedDatabaseUrl, CATALOG_SOURCE: 'postgresql',
+    FASTAPI_CHECKOUT_ENABLED: 'false', CHECKOUT_WRITE_AUTHORITY: 'prisma',
+    MIGRATION_MODE: 'observe', FASTAPI_PAYMENT_SIMULATOR_ENABLED: 'false',
+    FOCUS_DEBUG: 'false',
+  };
+  return start(python, ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', new URL(backend).port], path.join(root, 'backend'), backendEnv);
+}
+
 after(async () => {
   const results = await Promise.allSettled([stop(next), stop(fastApi)]);
-  if (temporaryDirectory) await rm(temporaryDirectory, { recursive: true, force: true });
   const errors = results.filter(result => result.status === 'rejected').map(result => result.reason);
+  try {
+    if (databaseCreated) console.info(runPython([path.join(root, 'scripts', 'catalog_e2e_database.py'), 'drop']).trim());
+  } catch (error) { errors.push(error); }
+  if (temporaryDirectory) await rm(temporaryDirectory, { recursive: true, force: true });
   if (errors.length) throw new AggregateError(errors, 'E2E service cleanup failed');
 });
 
@@ -185,6 +202,42 @@ test('FastAPI exposes the same synthetic records and supports catalog filters', 
   assert.equal((await fetch(`${backend}/api/v1/catalog/categories/homolog-catalog`)).status, 200);
 });
 
+test('search and category filters exclude unrelated records and preserve empty results', async () => {
+  const search = await page('/busca?q=Bottle');
+  assert.match(search, /Homolog Bottle/);
+  assert.doesNotMatch(search, /Homolog Shirt/);
+  const empty = await page('/busca?q=NoSuchHomologProduct');
+  assert.doesNotMatch(empty, /Homolog Bottle|Homolog Shirt|temporariamente indisponível/);
+  for (const query of ['category_slug=no-such-category', 'search=NoSuchHomologProduct']) {
+    const response = await fetch(`${backend}/api/v1/catalog/products?${query}`, { signal: AbortSignal.timeout(5000) });
+    assert.equal(response.status, 200);
+    const data = await response.json();
+    assert.equal(data.total, 0);
+    assert.deepEqual(data.items, []);
+  }
+});
+
+test('committed PostgreSQL inventory changes reach FastAPI and rendered Next.js content', async () => {
+  function setStock(quantity: number) {
+    runPython(['-c', `import os; from sqlalchemy import create_engine, text
+engine = create_engine(os.environ['DATABASE_URL'], hide_parameters=True)
+try:
+    with engine.begin() as connection:
+        result = connection.execute(text("UPDATE inventory SET quantity_available = :quantity WHERE variant_id = (SELECT id FROM product_variants WHERE sku = 'HOMOLOG-BOTTLE-V1')"), {'quantity': ${quantity}})
+        assert result.rowcount == 1
+finally:
+    engine.dispose()
+`]);
+  }
+  try {
+    setStock(3);
+    const response = await fetch(`${backend}/api/v1/catalog/products/homolog-bottle`, { signal: AbortSignal.timeout(5000) });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).variants[0].quantity_available, 3);
+    assert.match(await page('/produto/homolog-bottle'), /3\s+unidades em estoque/);
+  } finally { setStock(5); }
+});
+
 test('does not silently fall back to Prisma when FastAPI becomes unavailable', async () => {
   await stop(fastApi);
   fastApi = undefined;
@@ -193,4 +246,13 @@ test('does not silently fall back to Prisma when FastAPI becomes unavailable', a
   const html = renderedText(await response.text());
   assert.doesNotMatch(html, /Homolog Bottle/);
   assert.match(html, /Catálogo temporariamente indisponível/);
+});
+
+test('recovers the real catalog after restarting FastAPI against the same PostgreSQL database', async () => {
+  fastApi = startBackend();
+  await waitReady(`${backend}/health`);
+  const html = await page('/busca?q=Homolog');
+  assert.match(html, /Homolog Bottle/);
+  assert.match(html, /Homolog Shirt/);
+  assert.doesNotMatch(html, /Catálogo temporariamente indisponível/);
 });

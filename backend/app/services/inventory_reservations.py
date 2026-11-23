@@ -10,14 +10,18 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
-from typing import Iterable
+import time
+from typing import Callable, Iterable, TypeVar
 from uuid import UUID
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.models.product import Inventory, InventoryMovement, ProductVariant, StockReservation, StockReservationItem
+
+T = TypeVar('T')
+MAX_QUANTITY = 2147483647
 
 
 class ReservationError(Exception):
@@ -39,6 +43,9 @@ class ReservationResult:
 
 class InventoryReservationService:
     def __init__(self, db: Session, *, source: str = 'internal-inventory', idempotency_scope: str = 'default') -> None:
+        if any(not isinstance(value, str) or not value.strip() or len(value) > 120
+               for value in (source, idempotency_scope)):
+            raise ReservationError('A non-empty bounded source and scope are required.')
         self.db = db
         self.source = source
         self.idempotency_scope = idempotency_scope
@@ -46,8 +53,12 @@ class InventoryReservationService:
     @staticmethod
     def _canonical_lines(lines: Iterable[ReservationLine]) -> list[ReservationLine]:
         result = list(lines)
-        if not result or any(line.quantity <= 0 for line in result):
-            raise ReservationError('Reservation quantities must be positive.')
+        if not 1 <= len(result) <= 100 or any(
+            not isinstance(line, ReservationLine) or type(line.quantity) is not int
+            or not 1 <= line.quantity <= MAX_QUANTITY or not isinstance(line.variant_public_id, UUID)
+            for line in result
+        ):
+            raise ReservationError('Use 1-100 UUID lines with positive bounded integer quantities.')
         if len({line.variant_public_id for line in result}) != len(result):
             raise ReservationError('A variant may occur only once in a reservation.')
         return sorted(result, key=lambda line: str(line.variant_public_id))
@@ -63,38 +74,54 @@ class InventoryReservationService:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         return ReservationResult(reservation.public_id, reservation.status, expires_at)
 
-    @staticmethod
-    def _is_expired(reservation: StockReservation) -> bool:
+    def _now(self) -> datetime:
+        if self.db.get_bind().dialect.name == 'postgresql':
+            return self.db.scalar(select(func.clock_timestamp()))
+        return datetime.now(timezone.utc)
+
+    def _is_expired(self, reservation: StockReservation) -> bool:
         expires_at = reservation.expires_at
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
-        return datetime.now(timezone.utc) >= expires_at
+        return self._now() >= expires_at
+
+    def _transaction(self, operation: Callable[[], T]) -> T:
+        """Retry only rolled-back deadlocks/serialization failures, without I/O effects."""
+        for attempt in range(3):
+            try:
+                with self.db.begin():
+                    return operation()
+            except DBAPIError as exc:
+                if getattr(exc.orig, 'sqlstate', None) not in {'40P01', '40001'}:
+                    raise
+                if attempt == 2:
+                    raise ReservationError('Retryable database contention; retry the same request key.') from exc
+                time.sleep(0.01 * (attempt + 1))
+        raise AssertionError('Unreachable retry state')
 
     def create(self, idempotency_key: str, lines: Iterable[ReservationLine], *, ttl_seconds: int = 900) -> ReservationResult:
         """Create or replay a reservation, including concurrent same-key callers."""
         lines = list(lines)
-        for attempt in range(2):
-            try:
-                with self.db.begin():
-                    return self._create_in_transaction(idempotency_key, lines, ttl_seconds=ttl_seconds)
-            except IntegrityError:
-                self.db.rollback()
-                with self.db.begin():
-                    existing = self.db.scalar(
-                        select(StockReservation).where(
-                            StockReservation.idempotency_scope == self.idempotency_scope,
-                            StockReservation.idempotency_key == idempotency_key,
-                        )
+        try:
+            return self._transaction(lambda: self._create_in_transaction(idempotency_key, lines, ttl_seconds=ttl_seconds))
+        except IntegrityError as exc:
+            if (getattr(exc.orig, 'sqlstate', None) != '23505'
+                    or exc.orig.diag.constraint_name != 'uq_stock_reservation_idempotency'):
+                raise
+            with self.db.begin():
+                existing = self.db.scalar(
+                    select(StockReservation).where(
+                        StockReservation.idempotency_scope == self.idempotency_scope,
+                        StockReservation.idempotency_key == idempotency_key,
                     )
-                    if existing is not None:
-                        canonical = self._canonical_lines(lines)
-                        if existing.request_hash != self._request_hash(canonical, ttl_seconds):
-                            raise ReservationError('Idempotency key was already used with a different payload.')
-                        return self._result(existing)
-                if attempt == 0:
-                    continue
-                raise ReservationError('Reservation could not be committed safely.')
-        raise ReservationError('Reservation could not be committed safely.')
+                    .execution_options(populate_existing=True)
+                )
+                if existing is not None:
+                    canonical = self._canonical_lines(lines)
+                    if existing.request_hash != self._request_hash(canonical, ttl_seconds):
+                        raise ReservationError('Idempotency key was already used with a different payload.')
+                    return self._result(existing)
+                raise ReservationError('Committed idempotency record is unavailable; retry the same key.')
 
     def create_in_transaction(
         self, idempotency_key: str, lines: Iterable[ReservationLine], *, ttl_seconds: int = 900
@@ -105,9 +132,9 @@ class InventoryReservationService:
         return self._create_in_transaction(idempotency_key, lines, ttl_seconds=ttl_seconds)
 
     def _create_in_transaction(self, idempotency_key: str, lines: Iterable[ReservationLine], *, ttl_seconds: int = 900) -> ReservationResult:
-        if not idempotency_key.strip() or len(idempotency_key) > 200:
+        if not isinstance(idempotency_key, str) or not idempotency_key.strip() or len(idempotency_key) > 200:
             raise ReservationError('A valid idempotency key is required.')
-        if not 1 <= ttl_seconds <= 86400:
+        if type(ttl_seconds) is not int or not 1 <= ttl_seconds <= 86400:
             raise ReservationError('Reservation TTL must be between 1 and 86400 seconds.')
         canonical = self._canonical_lines(lines)
         request_hash = self._request_hash(canonical, ttl_seconds)
@@ -116,7 +143,7 @@ class InventoryReservationService:
             select(StockReservation).where(
                 StockReservation.idempotency_scope == self.idempotency_scope,
                 StockReservation.idempotency_key == idempotency_key,
-            ).options(selectinload(StockReservation.items))
+            ).execution_options(populate_existing=True)
         )
         if existing is not None:
             if existing.request_hash != request_hash:
@@ -128,6 +155,7 @@ class InventoryReservationService:
             select(ProductVariant).where(ProductVariant.public_id.in_(variant_ids))
             .options(joinedload(ProductVariant.product))
             .order_by(ProductVariant.id)
+            .execution_options(populate_existing=True)
         ).all()
         by_public_id = {variant.public_id: variant for variant in variants}
         if len(by_public_id) != len(canonical) or any(not variant.is_active or variant.product.status != 'ACTIVE' for variant in variants):
@@ -141,7 +169,7 @@ class InventoryReservationService:
             idempotency_scope=self.idempotency_scope,
             idempotency_key=idempotency_key,
             request_hash=request_hash,
-            expires_at=datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds),
+            expires_at=self._now() + timedelta(seconds=ttl_seconds),
         )
         self.db.add(reservation)
         self.db.flush()
@@ -150,16 +178,22 @@ class InventoryReservationService:
         for variant in variants:
             inventory = self.db.scalar(
                 select(Inventory).where(Inventory.variant_id == variant.id).with_for_update()
+                .execution_options(populate_existing=True)
             )
             if inventory is None:
                 raise ReservationError(f'No inventory exists for variant {variant.public_id}.')
             inventory_by_variant[variant.id] = inventory
+
+        # The TTL starts after obtaining all stock locks, not before a lock wait.
+        reservation.expires_at = self._now() + timedelta(seconds=ttl_seconds)
 
         for line in canonical:
             variant = by_public_id[line.variant_public_id]
             inventory = inventory_by_variant[variant.id]
             if inventory.quantity_available < line.quantity:
                 raise ReservationError(f'Insufficient inventory for variant {line.variant_public_id}.')
+            if inventory.quantity_reserved > MAX_QUANTITY - line.quantity:
+                raise ReservationError('Reserved quantity exceeds the supported integer range.')
             inventory.quantity_available -= line.quantity
             inventory.quantity_reserved += line.quantity
             item = StockReservationItem(reservation_id=reservation.id, variant_id=variant.id, quantity=line.quantity)
@@ -174,12 +208,12 @@ class InventoryReservationService:
 
     def get(self, reservation_id: UUID) -> ReservationResult | None:
         with self.db.begin():
-            reservation = self.db.scalar(select(StockReservation).where(StockReservation.public_id == reservation_id))
+            reservation = self.db.scalar(select(StockReservation).where(StockReservation.public_id == reservation_id)
+                                         .execution_options(populate_existing=True))
             return None if reservation is None else self._result(reservation)
 
     def _transition(self, reservation_id: UUID, target: str) -> ReservationResult:
-        with self.db.begin():
-            return self._transition_in_transaction(reservation_id, target)
+        return self._transaction(lambda: self._transition_in_transaction(reservation_id, target))
 
     def transition_in_transaction(self, reservation_id: UUID, target: str) -> ReservationResult:
         if not self.db.in_transaction():
@@ -190,6 +224,7 @@ class InventoryReservationService:
         reservation = self.db.scalar(
             select(StockReservation).where(StockReservation.public_id == reservation_id)
             .options(selectinload(StockReservation.items)).with_for_update()
+            .execution_options(populate_existing=True)
         )
         if reservation is None:
             raise ReservationError('Reservation not found.')
@@ -197,17 +232,24 @@ class InventoryReservationService:
             return self._result(reservation)
         if reservation.status != 'pending' or target not in {'confirmed', 'released', 'expired'}:
             raise ReservationError(f'Invalid reservation transition: {reservation.status} -> {target}.')
+        inventory_by_variant: dict[int, Inventory] = {}
+        for item in sorted(reservation.items, key=lambda item: item.variant_id):
+            inventory = self.db.scalar(
+                select(Inventory).where(Inventory.variant_id == item.variant_id).with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if inventory is None or inventory.quantity_reserved < item.quantity:
+                raise ReservationError('Reserved inventory invariant was violated.')
+            inventory_by_variant[item.variant_id] = inventory
+
+        # A stock lock may block beyond the deadline: check only after all waits.
         if target == 'confirmed' and self._is_expired(reservation):
             raise ReservationError('Reservation has expired and cannot be confirmed.')
         if target == 'expired' and not self._is_expired(reservation):
             raise ReservationError('Reservation cannot expire before its deadline.')
 
-        for item in sorted(reservation.items, key=lambda item: item.variant_id):
-            inventory = self.db.scalar(
-                select(Inventory).where(Inventory.variant_id == item.variant_id).with_for_update()
-            )
-            if inventory is None or inventory.quantity_reserved < item.quantity:
-                raise ReservationError('Reserved inventory invariant was violated.')
+        for item in reservation.items:
+            inventory = inventory_by_variant[item.variant_id]
             inventory.quantity_reserved -= item.quantity
             if target != 'confirmed':
                 inventory.quantity_available += item.quantity

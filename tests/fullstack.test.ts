@@ -77,7 +77,17 @@ async function stopStack() {
   const processToStop = stack;
   const exited = once(processToStop, 'exit');
   if (process.platform === 'win32') {
-    execFileSync('taskkill', ['/PID', String(processToStop.pid), '/T', '/F'], { stdio: 'ignore' });
+    try {
+      execFileSync('taskkill', ['/PID', String(processToStop.pid), '/T', '/F'], { stdio: 'ignore' });
+    } catch (error) {
+      // The child may exit between exitCode inspection and taskkill. Ignore
+      // only when its exit is actually observed; a running process still fails.
+      const alreadyExited = await Promise.race([
+        exited.then(() => true),
+        new Promise<boolean>(resolve => setTimeout(() => resolve(false), 1000)),
+      ]);
+      if (!alreadyExited) throw error;
+    }
   } else process.kill(-processToStop.pid!, 'SIGTERM');
   await exited;
   stack = undefined;

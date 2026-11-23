@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, Uuid, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, Uuid, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -140,6 +140,7 @@ class Inventory(Base):
     __table_args__ = (
         CheckConstraint('quantity_available >= 0', name='ck_inventory_available_nonnegative'),
         CheckConstraint('quantity_reserved >= 0', name='ck_inventory_reserved_nonnegative'),
+        CheckConstraint('unattributed_reserved >= 0', name='ck_inventory_unattributed_nonnegative'),
         UniqueConstraint('variant_id', name='uq_inventory_variant_id'),
     )
 
@@ -149,6 +150,7 @@ class Inventory(Base):
     )
     quantity_available: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default='0')
     quantity_reserved: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default='0')
+    unattributed_reserved: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default='0')
     updated_at: Mapped[datetime] = mapped_column(nullable=False, server_default=func.now(), onupdate=func.now())
 
     variant: Mapped[ProductVariant] = relationship('ProductVariant', back_populates='inventory')
@@ -200,6 +202,9 @@ class StockReservationItem(Base):
 class InventoryMovement(Base):
     __tablename__ = 'inventory_movements'
     __table_args__ = (
+        Index('uq_inventory_movement_terminal', 'reservation_id', 'variant_id', unique=True,
+              postgresql_where=text("operation IN ('confirm', 'release', 'expire')"),
+              sqlite_where=text("operation IN ('confirm', 'release', 'expire')")),
         UniqueConstraint('reservation_id', 'variant_id', 'operation', name='uq_inventory_movement_operation'),
         CheckConstraint("operation IN ('reserve', 'confirm', 'release', 'expire')", name='ck_inventory_movement_operation'),
         CheckConstraint('quantity > 0', name='ck_inventory_movement_quantity_positive'),

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db.dependencies import get_db
 from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct, CatalogSort
+from app.schemas.catalog_money import MAX_PRICE
 from app.services.catalog_service import CatalogService
 
 
@@ -23,7 +24,7 @@ Limit = Annotated[int, Query(ge=1, le=100)]
 Search = Annotated[str | None, Query(max_length=120)]
 CategorySlug = Annotated[str | None, Query(alias='category_slug', max_length=140)]
 Sort = Annotated[CatalogSort, Query()]
-Price = Annotated[Decimal | None, Query(ge=0)]
+Price = Annotated[Decimal | None, Query(ge=0, le=MAX_PRICE)]
 
 
 @router.get('/products', response_model=CatalogPage[CatalogProduct],

@@ -16,5 +16,14 @@ fixtures without that column use descending source IDs as a deterministic
 compatibility fallback.
 
 FastAPI remains a read-only catalog source. Collections, reviews, featured
-metadata and `createdAt` remain Prisma-only. FastAPI does not expose checkout,
-purchase or stock synchronization operations.
+metadata and `createdAt` remain Prisma-only. The catalog router does not expose
+checkout, purchase or stock synchronization operations. Existing experimental
+checkout routes elsewhere remain disabled by default; this contract does not
+activate them.
+
+The additive 1.1 envelope includes contract_version, and products carry BRL
+currency plus their actual catalog_origin. IDs remain unchanged; public_id is
+an independent UUID, never an inferred Prisma correspondence. Read prices are
+Decimal/HALF_UP with two places and Numeric(10,2) bounds. The adapter exposes
+integer minor units while preserving legacy display numbers. See PHASE23_AUDIT.md
+for the precision policy, operational constraints and validation evidence.

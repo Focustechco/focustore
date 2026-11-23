@@ -44,10 +44,14 @@ class PostgresCatalogRepository:
                 Product.brand.ilike(pattern, escape='\\'),
             ))
         if category_slug and category_slug != 'todos':
-            base = base.where(Product.categories.any(and_(
+            linked = Product.categories.any(and_(
                 Category.slug == category_slug,
                 Category.is_active.is_(True),
+            ))
+            primary = and_(~Product.categories.any(), Product.category.has(and_(
+                Category.slug == category_slug, Category.is_active.is_(True),
             )))
+            base = base.where(or_(linked, primary))
         price = func.coalesce(Product.base_price, Product.price)
         if min_price is not None:
             base = base.where(price >= min_price)

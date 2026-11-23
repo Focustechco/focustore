@@ -207,6 +207,12 @@
       },
       "CatalogPage_CatalogCategory_": {
         "properties": {
+          "contract_version": {
+            "const": "1.1",
+            "default": "1.1",
+            "title": "Contract Version",
+            "type": "string"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/CatalogCategory"
@@ -238,6 +244,12 @@
       },
       "CatalogPage_CatalogProduct_": {
         "properties": {
+          "contract_version": {
+            "const": "1.1",
+            "default": "1.1",
+            "title": "Contract Version",
+            "type": "string"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/CatalogProduct"
@@ -274,6 +286,9 @@
             "type": "boolean"
           },
           "base_price": {
+            "decimal_places": 2,
+            "ge": 0,
+            "max_digits": 10,
             "title": "Base Price",
             "type": "string"
           },
@@ -281,12 +296,33 @@
             "title": "Brand",
             "type": "string"
           },
+          "catalog_origin": {
+            "anyOf": [
+              {
+                "enum": [
+                  "legacy_sqlite",
+                  "postgresql"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Origin"
+          },
           "categories": {
             "items": {
               "$ref": "#/components/schemas/CatalogCategory"
             },
             "title": "Categories",
             "type": "array"
+          },
+          "currency": {
+            "const": "BRL",
+            "default": "BRL",
+            "title": "Currency",
+            "type": "string"
           },
           "description": {
             "title": "Description",
@@ -320,6 +356,9 @@
           "promotional_price": {
             "anyOf": [
               {
+                "decimal_places": 2,
+                "ge": 0,
+                "max_digits": 10,
                 "type": "string"
               },
               {
@@ -454,12 +493,18 @@
             "type": "integer"
           },
           "price": {
+            "decimal_places": 2,
+            "ge": 0,
+            "max_digits": 10,
             "title": "Price",
             "type": "string"
           },
           "promotional_price": {
             "anyOf": [
               {
+                "decimal_places": 2,
+                "ge": 0,
+                "max_digits": 10,
                 "type": "string"
               },
               {
@@ -1770,6 +1815,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 99999999.99,
                   "minimum": 0.0,
                   "type": "number"
                 },
@@ -1790,6 +1836,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 99999999.99,
                   "minimum": 0.0,
                   "type": "number"
                 },

@@ -1,17 +1,8 @@
 """Translate selected Prisma columns without mutating or persisting source data."""
-from decimal import Decimal, ROUND_HALF_UP
 from sqlite3 import Row
 
 from app.schemas.catalog import CatalogCategory, CatalogImage, CatalogProduct, CatalogVariant
-
-
-def money(value: str | None) -> Decimal | None:
-    if value is None:
-        return None
-    amount = Decimal(value)
-    if not amount.is_finite() or amount < 0:
-        raise ValueError('Invalid source price')
-    return amount.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+from app.schemas.catalog_money import money
 
 
 def map_category(row: Row) -> CatalogCategory:
@@ -34,6 +25,7 @@ def map_product(
     data['promotional_price'] = money(data['promotional_price'])
     return CatalogProduct(
         **data,
+        catalog_origin='legacy_sqlite',
         images=gallery,
         primary_image=next((image for image in gallery if image.is_primary),
                            gallery[0] if gallery else None),

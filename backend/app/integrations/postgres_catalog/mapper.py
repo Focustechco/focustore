@@ -53,6 +53,7 @@ def product_schema(product: Product) -> CatalogProduct:
 
     variants = [variant_schema(variant) for variant in product.variants if variant.is_active]
     return CatalogProduct(
+        catalog_origin='postgresql',
         id=str(product.id),
         public_id=product.public_id,
         name=product.name,

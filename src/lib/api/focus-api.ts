@@ -1,5 +1,6 @@
 /** Server-side client for FocusStore's public FastAPI catalog contract. */
-import type { ApiErrorBody, HttpStatus } from './contracts';
+import type { HttpStatus } from './contracts';
+import { catalogMinorUnits } from './catalog-money';
 
 export type CatalogImageResponse = { id: string; url: string; alt_text: string | null; position: number; is_primary: boolean };
 export type CatalogCategoryResponse = { id: string; name: string; slug: string; description: string | null; image_url: string | null; parent_id: string | null; position: number };
@@ -9,11 +10,12 @@ export type CatalogVariantResponse = {
   quantity_available: number | null; quantity_reserved: number | null; available: boolean;
 };
 export type CatalogProductResponse = {
+  catalog_origin?: 'legacy_sqlite' | 'postgresql' | null; currency?: 'BRL';
   id: string; public_id?: string | null; name: string; slug: string; sku: string; description: string; short_description: string | null; brand: string; status: string;
   base_price: string | number; promotional_price: string | number | null; available: boolean; primary_image: CatalogImageResponse | null;
   images: CatalogImageResponse[]; categories: CatalogCategoryResponse[]; variants: CatalogVariantResponse[];
 };
-export type CatalogPageResponse<T> = { items: T[]; total: number; offset: number; limit: number };
+export type CatalogPageResponse<T> = { contract_version?: '1.1'; items: T[]; total: number; offset: number; limit: number };
 export type CatalogProductQuery = {
   categorySlug?: string;
   search?: string;
@@ -59,15 +61,29 @@ function boolean(value: unknown, label: string): boolean { if (typeof value !== 
 function nullableString(value: unknown, label: string): string | null { return value === null ? null : string(value, label); }
 function nullableNumber(value: unknown, label: string): number | null { return value === null ? null : number(value, label); }
 function money(value: unknown, label: string): string | number {
-  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
-  if (typeof value === 'string' && /^\d+(?:\.\d+)?$/.test(value)) return value;
+  if (typeof value === 'number' || typeof value === 'string') {
+    try { catalogMinorUnits(value); return value; } catch { /* reject unsafe source money below */ }
+  }
   throw new FocusApiError(`Unexpected FastAPI response: ${label} must be a non-negative decimal.`, 'response');
 }
 function nullableMoney(value: unknown, label: string): string | number | null { return value === null ? null : money(value, label); }
 function paginationNumber(value: unknown, label: string): number {
   const result = number(value, label);
-  if (!Number.isInteger(result) || result < 0) throw new FocusApiError(`Unexpected FastAPI response: ${label} must be a non-negative integer.`, 'response');
+  if (!Number.isSafeInteger(result) || result < 0) throw new FocusApiError(`Unexpected FastAPI response: ${label} must be a non-negative integer.`, 'response');
   return result;
+}
+
+function publicUuid(value: unknown, label: string): string | null | undefined {
+  if (value === null || value === undefined) return value;
+  const result = string(value, label);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(result)) {
+    throw new FocusApiError(`Unexpected FastAPI response: ${label} must be a UUID.`, 'response');
+  }
+  return result;
+}
+
+function quantity(value: unknown, label: string): number | null {
+  return value === null ? null : paginationNumber(value, label);
 }
 
 export function parseCatalogImage(value: unknown): CatalogImageResponse {
@@ -80,16 +96,26 @@ export function parseCatalogCategory(value: unknown): CatalogCategoryResponse {
 }
 function parseCatalogVariant(value: unknown): CatalogVariantResponse {
   const item = record(value, 'variant');
-  return { id: string(item.id, 'variant.id'), public_id: item.public_id === undefined ? undefined : nullableString(item.public_id, 'variant.public_id'), sku: string(item.sku, 'variant.sku'), name: string(item.name, 'variant.name'), color: nullableString(item.color, 'variant.color'), color_hex: nullableString(item.color_hex, 'variant.color_hex'), size: nullableString(item.size, 'variant.size'), model: nullableString(item.model, 'variant.model'), price: money(item.price, 'variant.price'), promotional_price: nullableMoney(item.promotional_price, 'variant.promotional_price'), image_url: nullableString(item.image_url, 'variant.image_url'), position: number(item.position, 'variant.position'), quantity_available: nullableNumber(item.quantity_available, 'variant.quantity_available'), quantity_reserved: nullableNumber(item.quantity_reserved, 'variant.quantity_reserved'), available: boolean(item.available, 'variant.available') };
+  return { id: string(item.id, 'variant.id'), public_id: publicUuid(item.public_id, 'variant.public_id'), sku: string(item.sku, 'variant.sku'), name: string(item.name, 'variant.name'), color: nullableString(item.color, 'variant.color'), color_hex: nullableString(item.color_hex, 'variant.color_hex'), size: nullableString(item.size, 'variant.size'), model: nullableString(item.model, 'variant.model'), price: money(item.price, 'variant.price'), promotional_price: nullableMoney(item.promotional_price, 'variant.promotional_price'), image_url: nullableString(item.image_url, 'variant.image_url'), position: number(item.position, 'variant.position'), quantity_available: quantity(item.quantity_available, 'variant.quantity_available'), quantity_reserved: quantity(item.quantity_reserved, 'variant.quantity_reserved'), available: boolean(item.available, 'variant.available') };
 }
 export function parseCatalogProduct(value: unknown): CatalogProductResponse {
   const item = record(value, 'product');
+  if (item.catalog_origin != null && !['legacy_sqlite', 'postgresql'].includes(String(item.catalog_origin))) throw new FocusApiError('Unsupported catalog origin.', 'response');
+  if (item.currency !== undefined && item.currency !== 'BRL') throw new FocusApiError('Unsupported catalog currency.', 'response');
   if (!Array.isArray(item.images) || !Array.isArray(item.categories) || !Array.isArray(item.variants)) throw new FocusApiError('Unexpected FastAPI response: product relations must be arrays.', 'response');
-  return { id: string(item.id, 'product.id'), public_id: item.public_id === undefined ? undefined : nullableString(item.public_id, 'product.public_id'), name: string(item.name, 'product.name'), slug: string(item.slug, 'product.slug'), sku: string(item.sku, 'product.sku'), description: string(item.description, 'product.description'), short_description: nullableString(item.short_description, 'product.short_description'), brand: string(item.brand, 'product.brand'), status: string(item.status, 'product.status'), base_price: money(item.base_price, 'product.base_price'), promotional_price: nullableMoney(item.promotional_price, 'product.promotional_price'), available: boolean(item.available, 'product.available'), primary_image: item.primary_image === null ? null : parseCatalogImage(item.primary_image), images: item.images.map(parseCatalogImage), categories: item.categories.map(parseCatalogCategory), variants: item.variants.map(parseCatalogVariant) };
+  return { catalog_origin: item.catalog_origin as CatalogProductResponse['catalog_origin'], currency: item.currency as 'BRL' | undefined, id: string(item.id, 'product.id'), public_id: publicUuid(item.public_id, 'product.public_id'), name: string(item.name, 'product.name'), slug: string(item.slug, 'product.slug'), sku: string(item.sku, 'product.sku'), description: string(item.description, 'product.description'), short_description: nullableString(item.short_description, 'product.short_description'), brand: string(item.brand, 'product.brand'), status: string(item.status, 'product.status'), base_price: money(item.base_price, 'product.base_price'), promotional_price: nullableMoney(item.promotional_price, 'product.promotional_price'), available: boolean(item.available, 'product.available'), primary_image: item.primary_image === null ? null : parseCatalogImage(item.primary_image), images: item.images.map(parseCatalogImage), categories: item.categories.map(parseCatalogCategory), variants: item.variants.map(parseCatalogVariant) };
 }
 export function parseCatalogPage<T>(value: unknown, parseItem: (item: unknown) => T): CatalogPageResponse<T> {
   const page = record(value, 'page'); if (!Array.isArray(page.items)) throw new FocusApiError('Unexpected FastAPI response: page.items must be an array.', 'response');
-  return { items: page.items.map(parseItem), total: paginationNumber(page.total, 'page.total'), offset: paginationNumber(page.offset, 'page.offset'), limit: paginationNumber(page.limit, 'page.limit') };
+  if (page.contract_version !== undefined && page.contract_version !== '1.1') throw new FocusApiError('Unsupported catalog contract version.', 'response');
+  const limit = paginationNumber(page.limit, 'page.limit');
+  if (limit < 1 || limit > 100 || page.items.length > limit) throw new FocusApiError('Invalid catalog page bounds.', 'response');
+  const total = paginationNumber(page.total, 'page.total');
+  const offset = paginationNumber(page.offset, 'page.offset');
+  if ((page.items.length === 0 && offset < total) || (page.items.length > 0 && offset + page.items.length > total)) {
+    throw new FocusApiError('Inconsistent catalog page; no empty-result fallback is allowed.', 'response');
+  }
+  return { contract_version: page.contract_version as '1.1' | undefined, items: page.items.map(parseItem), total, offset, limit };
 }
 function configuredBaseUrl(value: string | undefined): string {
   if (!value) throw new FocusApiError('FOCUS_API_BASE_URL is required when CATALOG_READ_SOURCE=fastapi.', 'configuration');
@@ -126,15 +152,11 @@ export class FocusApiClient {
       catch { if (controller.signal.aborted) throw new FocusApiError(`FastAPI catalog timed out after ${this.timeoutMs}ms.`, 'timeout'); throw new FocusApiError('FastAPI catalog network request failed.', 'network'); }
       if (nullableNotFound && response.status === 404) return null;
       if (!response.ok) {
-        const raw = (await response.text()).slice(0, 512);
-        let detail = raw;
-        try {
-          const parsed = JSON.parse(raw) as ApiErrorBody;
-          if (typeof parsed.detail === 'string') detail = parsed.detail.slice(0, 256);
-        } catch { /* preserve a bounded non-JSON error body */ }
-        const retryAfter = Number(response.headers.get('retry-after'));
+        // Never forward upstream debug bodies, paths, connection strings or secrets.
+        const retryHeader = response.headers.get('retry-after');
+        const retryAfter = retryHeader === null ? NaN : Number(retryHeader);
         const retryAfterSeconds = Number.isFinite(retryAfter) && retryAfter >= 0 ? Math.min(retryAfter, 3600) : undefined;
-        throw new FocusApiError(`FastAPI catalog returned HTTP ${response.status}${detail ? `: ${detail}` : ''}.`, 'http', response.status as HttpStatus, retryAfterSeconds);
+        throw new FocusApiError(`FastAPI catalog returned HTTP ${response.status}.`, 'http', response.status as HttpStatus, retryAfterSeconds);
       }
       let body: unknown; try { body = await response.json(); } catch { throw new FocusApiError('FastAPI catalog returned invalid JSON.', 'response'); }
       return parse(body);

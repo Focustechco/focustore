@@ -20,7 +20,7 @@
     "clsx": "^2.1.1",
     "jose": "^6.2.13",
     "lucide-react": "^1.16.0",
-    "next": "^16.4.1",
+    "next": "^16.4.6",
     "openid-client": "^6.8.8",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -44,6 +44,7 @@
   },
   "overrides": {
     "@prisma/config": {
+      "effect": "^3.22.1",
       "deepmerge-ts": "^8.0.0"
     },
     "@types/react": "19.3.0",

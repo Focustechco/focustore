@@ -208,3 +208,46 @@ schema) e o checkout experimental FastAPI não apresentam diff. As mudanças de
 testes/store e tests/fullstack são diagnóstico e encerramento de processos,
 não alterações das regras comerciais. O restante do diff é catálogo, estoque
 PostgreSQL, migration, documentação, regressões e patches direcionados npm.
+
+## Nova execução de desbloqueio com Node 22
+
+Em 23/11/2026 repetimos as validações, sem reimplementar funcionalidades do HEAD
+5a8fd00. O workspace permitiu escrita e estava limpo na feature correta; o commit
+20fd379 permanece ancestral. Nenhum arquivo __pycache__ local foi descartado.
+
+Criamos outro cluster PostgreSQL 18, sem Docker nem uso da porta 5432:
+127.0.0.1:55432, banco recovery_test, usuário phase23_recheck, data_directory
+`.local-tools/recovery-pg`, system_identifier 7711435820413233952. Identidade
+confirmada por SQL antes das migrations. Upgrade head/check aprovados; constraints,
+FKs e 12 triggers não internos de inventory/reservas/itens/movimentos inspecionados.
+
+Resultado novo: **227 passed, zero skipped**, um warning Starlette/httpx,
+353,84s. Inclui concorrência real, rollback, migração populada/vazia, prazos após
+espera por lock e recuperação após reinício. Integridade, OpenAPI e pip check
+passaram novamente. Nenhum banco persistente foi utilizado para essas escritas.
+
+Frontend executado em cópia temporária somente de código, sem .env, bancos ou
+.next anteriores, com **Node 22.23.5 / npm 10.9.9**, distribuição oficial com
+SHA-256 conferido: npm ci e Prisma Client aprovados, TypeScript aprovado,
+**51 testes frontend** e **5 fullstack**, sem skips, e **build Next.js aprovado**.
+O Node global não foi alterado. Aviso MODULE_TYPELESS_PACKAGE_JSON preexistente
+foi registrado; stderr de aviso não foi confundido com exit code de falha.
+
+Diagnóstico controlado: o mesmo Node 22 falhou em os.userInfo/uv_os_get_passwd
+no sandbox com cerca de 4470 MiB livres, e funcionou no contexto autorizado com
+cerca de 4512 MiB livres. Isso aponta para diferença de contexto/permissões na
+consulta do usuário, não comprova falta de RAM e não exigiu aumento de recursos.
+A primeira cópia mkdtemp criada pelo sandbox tinha ACL incompatível com o contexto
+Node autorizado; somente essa cópia foi recriada pelo mesmo contexto executor,
+sem modificar permissões dos arquivos de trabalho ou simular os.userInfo.
+
+Os 41 skips históricos de 20fd379 vinham da fixture postgres sem TEST_DATABASE_URL:
+27 casos de mapping, 7 de integridade e 7 de identidade pública. Não eram testes
+desativados. A coleta isolada comparou 171/41 (histórico), 206/65 (main) e 227/83
+(feature), respectivamente total/casos que requerem PostgreSQL. Com a URL do novo
+cluster, os 83 casos PostgreSQL relevantes executaram na suíte completa, sem skips.
+
+Não houve correção adicional de produto: o novo commit registra evidências.
+Os riscos de locks da migration, custo dos checks diferidos e futura autoridade
+comercial permanecem os descritos acima. Checkout Prisma e flags de compras
+FastAPI não foram alterados. A atualização utiliza o PR #17 já existente.

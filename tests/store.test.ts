@@ -230,7 +230,7 @@ test('admin endpoints and server pages deny unauthenticated and ordinary users',
     assert.equal((await api(endpoint, 'GET', undefined, customerCookie)).status, 403);
   }
   const page = await api('/admin/pedidos');
-  assert.equal(page.status, 307);
+  assert.equal(page.status, 307, output);
   assert.equal(page.headers.get('location'), '/admin-acesso');
   await prisma.user.create({ data: { name: 'Synthetic Admin', email: 'admin@example.test', role: 'ADMIN', passwordHash: await bcrypt.hash('synthetic-admin-password', 4) } });
   const login = await api('/api/auth/login', 'POST', { identifier: 'admin@example.test', password: 'synthetic-admin-password' });

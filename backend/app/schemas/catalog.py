@@ -1,9 +1,12 @@
 """Public read contract. External IDs never refer to PostgreSQL integer IDs."""
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
+from app.schemas.catalog_money import money
+
+CatalogMoney = Annotated[Decimal, BeforeValidator(money), Field(ge=0, max_digits=10, decimal_places=2)]
 
 
 CatalogSort = Literal['relevance', 'price_asc', 'price_desc', 'newest']
@@ -36,8 +39,8 @@ class CatalogVariant(BaseModel):
     color_hex: str | None
     size: str | None
     model: str | None
-    price: Decimal = Field(ge=0)
-    promotional_price: Decimal | None = Field(ge=0)
+    price: CatalogMoney
+    promotional_price: CatalogMoney | None
     image_url: str | None
     position: int
     quantity_available: int | None = Field(ge=0)
@@ -47,6 +50,8 @@ class CatalogVariant(BaseModel):
 
 class CatalogProduct(BaseModel):
     id: str
+    catalog_origin: Literal['legacy_sqlite', 'postgresql'] | None = None
+    currency: Literal['BRL'] = 'BRL'
     public_id: UUID | None = None
     name: str
     slug: str
@@ -55,8 +60,8 @@ class CatalogProduct(BaseModel):
     short_description: str | None
     brand: str
     status: str
-    base_price: Decimal = Field(ge=0)
-    promotional_price: Decimal | None = Field(ge=0)
+    base_price: CatalogMoney
+    promotional_price: CatalogMoney | None
     available: bool
     primary_image: CatalogImage | None
     images: list[CatalogImage]
@@ -65,6 +70,7 @@ class CatalogProduct(BaseModel):
 
 
 class CatalogPage[T](BaseModel):
+    contract_version: Literal['1.1'] = '1.1'
     items: list[T]
     total: int
     offset: int

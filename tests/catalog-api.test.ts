@@ -1,32 +1,61 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { FocusApiClient, FocusApiError, type CatalogProductResponse } from '../src/lib/api/focus-api';
+import { FocusApiClient, FocusApiError, parseCatalogProduct, parseCatalogPage, type CatalogProductResponse } from '../src/lib/api/focus-api';
 import { adaptCatalogCategory, adaptCatalogPage, adaptCatalogProduct } from '../src/modules/catalog/catalog-api.adapter';
 
 function productFixture(): CatalogProductResponse {
   return {
-    id: 'product-1', public_id: 'public-product-1', name: 'Focus bottle', slug: 'focus-bottle', sku: 'BOTTLE-1', description: 'Synthetic product', short_description: null, brand: 'Focus', status: 'ACTIVE', base_price: '129.90', promotional_price: '99.90', available: true,
+    id: 'product-1', public_id: '11111111-1111-4111-8111-111111111111', name: 'Focus bottle', slug: 'focus-bottle', sku: 'BOTTLE-1', description: 'Synthetic product', short_description: null, brand: 'Focus', status: 'ACTIVE', base_price: '129.90', promotional_price: '99.90', available: true,
     primary_image: { id: 'image-2', url: '/two.png', alt_text: null, position: 2, is_primary: true },
     images: [
       { id: 'image-2', url: '/two.png', alt_text: null, position: 2, is_primary: true },
       { id: 'image-1', url: '/one.png', alt_text: 'Front', position: 1, is_primary: false },
     ],
     categories: [{ id: 'category-1', name: 'Accessories', slug: 'accessories', description: null, image_url: null, parent_id: null, position: 3 }],
-    variants: [{ id: 'variant-1', public_id: 'public-variant-1', sku: 'BOTTLE-1-BLACK', name: 'Black', color: 'Black', color_hex: '#000000', size: null, model: null, price: '129.90', promotional_price: null, image_url: null, position: 1, quantity_available: 3, quantity_reserved: 1, available: true }],
+    variants: [{ id: 'variant-1', public_id: '22222222-2222-4222-8222-222222222222', sku: 'BOTTLE-1-BLACK', name: 'Black', color: 'Black', color_hex: '#000000', size: null, model: null, price: '129.90', promotional_price: null, image_url: null, position: 1, quantity_available: 3, quantity_reserved: 1, available: true }],
   };
 }
+
+test('catalog money rounds decimal half-up in integer cents without changing IDs', () => {
+  const input = productFixture();
+  input.base_price = '19.995';
+  input.variants[0].price = '0.105';
+  const result = adaptCatalogProduct(input);
+  assert.equal(result.id, input.id);
+  assert.equal(result.publicId, input.public_id);
+  assert.equal(result.basePriceMinor, 2000);
+  assert.equal(result.basePrice, 20);
+  assert.equal(result.variants[0].priceMinor, 11);
+  assert.equal(result.catalogSource, 'fastapi');
+});
+
+test('catalog read boundary rejects invalid UUIDs, quantities and page versions', () => {
+  for (const invalid of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    const input = productFixture();
+    input.variants[0].quantity_available = invalid;
+    assert.throws(() => parseCatalogProduct(input), FocusApiError);
+  }
+  assert.throws(() => parseCatalogProduct({ ...productFixture(), public_id: 'internal-integer-1' }), FocusApiError);
+  for (const base_price of ['NaN', 'Infinity', '-1', '9999999999999999999']) {
+    assert.throws(() => parseCatalogProduct({ ...productFixture(), base_price }), FocusApiError);
+  }
+  assert.throws(() => parseCatalogPage({ items: [], total: 0, offset: 0, limit: 0 }, parseCatalogProduct), FocusApiError);
+  assert.throws(() => parseCatalogPage({ items: [], total: 1, offset: 0, limit: 20 }, parseCatalogProduct), FocusApiError);
+  assert.throws(() => parseCatalogPage({ items: [], total: 0, offset: 0, limit: 1, contract_version: '2.0' }, parseCatalogProduct), FocusApiError);
+  assert.equal(parseCatalogProduct({ ...productFixture(), public_id: null }).public_id, null);
+});
 
 test('adapter converts FastAPI product fields, relations, images and inventory', () => {
   const product = adaptCatalogProduct(productFixture());
   assert.equal(product.catalogSource, 'fastapi');
-  assert.equal(product.publicId, 'public-product-1');
+  assert.equal(product.publicId, '11111111-1111-4111-8111-111111111111');
   assert.equal(product.basePrice, 129.90);
   assert.equal(product.promotionalPrice, 99.90);
   assert.deepEqual(product.images.map(image => image.id), ['image-1', 'image-2']);
   assert.equal(product.categories[0].categoryId, 'category-1');
   assert.equal(product.categories[0].category.slug, 'accessories');
   assert.deepEqual(product.variants[0].inventory, { quantityAvailable: 3, quantityReserved: 1 });
-  assert.equal(product.variants[0].publicId, 'public-variant-1');
+  assert.equal(product.variants[0].publicId, '22222222-2222-4222-8222-222222222222');
 });
 
 test('adapter preserves null optional fields and paginated metadata', () => {
@@ -82,6 +111,14 @@ test('FastAPI catalog requests omit browser credentials', async () => {
   });
   await client.listProducts();
   assert.equal(requestInit?.credentials, 'omit');
+});
+
+test('upstream errors do not leak private diagnostic bodies or invent retry hints', async () => {
+  const client = new FocusApiClient({ baseUrl: 'http://catalog.test', fetch: async () =>
+    new Response('postgresql://user:synthetic-secret@private/database', { status: 503 }) });
+  await assert.rejects(client.listProducts(), (error: unknown) => error instanceof FocusApiError
+    && !error.message.includes('synthetic-secret') && !error.message.includes('private')
+    && error.retryAfterSeconds === undefined);
 });
 
 test('FastAPI client encodes product slugs and returns null only for HTTP 404 details', async () => {

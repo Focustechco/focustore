@@ -1,11 +1,13 @@
 """Explicit, read-only queries against the Prisma SQLite catalog only."""
 from pathlib import Path
+from contextlib import contextmanager
 import sqlite3
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING, ROUND_FLOOR
 
 from app.integrations.prisma_sqlite import readonly_connection
 from app.integrations.legacy_catalog.mapper import map_category, map_product
 from app.schemas.catalog import CatalogCategory, CatalogPage, CatalogProduct, CatalogSort
+from app.schemas.catalog_money import minor_units
 
 
 PRODUCT_COLUMNS = '''
@@ -22,28 +24,45 @@ class LegacyCatalogRepository:
     def __init__(self, path: Path) -> None:
         self.path = path
 
+    @contextmanager
     def connection(self):
-        return readonly_connection(self.path)
+        with readonly_connection(self.path) as connection:
+            connection.create_function('catalog_cents', 1, minor_units, deterministic=True)
+            yield connection
 
-    def _product(self, connection: sqlite3.Connection, row: sqlite3.Row) -> CatalogProduct:
-        images = connection.execute('''
-            SELECT id, url, alt_text, position, is_primary FROM product_images
-            WHERE product_id = ? ORDER BY position, id
-        ''', (row['id'],)).fetchall()
-        categories = connection.execute('''
-            SELECT c.id, c.name, c.slug, c.description, c.image_url, c.parent_id, c.position
+    def _products(self, connection: sqlite3.Connection, rows: list[sqlite3.Row]) -> list[CatalogProduct]:
+        if not rows:
+            return []
+        identifiers = [row['id'] for row in rows]
+        # Only placeholder count is interpolated; every value stays bound.
+        placeholders = ','.join('?' for _ in identifiers)
+        images = connection.execute(f'''
+            SELECT product_id, id, url, alt_text, position, is_primary FROM product_images
+            WHERE product_id IN ({placeholders}) ORDER BY position, id
+        ''', identifiers).fetchall()
+        categories = connection.execute(f'''
+            SELECT pc.product_id, c.id, c.name, c.slug, c.description, c.image_url, c.parent_id, c.position
             FROM categories c JOIN product_categories pc ON pc.category_id = c.id
-            WHERE pc.product_id = ? AND c.is_active = 1 ORDER BY c.position, c.id
-        ''', (row['id'],)).fetchall()
-        variants = connection.execute('''
-            SELECT v.id, v.sku, v.name, v.color, v.color_hex, v.size, v.model,
+            WHERE pc.product_id IN ({placeholders}) AND c.is_active = 1 ORDER BY c.position, c.id
+        ''', identifiers).fetchall()
+        variants = connection.execute(f'''
+            SELECT v.product_id, v.id, v.sku, v.name, v.color, v.color_hex, v.size, v.model,
                    CAST(v.price AS TEXT) AS price,
                    CAST(v.promotional_price AS TEXT) AS promotional_price,
                    v.image_url, v.position, i.quantity_available, i.quantity_reserved
             FROM product_variants v LEFT JOIN inventory i ON i.variant_id = v.id
-            WHERE v.product_id = ? AND v.is_active = 1 ORDER BY v.position, v.id
-        ''', (row['id'],)).fetchall()
-        return map_product(row, images, categories, variants)
+            WHERE v.product_id IN ({placeholders}) AND v.is_active = 1 ORDER BY v.position, v.id
+        ''', identifiers).fetchall()
+        grouped = []
+        for relation in (images, categories, variants):
+            buckets: dict[str, list[sqlite3.Row]] = {}
+            for item in relation:
+                buckets.setdefault(item['product_id'], []).append(item)
+            grouped.append(buckets)
+        return [map_product(row, *(buckets.get(row['id'], []) for buckets in grouped)) for row in rows]
+
+    def _product(self, connection: sqlite3.Connection, row: sqlite3.Row) -> CatalogProduct:
+        return self._products(connection, [row])[0]
 
     @staticmethod
     def _like_value(value: str) -> str:
@@ -71,11 +90,11 @@ class LegacyCatalogRepository:
             clauses.append("EXISTS (SELECT 1 FROM product_categories pc JOIN categories c ON c.id = pc.category_id WHERE pc.product_id = p.id AND c.slug = ? AND c.is_active = 1)")
             parameters.append(category_slug)
         if min_price is not None:
-            clauses.append('p.base_price >= ?')
-            parameters.append(str(min_price))
+            clauses.append('catalog_cents(CAST(p.base_price AS TEXT)) >= CAST(? AS INTEGER)')
+            parameters.append(str((min_price * 100).to_integral_value(rounding=ROUND_CEILING)))
         if max_price is not None:
-            clauses.append('p.base_price <= ?')
-            parameters.append(str(max_price))
+            clauses.append('catalog_cents(CAST(p.base_price AS TEXT)) <= CAST(? AS INTEGER)')
+            parameters.append(str((max_price * 100).to_integral_value(rounding=ROUND_FLOOR)))
         return ' AND '.join(clauses), parameters
 
     def products(
@@ -100,9 +119,9 @@ class LegacyCatalogRepository:
                 f'SELECT count(*) FROM products p WHERE {where}', parameters
             ).fetchone()[0]
             if sort == 'price_asc':
-                ordering = 'p.base_price ASC, p.slug ASC, p.id ASC'
+                ordering = 'catalog_cents(CAST(p.base_price AS TEXT)) ASC, p.slug ASC, p.id ASC'
             elif sort == 'price_desc':
-                ordering = 'p.base_price DESC, p.slug ASC, p.id ASC'
+                ordering = 'catalog_cents(CAST(p.base_price AS TEXT)) DESC, p.slug ASC, p.id ASC'
             elif sort == 'newest':
                 # Synthetic/older Prisma fixtures may not have created_at.
                 ordering = 'p.created_at DESC, p.id DESC' if self._has_created_at(connection) else 'p.id DESC'
@@ -112,7 +131,7 @@ class LegacyCatalogRepository:
                 SELECT {PRODUCT_COLUMNS} FROM products p WHERE {where}
                 ORDER BY {ordering} LIMIT ? OFFSET ?
             ''', [*parameters, limit, offset]).fetchall()
-            return CatalogPage(items=[self._product(connection, row) for row in rows],
+            return CatalogPage(items=self._products(connection, rows),
                                total=total, offset=offset, limit=limit)
 
     def product(self, slug: str) -> CatalogProduct | None:
@@ -134,3 +153,10 @@ class LegacyCatalogRepository:
             ''', (limit, offset)).fetchall()
             return CatalogPage(items=[map_category(row) for row in rows],
                                total=total, offset=offset, limit=limit)
+
+    def category(self, slug: str) -> CatalogCategory | None:
+        with self.connection() as connection:
+            row = connection.execute(
+                f'SELECT {CATEGORY_COLUMNS} FROM categories WHERE slug = ? AND is_active = 1', (slug,)
+            ).fetchone()
+            return map_category(row) if row else None

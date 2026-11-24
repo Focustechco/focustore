@@ -22,6 +22,7 @@ export function restoredCart(value: unknown): CartItem[] {
       typeof item.quantity === 'number' &&
       Number.isSafeInteger(item.quantity) &&
       item.quantity > 0 &&
+      item.quantity <= 999 &&
       typeof item.price === 'number' &&
       Number.isFinite(item.price) &&
       item.price >= 0 &&

@@ -159,7 +159,7 @@ test('product validation rejects negative stock, prices and invalid promotions',
 
 test('malformed saved cart is ignored and destructive demo scripts fail closed', () => {
   assert.deepEqual(restoredCart({}), []);
-  assert.deepEqual(restoredCart([null, { quantity: -1 }, { quantity: Number.NaN }]), []);
+  assert.deepEqual(restoredCart([null, { quantity: -1 }, { quantity: Number.NaN }, { quantity: 1000 }]), []);
   assert.throws(() => assertDemoSeed());
 });
 

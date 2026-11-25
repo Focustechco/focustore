@@ -90,6 +90,18 @@ export async function PUT(
 
     const updated = await prisma.user.update({
       where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        image: true,
+        role: true,
+        phone: true,
+        cpf: true,
+        createdAt: true,
+        updatedAt: true,
+      },
       data: {
         ...(name !== undefined ? { name } : {}),
         ...(phone !== undefined ? { phone } : {}),

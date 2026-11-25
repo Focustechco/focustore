@@ -1,19 +1,7 @@
 name: Backend quality (no deploy)
 
 on:
-  push:
-    branches: [main, back-end]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-quality.yml'
-
-  pull_request:
-    branches: [main, back-end]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-quality.yml'
-
-  workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -23,6 +11,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  sqlite-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      DATABASE_URL: 'sqlite:///:memory:'
+      FOCUS_DEBUG: 'false'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: Run SQLite and unit tests
+        run: >-
+          python -m pytest -q -ra --junitxml=pytest-sqlite.xml
+          --ignore=tests/test_auth_postgres.py
+          --ignore=tests/test_integrity_agent.py
+          --ignore=tests/test_postgres_product_flow.py
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: backend-sqlite-pytest
+          path: backend/pytest-sqlite.xml
+          if-no-files-found: warn
+          retention-days: 7
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -32,20 +53,20 @@ jobs:
         env:
           POSTGRES_USER: focusstore_ci
           POSTGRES_PASSWORD: focusstore_ci_only
-          POSTGRES_DB: focusstore_ci
+          POSTGRES_DB: focusstore_integration_test
         ports:
           - 5433:5432
         options: >-
-          --health-cmd "pg_isready -U focusstore_ci -d focusstore_ci"
+          --health-cmd "pg_isready -U focusstore_ci -d focusstore_integration_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgresql+psycopg://focusstore_ci:focusstore_ci_only@127.0.0.1:5433/focusstore_ci
+      DATABASE_URL: postgresql+psycopg://focusstore_ci:focusstore_ci_only@127.0.0.1:5433/focusstore_integration_test
       FOCUS_DEBUG: 'false'
       APP_NAME: FocusStore API
       APP_VERSION: '0.1.0'
-      TEST_DATABASE_URL: postgresql+psycopg://focusstore_ci:focusstore_ci_only@127.0.0.1:5433/focusstore_ci
+      TEST_DATABASE_URL: postgresql+psycopg://focusstore_ci:focusstore_ci_only@127.0.0.1:5433/focusstore_integration_test
     defaults:
       run:
         working-directory: backend
@@ -66,6 +87,27 @@ jobs:
         run: |
           python -m pip install pip-audit==2.10.1
           python -m pip_audit -r requirements.txt --strict
+      - name: Verify disposable database identity
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          from sqlalchemy import create_engine, text
+          sys.path.insert(0, 'tests')
+          from postgres_test_guard import safe_test_url, validate_identity
+
+          if os.environ.get('GITHUB_ACTIONS') != 'true':
+              raise SystemExit('This database is restricted to GitHub Actions')
+          url = safe_test_url(os.environ['TEST_DATABASE_URL'])
+          if not url.database.endswith('_test') or os.environ['DATABASE_URL'] != os.environ['TEST_DATABASE_URL']:
+              raise SystemExit('Expected the same disposable test database for migrations and tests')
+          engine = create_engine(url, hide_parameters=True)
+          with engine.connect() as connection:
+              validate_identity(connection, url)
+              if int(connection.execute(text('SHOW server_version_num')).scalar_one()) // 10000 != 18:
+                  raise SystemExit('PostgreSQL 18 is required')
+          engine.dispose()
+          PY
       - name: Apply migrations to temporary database
         run: python -m alembic upgrade head
       - name: Check migrations against models
@@ -78,11 +120,19 @@ jobs:
           import xml.etree.ElementTree as ET
 
           root = ET.parse('pytest-report.xml').getroot()
-          skipped = int(root.attrib.get('skipped', '0'))
+          skipped = len(root.findall('.//testcase/skipped'))
           if skipped:
               raise SystemExit(f'CI must not skip backend tests; observed {skipped} skipped test(s)')
           print('No backend tests were skipped')
           PY
+      - name: Upload backend test report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-pytest
+          path: backend/pytest-report.xml
+          if-no-files-found: warn
+          retention-days: 7
       - name: 'Integrity agent: PostgreSQL schema and data'
         if: ${{ !cancelled() }}
         run: python -m app.agents.integrity

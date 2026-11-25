@@ -11,7 +11,7 @@ import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { verifiedDatabaseUrl } from '../src/lib/db/database-url';
 import { HIDDEN_PRODUCT_SLUGS } from '../src/modules/catalog/catalog-policy';
-import { postgresTestUrl } from './helpers/postgres-test';
+import { sqliteTestUrl } from './helpers/sqlite-test';
 
 let directory: string;
 let sqlite: string;
@@ -113,7 +113,9 @@ before(async () => {
   directory = await mkdtemp(path.join(root, 'fullstack-'));
   sqlite = path.join(directory, 'store.db');
   await writeFile(sqlite, '', { flag: 'wx' });
-  frontendDatabaseUrl = postgresTestUrl('fullstack');
+  const frontendDirectory = path.join(directory, 'frontend');
+  await mkdir(frontendDirectory);
+  frontendDatabaseUrl = await sqliteTestUrl(frontendDirectory);
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'],
                { env: { ...process.env, DATABASE_URL: frontendDatabaseUrl }, stdio: 'pipe' });
   Object.assign(process.env, { DATABASE_URL: frontendDatabaseUrl, NODE_ENV: 'test' });
@@ -183,7 +185,7 @@ test('HTTP registration and sessions persist after logout, login and application
   assert.equal((await api('/api/auth/register', 'POST', registration)).status, 409);
 });
 
-test('admin HTTP writes persist in Prisma PostgreSQL while FastAPI keeps its legacy catalog boundary', { timeout: 60000 }, async () => {
+test('admin HTTP writes persist in Prisma SQLite while FastAPI keeps its legacy catalog boundary', { timeout: 60000 }, async () => {
   const empty = await fetch(backend + '/api/v1/catalog/products');
   assert.equal(empty.status, 503);
   const stored = await client.user.findUniqueOrThrow({ where: { email } });

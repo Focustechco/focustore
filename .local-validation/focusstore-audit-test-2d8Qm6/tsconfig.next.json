@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "baseUrl": "../..",
+    "tsBuildInfoFile": "C:\\Users\\marxa\\Documents\\focus\\FocusStore\\focustore\\.local-validation\\focusstore-audit-test-2d8Qm6\\next.tsbuildinfo"
+  },
+  "include": [
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/next-env.d.ts",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/src/**/*.ts",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/src/**/*.tsx",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/tests/**/*.ts",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/scripts/**/*.ts",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/prisma/**/*.ts",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/next.config.ts",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/tailwind.config.ts",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/.local-validation/focusstore-audit-test-2d8Qm6/next/types/**/*.ts",
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/.local-validation/focusstore-audit-test-2d8Qm6/next/dev/types/**/*.ts",
+    ".local-validation/focusstore-audit-test-2d8Qm6/next/types/**/*.ts",
+    ".local-validation/focusstore-audit-test-2d8Qm6/next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "C:/Users/marxa/Documents/focus/FocusStore/focustore/node_modules"
+  ]
+}

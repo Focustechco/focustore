@@ -17,7 +17,7 @@ import { sameOrigin } from '../src/lib/security/origin';
 import { restoredCart } from '../src/modules/cart/cart-validation';
 import { assertDemoSeed } from '../scripts/seed-safety.cjs';
 import { nextTestConfig } from './helpers/next-config';
-import { postgresTestUrl } from './helpers/postgres-test';
+import { sqliteTestUrl } from './helpers/sqlite-test';
 
 let directory: string;
 let fixtureRoot: string;
@@ -47,7 +47,7 @@ before(async () => {
   fixtureRoot = path.join(process.cwd(), '.local-validation');
   await mkdir(fixtureRoot, { recursive: true });
   directory = await mkdtemp(path.join(fixtureRoot, 'focusstore-audit-test-'));
-  const url = postgresTestUrl('store');
+  const url = await sqliteTestUrl(directory);
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', NEXTAUTH_SECRET: randomUUID() });
   process.env.SOCIAL_LOGIN_ORIGIN = ''; // Never call real OAuth providers in this HTTP suite.
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--schema', 'prisma/schema.prisma', '--skip-generate'],
@@ -218,6 +218,17 @@ test('admin endpoints and server pages deny unauthenticated and ordinary users',
   const login = await api('/api/auth/login', 'POST', { identifier: 'admin@example.test', password: 'synthetic-admin-password' });
   assert.equal(login.status, 200);
   adminCookie = login.headers.get('set-cookie')!.split(';')[0];
+});
+
+test('admin customer update does not return password hashes', async () => {
+  const customer = await prisma.user.findUniqueOrThrow({ where: { email: 'customer@example.test' } });
+  const response = await api(`/api/admin/customers/${customer.id}`, 'PUT', { name: 'Updated customer' }, adminCookie);
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.customer.id, customer.id);
+  assert.equal(body.customer.name, 'Updated customer');
+  assert.equal(Object.hasOwn(body.customer, 'passwordHash'), false);
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: customer.id } })).passwordHash, customer.passwordHash);
 });
 
 test('admin banner detail route preserves authorization and CRUD behavior', async () => {

@@ -12,7 +12,7 @@ import { exportJWK, generateKeyPair, SignJWT, jwtVerify, importSPKI, exportPKCS8
 import { appleClientSecret, safeReturnTo, socialOrigin, type Provider } from '../src/lib/auth/social/config';
 import { flowCookie, openFlow, type SocialFlow } from '../src/lib/auth/social/flow';
 import type { SocialDependencies } from '../src/lib/auth/social/http';
-import { postgresTestUrl } from './helpers/postgres-test';
+import { sqliteTestUrl } from './helpers/sqlite-test';
 
 const origin = 'https://shop.example.test';
 let db: PrismaClient;
@@ -28,7 +28,8 @@ let tokenRequests = 0;
 before(async () => {
   const root = path.join(process.cwd(), '.local-validation');
   await mkdir(root, { recursive: true });
-  const url = postgresTestUrl('social');
+  const directory = await mkdtemp(path.join(root, 'social-test-'));
+  const url = await sqliteTestUrl(directory);
   Object.assign(process.env, { DATABASE_URL: url, NODE_ENV: 'test', SOCIAL_LOGIN_ORIGIN: origin, SOCIAL_LOGIN_SECRET: randomUUID() });
   execFileSync(process.execPath, ['node_modules/prisma/build/index.js', 'db', 'push', '--skip-generate'], { env: process.env, stdio: 'pipe' });
   db = new PrismaClient({ datasources: { db: { url } }, log: [] });

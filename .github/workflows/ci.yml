@@ -1,0 +1,177 @@
+name: FocusStore CI
+
+on:
+  push:
+    branches: [main, back-end]
+  pull_request:
+    branches: [main, back-end]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  FOCUS_DEBUG: 'false'
+  APP_NAME: FocusStore API
+  APP_VERSION: '0.1.0'
+
+jobs:
+  frontend-quality:
+    name: Frontend quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Configure disposable Prisma SQLite database
+        run: echo "DATABASE_URL=file:${RUNNER_TEMP}/focusstore-frontend-ci.db" >> "$GITHUB_ENV"
+      - run: npm run db:generate
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Run frontend tests
+        run: npm test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install fullstack test dependency
+        run: python -m pip install -r backend/requirements.txt
+      - name: Run fullstack tests against disposable SQLite
+        env:
+          FOCUS_PYTHON_EXECUTABLE: python
+        run: npm run test:fullstack
+      - run: npm run build
+
+  backend-sqlite:
+    name: Backend SQLite and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: Run SQLite/unit suite (PostgreSQL cases are reported as skipped here)
+        env:
+          DATABASE_URL: sqlite:///${{ runner.temp }}/focusstore-backend-ci.db
+        run: python -m pytest -q -ra --junitxml=../test-results/backend-sqlite.xml
+      - name: Publish SQLite/unit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-sqlite-junit
+          path: test-results/backend-sqlite.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+  postgresql-integration:
+    name: PostgreSQL integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18.7
+        env:
+          POSTGRES_USER: focusstore_ci
+          POSTGRES_PASSWORD: focusstore_ci_only
+          POSTGRES_DB: focusstore_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U focusstore_ci -d focusstore_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql+psycopg://focusstore_ci:focusstore_ci_only@127.0.0.1:5432/focusstore_test
+      TEST_DATABASE_URL: postgresql+psycopg://focusstore_ci:focusstore_ci_only@127.0.0.1:5432/focusstore_test
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: python -m pip install -r requirements.txt
+      - name: Verify isolated PostgreSQL target
+        run: |
+          python - <<'PY'
+          import os
+          from sqlalchemy.engine import make_url
+
+          assert os.environ.get('GITHUB_ACTIONS') == 'true'
+          url = make_url(os.environ['TEST_DATABASE_URL'])
+          assert url.get_backend_name() == 'postgresql'
+          assert url.host in {'127.0.0.1', 'localhost'}
+          assert url.port == 5432
+          assert url.database == 'focusstore_test'
+          assert url.database.endswith('_test')
+          assert url.username == 'focusstore_ci'
+          PY
+      - run: python -m alembic upgrade head
+      - run: python -m alembic check
+      - name: Run PostgreSQL transactional and migration tests
+        run: >-
+          python -m pytest -q -ra
+          tests/test_checkout_orders_postgres.py
+          tests/test_inventory_reservations_postgres.py
+          tests/test_processing_services_postgres.py
+          tests/test_integrity_agent.py
+          tests/test_migrations.py
+          tests/test_postgres_catalog_filters.py
+          tests/test_postgres_catalog_mapping.py
+          tests/test_postgres_catalog_models.py
+          tests/test_progressive_migration_postgres.py
+          tests/test_public_identity_postgres.py
+          --junitxml=../test-results/backend-postgresql.xml
+      - run: python -m app.agents.integrity
+      - run: python -m app.agents.openapi_check
+      - name: Publish PostgreSQL report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-postgresql-junit
+          path: test-results/backend-postgresql.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+  full-validation:
+    name: Full validation summary
+    runs-on: ubuntu-latest
+    needs: [frontend-quality, backend-sqlite, postgresql-integration]
+    if: always()
+    steps:
+      - name: Publish required job summary
+        env:
+          FRONTEND_RESULT: ${{ needs.frontend-quality.result }}
+          SQLITE_RESULT: ${{ needs.backend-sqlite.result }}
+          POSTGRESQL_RESULT: ${{ needs.postgresql-integration.result }}
+        run: |
+          echo "### FocusStore CI" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Frontend: ${FRONTEND_RESULT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Backend SQLite/unit: ${SQLITE_RESULT}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- PostgreSQL integration: ${POSTGRESQL_RESULT}" >> "$GITHUB_STEP_SUMMARY"
+          test "$FRONTEND_RESULT" = success
+          test "$SQLITE_RESULT" = success
+          test "$POSTGRESQL_RESULT" = success

@@ -289,7 +289,7 @@ function checkoutInput() {
     items: [{ variantId, quantity: 1 }], paymentMethod: 'PIX' as const, idempotencyKey: randomUUID() };
 }
 
-test('checkout derives identity from session; demonstration is unavailable in production', async () => {
+test('checkout binds the owner, protects confirmations, and limits the simulation to same-origin owners', async () => {
   if (process.env.FOCUS_TEST_PRODUCTION === '1') {
     assert.equal((await api('/api/checkout', 'POST', checkoutInput(), customerCookie)).status, 503);
     assert.equal((await api('/api/payments/webhook', 'POST', {})).status, 503);
@@ -300,7 +300,28 @@ test('checkout derives identity from session; demonstration is unavailable in pr
   const data = await response.json();
   const customer = await prisma.user.findUniqueOrThrow({ where: { email: 'customer@example.test' } });
   assert.equal(data.order.userId, customer.id);
+  assert.equal((await api(`/checkout/confirmacao/${data.order.id}`, 'GET', undefined, customerCookie)).status, 200);
   assert.equal((await api('/api/payments/webhook', 'POST', { orderId: data.order.id, status: 'PAID' })).status, 401);
+  const crossOrigin = await fetch(base + '/api/payments/webhook', {
+    method: 'POST',
+    headers: { origin: 'https://evil.example', 'content-type': 'application/json', cookie: customerCookie },
+    body: JSON.stringify({ orderId: data.order.id, status: 'PAID' }),
+  });
+  assert.equal(crossOrigin.status, 403);
+  await payments.handlePaymentWebhook({ eventId: randomUUID(), eventType: 'cancel', paymentId: data.payment.id, status: 'CANCELLED', provider: 'demo' });
+});
+
+test('guest checkout grants only a signed, short-lived confirmation capability', async () => {
+  if (process.env.FOCUS_TEST_PRODUCTION === '1') return;
+  const response = await api('/api/checkout', 'POST', checkoutInput());
+  assert.equal(response.status, 201);
+  const data = await response.json();
+  const guestCookie = response.headers.get('set-cookie')!.split(';')[0];
+  assert.match(response.headers.get('set-cookie')!, /focus_guest_order=/);
+  assert.match(response.headers.get('set-cookie')!, /HttpOnly/i);
+  assert.match(response.headers.get('set-cookie')!, /SameSite=lax/i);
+  assert.equal((await api(`/checkout/confirmacao/${data.order.id}`)).status, 404);
+  assert.equal((await api(`/checkout/confirmacao/${data.order.id}`, 'GET', undefined, guestCookie)).status, 200);
   await payments.handlePaymentWebhook({ eventId: randomUUID(), eventType: 'cancel', paymentId: data.payment.id, status: 'CANCELLED', provider: 'demo' });
 });
 

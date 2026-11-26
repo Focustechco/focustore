@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { CheckoutService } from '@/modules/checkout/checkout.service';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { getAuthenticatedUser } from '@/lib/auth/session';
+import { grantGuestOrder, GUEST_ORDER_COOKIE_NAME } from '@/lib/auth/guest-order';
 
 export async function POST(req: Request) {
   try {
@@ -28,7 +29,17 @@ export async function POST(req: Request) {
       userId: authenticatedUser?.id,
     });
 
-    return NextResponse.json(result, { status: 201 });
+    const response = NextResponse.json(result, { status: 201 });
+    if (!authenticatedUser && !result.order.userId) {
+      response.cookies.set(GUEST_ORDER_COOKIE_NAME, grantGuestOrder(result.order.id), {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60,
+        path: '/',
+      });
+    }
+    return response;
   } catch (err: unknown) {
     console.error('Erro no checkout:', err);
     return NextResponse.json({ error: 'Falha ao processar checkout.' }, { status: 400 });

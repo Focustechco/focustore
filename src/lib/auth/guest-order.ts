@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const TOKEN_LIFETIME_MS = 60 * 60 * 1000;
+export const GUEST_ORDER_COOKIE_NAME = 'focus_guest_order';
 
 function secret(): string {
   const value = process.env.NEXTAUTH_SECRET || process.env.SOCIAL_LOGIN_SECRET;

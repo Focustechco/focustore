@@ -8,8 +8,9 @@ import { Button } from '@/components/ui/button';
 import { OrderConfirmationClient } from './order-confirmation-client';
 import { getPostgresOrder } from '@/lib/orders/postgres-orders';
 import { cookies } from 'next/headers';
-import { AUTH_COOKIE_NAME } from '@/lib/auth/session';
+import { AUTH_COOKIE_NAME, getAuthenticatedUser } from '@/lib/auth/session';
 import { isPostgresSession } from '@/lib/auth/fastapi';
+import { canReadGuestOrder, GUEST_ORDER_COOKIE_NAME } from '@/lib/auth/guest-order';
 
 interface Props {
   params: Promise<{ orderId: string }>;
@@ -17,7 +18,8 @@ interface Props {
 
 export default async function OrderConfirmationPage({ params }: Props) {
   const { orderId } = await params;
-  const sessionToken = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(AUTH_COOKIE_NAME)?.value;
   const postgresOrder = await getPostgresOrder(orderId);
   if (isPostgresSession(sessionToken) && !postgresOrder) notFound();
   if (postgresOrder) {
@@ -55,6 +57,12 @@ export default async function OrderConfirmationPage({ params }: Props) {
   if (!order) {
     notFound();
   }
+  const user = await getAuthenticatedUser();
+  const guestToken = cookieStore.get(GUEST_ORDER_COOKIE_NAME)?.value;
+  const mayRead = order.userId
+    ? order.userId === user?.id
+    : canReadGuestOrder(guestToken, order.id);
+  if (!mayRead) notFound();
 
   const payment = order.payments[0];
   const isPix = payment?.method === 'PIX';

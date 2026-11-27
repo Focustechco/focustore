@@ -2,6 +2,19 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { prisma } from '@/lib/db/prisma';
 
+const customerFields = {
+  id: true,
+  name: true,
+  email: true,
+  emailVerified: true,
+  image: true,
+  role: true,
+  phone: true,
+  cpf: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -14,7 +27,8 @@ export async function GET(
 
     const user = await prisma.user.findUnique({
       where: { id },
-      include: {
+      select: {
+        ...customerFields,
         addresses: { orderBy: { isDefault: 'desc' } },
         orders: {
           include: {
@@ -45,12 +59,11 @@ export async function GET(
     const totalSpent = (user.orders || [])
       .filter((o: any) => o.status !== 'CANCELLED')
       .reduce((sum: number, o: any) => sum + (o.total || 0), 0);
-    const { passwordHash: _passwordHash, ...customerData } = user;
-
     return NextResponse.json({
       success: true,
       customer: {
-        ...customerData,
+        ...user,
+        orders: user.orders.map(({ idempotencyKey: _idempotencyKey, ...order }) => order),
         totalSpent: Number(totalSpent.toFixed(2)),
       },
     });
@@ -90,6 +103,7 @@ export async function PUT(
 
     const updated = await prisma.user.update({
       where: { id },
+      select: customerFields,
       data: {
         ...(name !== undefined ? { name } : {}),
         ...(phone !== undefined ? { phone } : {}),
@@ -99,10 +113,10 @@ export async function PUT(
     });
 
     return NextResponse.json({ success: true, customer: updated });
-  } catch (error: any) {
-    console.error('Error updating customer:', error);
+  } catch {
+    console.error('Error updating customer');
     return NextResponse.json(
-      { success: false, error: error.message || 'Erro ao atualizar cliente.' },
+      { success: false, error: 'Erro ao atualizar cliente.' },
       { status: 500 }
     );
   }

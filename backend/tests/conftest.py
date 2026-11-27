@@ -1,4 +1,14 @@
+import os
+
 import pytest
+
+from app.config import Settings, get_settings
+
+# Establish a safe engine before application modules are imported during collection.
+inherited_database_url = os.environ.get('DATABASE_URL')
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+Settings.model_config['env_file'] = None
+get_settings.cache_clear()
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
@@ -10,8 +20,6 @@ from app.db.dependencies import get_db
 
 @pytest.fixture(autouse=True)
 def isolated_settings(monkeypatch, tmp_path):
-    from app.config import Settings, get_settings
-
     monkeypatch.setenv("DEBUG", "release")
     monkeypatch.setenv("FOCUS_DEBUG", "false")
     monkeypatch.setenv("APP_NAME", "FocusStore API")

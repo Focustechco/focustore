@@ -6,11 +6,12 @@ from alembic import command
 from alembic.config import Config
 import pytest
 from sqlalchemy import create_engine, event, text
-from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.agents import integrity as agent
+from conftest import inherited_database_url
+from postgres_guard import PostgresTestGuardError, authorize_test_target
 
 
 @pytest.fixture
@@ -21,10 +22,10 @@ def postgres(monkeypatch):
         if os.environ.get('CI'):
             pytest.fail('CI requires TEST_DATABASE_URL for PostgreSQL integration')
         pytest.skip('Set TEST_DATABASE_URL to a temporary local PostgreSQL *_test database')
-    url = make_url(raw)
-    assert url.get_backend_name() == 'postgresql'
-    assert url.host in {'localhost', '127.0.0.1', '::1'}
-    assert url.database and url.database.endswith('_test')
+    try:
+        url = authorize_test_target(raw, os.environ, inherited_database_url=inherited_database_url)
+    except PostgresTestGuardError as error:
+        pytest.fail(str(error), pytrace=False)
     admin = create_engine(url, hide_parameters=True)
     schema = 'agent_test_' + uuid4().hex
     with admin.begin() as connection:
@@ -183,4 +184,7 @@ def test_public_id_migration_backfills_existing_postgresql_rows(postgres):
 
 def test_connection_failure_is_nonzero(monkeypatch):
     monkeypatch.setenv('DATABASE_URL', 'postgresql+psycopg://test@127.0.0.1:1/focusstore_test?connect_timeout=1')
+    def fail_without_connection(*args, **kwargs):
+        raise OSError('synthetic connection failure')
+    monkeypatch.setattr(agent, 'create_engine', fail_without_connection)
     assert agent.main() == 1

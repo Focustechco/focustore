@@ -238,6 +238,59 @@ test('admin endpoints and server pages deny unauthenticated and ordinary users',
   adminCookie = login.headers.get('set-cookie')!.split(';')[0];
 });
 
+test('customer response security preserves public fields and rejects unauthorized requests', async () => {
+  const secret = `synthetic-secret-${randomUUID()}`;
+  const admin = await prisma.user.create({ data: {
+    name: 'Synthetic Admin', email: `${randomUUID()}@example.test`, role: 'ADMIN', passwordHash: secret,
+  } });
+  const customer = await prisma.user.create({ data: {
+    name: 'Synthetic Customer', email: `${randomUUID()}@example.test`, role: 'CUSTOMER', passwordHash: secret,
+  } });
+  const adminToken = `synthetic-admin-${randomUUID()}`;
+  const customerToken = `synthetic-customer-${randomUUID()}`;
+  const expires = new Date(Date.now() + 60_000);
+  await prisma.session.createMany({ data: [
+    { userId: admin.id, sessionToken: adminToken, expires },
+    { userId: customer.id, sessionToken: customerToken, expires },
+  ] });
+  const adminSession = `focus_session=${adminToken}`;
+  const customerSession = `focus_session=${customerToken}`;
+  const idempotencyKey = `synthetic-checkout-key-${randomUUID()}`;
+  await prisma.order.create({ data: {
+    userId: customer.id, orderNumber: `SYN-${randomUUID()}`, idempotencyKey,
+    subtotal: 10, total: 10, shippingStreet: 'Rua A', shippingNumber: '1',
+    shippingNeighborhood: 'Centro', shippingCity: 'Fortaleza', shippingState: 'CE', shippingPostalCode: '60000000',
+  } });
+  const endpoint = `/api/admin/customers/${customer.id}`;
+  const rejectedAnonymous = await api(endpoint, 'PUT', { name: 'Blocked' });
+  const rejectedCustomer = await api(endpoint, 'PUT', { name: 'Blocked' }, customerSession);
+  assert.equal(rejectedAnonymous.status, 401);
+  assert.equal(rejectedCustomer.status, 403);
+  const updated = await api(endpoint, 'PUT', { name: 'Updated Customer', phone: '123' }, adminSession);
+  assert.equal(updated.status, 200);
+  const body = await updated.json();
+  assert.deepEqual(Object.keys(body.customer).sort(), [
+    'id', 'name', 'email', 'emailVerified', 'image', 'role', 'phone', 'cpf', 'createdAt', 'updatedAt',
+  ].sort());
+  assert.equal(body.customer.id, customer.id);
+  assert.equal(body.customer.name, 'Updated Customer');
+  assert.equal(body.customer.email, customer.email);
+  assert.equal(body.customer.phone, '123');
+  assert.equal((await prisma.user.findUniqueOrThrow({ where: { id: customer.id } })).passwordHash, secret);
+  const detail = await api(endpoint, 'GET', undefined, adminSession);
+  const list = await api('/api/admin/customers', 'GET', undefined, adminSession);
+  const missing = await api(`/api/admin/customers/${randomUUID()}`, 'PUT', { name: 'Missing' }, adminSession);
+  assert.equal(detail.status, 200);
+  assert.equal(list.status, 200);
+  assert.equal(missing.status, 500);
+  for (const text of [JSON.stringify(body), await detail.text(), await list.text(),
+    await missing.text(), await rejectedAnonymous.text(), await rejectedCustomer.text()]) {
+    for (const sensitive of [secret, adminToken, customerToken, idempotencyKey, 'passwordHash', 'sessionToken', 'access_token', 'refresh_token', 'idempotencyKey']) {
+      assert.equal(text.includes(sensitive), false);
+    }
+  }
+});
+
 test('admin can change password securely and other sessions are revoked', async () => {
   const endpoint = '/api/admin/settings/password';
   const currentToken = adminCookie.split('=')[1];
